@@ -2,158 +2,155 @@ import { jsPDF } from 'jspdf';
 import { Appointment } from '../api/client';
 
 export function generateAppointmentPDF(appt: Appointment) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210;
-  const H = 297;
+  // Tarjeta horizontal compacta (tipo postal / revista)
+  const W = 190;
+  const H = 110;
+  const doc = new jsPDF({ unit: 'mm', format: [W, H], orientation: 'landscape' });
 
-  // ── Paleta editorial ────────────────────────────────────
-  const cream   = [250, 248, 243] as [number, number, number]; // fondo
-  const charcoal= [38, 42, 51]    as [number, number, number]; // texto principal
-  const gold    = [176, 141, 87]  as [number, number, number]; // acento
-  const goldSoft= [201, 175, 133] as [number, number, number]; // acento suave
-  const muted   = [120, 120, 115] as [number, number, number]; // texto secundario
-  const line    = [210, 203, 190] as [number, number, number]; // líneas finas
+  // ── Paleta azul + gris ──────────────────────────────────
+  const blue     = [37, 99, 235]   as [number, number, number];
+  const blueDark = [29, 58, 138]   as [number, number, number];
+  const blueSoft = [219, 234, 254] as [number, number, number];
+  const gray     = [71, 85, 105]   as [number, number, number];
+  const grayLite = [241, 245, 249] as [number, number, number];
+  const grayMid  = [148, 163, 184] as [number, number, number];
+  const white    = [255, 255, 255] as [number, number, number];
+  const ink       = [30, 41, 59]   as [number, number, number];
 
-  // ── Fondo crema a página completa ───────────────────────
-  doc.setFillColor(...cream);
+  // ── Fondo general gris muy claro ────────────────────────
+  doc.setFillColor(...grayLite);
   doc.rect(0, 0, W, H, 'F');
 
-  // ── Doble marco dorado ──────────────────────────────────
-  doc.setDrawColor(...gold);
-  doc.setLineWidth(0.8);
-  doc.rect(12, 12, W - 24, H - 24);
-  doc.setLineWidth(0.2);
-  doc.rect(15, 15, W - 30, H - 30);
+  // ════════════════════════════════════════════════════════
+  // PANEL IZQUIERDO (azul) — identidad
+  // ════════════════════════════════════════════════════════
+  const PW = 62; // ancho panel
+  doc.setFillColor(...blue);
+  doc.rect(0, 0, PW, H, 'F');
+  // franja inferior más oscura
+  doc.setFillColor(...blueDark);
+  doc.rect(0, H - 14, PW, 14, 'F');
 
-  const cx = W / 2;
-
-  // ── Esquinas ornamentales ───────────────────────────────
-  const corner = (x: number, y: number, dx: number, dy: number) => {
-    doc.setDrawColor(...goldSoft);
-    doc.setLineWidth(0.4);
-    doc.line(x, y, x + dx * 6, y);
-    doc.line(x, y, x, y + dy * 6);
-  };
-  corner(15, 15, 1, 1);
-  corner(W - 15, 15, -1, 1);
-  corner(15, H - 15, 1, -1);
-  corner(W - 15, H - 15, -1, -1);
-
-  // ── Encabezado: nombre de la clínica (versalitas) ───────
-  doc.setFont('times', 'normal');
-  doc.setTextColor(...gold);
-  doc.setFontSize(11);
-  doc.text('C L Í N I C A   P R O', cx, 32, { align: 'center', charSpace: 1 });
-
-  // Espacio para logo (círculo sutil)
-  doc.setDrawColor(...goldSoft);
-  doc.setLineWidth(0.4);
-  doc.circle(cx, 50, 12);
-  doc.setFontSize(6.5);
-  doc.setTextColor(...muted);
-  doc.text('LOGO', cx, 51, { align: 'center', charSpace: 0.5 });
-
-  // ── Filete con rombo central ────────────────────────────
-  const ornRule = (y: number, half = 30) => {
-    doc.setDrawColor(...goldSoft);
-    doc.setLineWidth(0.3);
-    doc.line(cx - half, y, cx - 4, y);
-    doc.line(cx + 4, y, cx + half, y);
-    doc.setFillColor(...gold);
-    doc.triangle(cx, y - 1.4, cx - 1.4, y, cx, y + 1.4, 'F');
-    doc.triangle(cx, y - 1.4, cx + 1.4, y, cx, y + 1.4, 'F');
-  };
-  ornRule(70, 26);
-
-  // ── Titular tipo invitación ─────────────────────────────
-  doc.setFont('times', 'italic');
-  doc.setTextColor(...muted);
-  doc.setFontSize(13);
-  doc.text('Tenemos el gusto de confirmar su', cx, 84, { align: 'center' });
-
-  doc.setFont('times', 'normal');
-  doc.setTextColor(...charcoal);
-  doc.setFontSize(40);
-  doc.text('Cita Médica', cx, 100, { align: 'center', charSpace: 0.5 });
-
-  ornRule(112, 26);
-
-  // ── Nombre del paciente, protagonista ───────────────────
-  doc.setFont('times', 'italic');
-  doc.setTextColor(...muted);
-  doc.setFontSize(11);
-  doc.text('Estimado(a)', cx, 128, { align: 'center' });
-
-  doc.setFont('times', 'normal');
-  doc.setTextColor(...gold);
-  doc.setFontSize(24);
-  doc.text(appt.user_name, cx, 140, { align: 'center', charSpace: 0.3 });
-
-  // ── Fecha y hora destacadas ─────────────────────────────
-  const fecha = new Date(appt.date + 'T00:00:00').toLocaleDateString('es-CO', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-  const fechaCap = fecha.charAt(0).toUpperCase() + fecha.slice(1);
-
-  doc.setFont('times', 'normal');
-  doc.setTextColor(...charcoal);
-  doc.setFontSize(15);
-  doc.text(fechaCap, cx, 158, { align: 'center' });
-
-  // Hora con líneas a los lados
-  doc.setDrawColor(...line);
-  doc.setLineWidth(0.3);
-  doc.line(cx - 40, 167, cx - 16, 167);
-  doc.line(cx + 16, 167, cx + 40, 167);
-  doc.setFont('times', 'normal');
-  doc.setTextColor(...gold);
-  doc.setFontSize(18);
-  doc.text(appt.time + ' h', cx, 169, { align: 'center', charSpace: 1 });
-
-  // ── Bloque de detalles (médico, motivo) ─────────────────
-  let y = 188;
-  const detailRow = (label: string, value: string) => {
-    if (!value) return;
-    doc.setFont('times', 'italic');
-    doc.setTextColor(...muted);
-    doc.setFontSize(9.5);
-    doc.text(label.toUpperCase(), cx, y, { align: 'center', charSpace: 1.5 });
-    doc.setFont('times', 'normal');
-    doc.setTextColor(...charcoal);
-    doc.setFontSize(13);
-    const lines = doc.splitTextToSize(value, 150);
-    doc.text(lines, cx, y + 6, { align: 'center' });
-    y += 8 + lines.length * 6;
-  };
-
-  detailRow('Profesional', `Dr. ${appt.doctor_name}`);
-  detailRow('Especialidad', appt.doctor_specialty);
-  if (appt.reason) detailRow('Motivo de la consulta', appt.reason);
-  if (appt.notes)  detailRow('Notas', appt.notes);
-
-  ornRule(Math.min(y + 2, 244), 22);
-
-  // ── Indicaciones discretas ──────────────────────────────
-  doc.setFont('times', 'italic');
-  doc.setTextColor(...muted);
-  doc.setFontSize(9);
-  const nota = 'Le agradecemos llegar diez minutos antes y presentar este documento junto con su identificación.';
-  doc.text(doc.splitTextToSize(nota, 130), cx, 254, { align: 'center' });
-
-  // ── Pie ─────────────────────────────────────────────────
-  doc.setFont('times', 'normal');
-  doc.setTextColor(...gold);
-  doc.setFontSize(8);
-  doc.text('C L Í N I C A   P R O', cx, 272, { align: 'center', charSpace: 1 });
-  doc.setFont('times', 'italic');
-  doc.setTextColor(...muted);
+  // Espacio para logo (recuadro redondeado claro)
+  doc.setFillColor(...white);
+  doc.roundedRect(14, 12, 34, 22, 3, 3, 'F');
+  doc.setTextColor(...grayMid);
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.text(
-    `Cita N.º ${appt.id}  ·  Emitido el ${new Date().toLocaleDateString('es-CO')}`,
-    cx, 278, { align: 'center' }
-  );
+  doc.text('tu logo', 31, 24.5, { align: 'center' });
+
+  // Nombre clínica
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.text('ClínicaPro', 14, 48);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...blueSoft);
+  doc.text('cuidamos tu sonrisa', 14, 53.5);
+
+  // Palabra grande vertical-ish "CITA"
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(40);
+  doc.setTextColor(255, 255, 255);
+  doc.text('¡Cita!', 14, 78);
+
+  // mini etiqueta en franja inferior
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(...blueSoft);
+  doc.text(`N.º ${appt.id}`, 14, H - 5);
+  doc.text('TE ESPERAMOS', PW - 14, H - 5, { align: 'right' });
+
+  // ════════════════════════════════════════════════════════
+  // ÁREA DERECHA — detalles
+  // ════════════════════════════════════════════════════════
+  const RX = PW + 10;       // inicio contenido derecho
+  const RR = W - 12;        // margen derecho
+
+  // Saludo grande y jovial
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...gray);
+  doc.text('¡Hola,', RX, 18);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...blue);
+  const nombre = doc.splitTextToSize(appt.user_name + '!', RR - RX);
+  doc.text(nombre[0], RX, 27);
+
+  // Línea divisoria azul
+  doc.setDrawColor(...blue);
+  doc.setLineWidth(1);
+  doc.line(RX, 32, RX + 22, 32);
+
+  // ── Bloque FECHA + HORA (recuadro azul claro) ───────────
+  const by = 37;
+  doc.setFillColor(...blueSoft);
+  doc.roundedRect(RX, by, RR - RX, 26, 3, 3, 'F');
+
+  const fecha = new Date(appt.date + 'T00:00:00');
+  const dia = fecha.toLocaleDateString('es-CO', { day: '2-digit' });
+  const mes = fecha.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '').toUpperCase();
+  const diaSem = fecha.toLocaleDateString('es-CO', { weekday: 'long' });
+  const diaSemCap = diaSem.charAt(0).toUpperCase() + diaSem.slice(1);
+
+  // número de día enorme
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(30);
+  doc.setTextColor(...blueDark);
+  doc.text(dia, RX + 6, by + 19);
+  // mes
+  doc.setFontSize(11);
+  doc.setTextColor(...blue);
+  doc.text(mes, RX + 26, by + 12);
+  // día de la semana
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...gray);
+  doc.text(diaSemCap, RX + 26, by + 18.5);
+
+  // separador vertical
+  const sepX = RR - 42;
+  doc.setDrawColor(...grayMid);
+  doc.setLineWidth(0.3);
+  doc.line(sepX, by + 5, sepX, by + 21);
+
+  // hora
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...gray);
+  doc.text('HORA', sepX + 6, by + 10);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(19);
+  doc.setTextColor(...blueDark);
+  doc.text(appt.time, sepX + 6, by + 20);
+
+  // ── Detalles inferiores (médico / motivo) ───────────────
+  let dy = 72;
+  const chip = (label: string, value: string) => {
+    if (!value) return;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...grayMid);
+    doc.text(label.toUpperCase(), RX, dy);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(...ink);
+    const lines = doc.splitTextToSize(value, RR - RX);
+    doc.text(lines[0], RX, dy + 5);
+    dy += 12;
+  };
+  chip('Tu doctor', `Dr. ${appt.doctor_name}  ·  ${appt.doctor_specialty}`);
+  chip('Motivo', appt.reason || 'Consulta general');
+
+  // nota al pie derecha
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7);
+  doc.setTextColor(...grayMid);
+  doc.text('Llega 10 min antes y trae este pase :)', RX, H - 6);
 
   // ── Descarga ────────────────────────────────────────────
   const safeName = appt.user_name.replace(/\s+/g, '_');
-  doc.save(`Invitacion_Cita_${safeName}_${appt.date}.pdf`);
+  doc.save(`Cita_${safeName}_${appt.date}.pdf`);
 }
