@@ -1,3 +1,5 @@
+import dns from 'dns';
+dns.setDefaultResultOrder('ipv4first');
 import { Pool } from 'pg';
 
 const pool = new Pool({
@@ -35,6 +37,55 @@ export async function initDB() {
       reason TEXT,
       status TEXT NOT NULL DEFAULT 'scheduled' CHECK(status IN ('scheduled','completed','cancelled')),
       notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS medical_info (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      blood_type TEXT,
+      allergies TEXT,
+      medical_conditions TEXT,
+      current_medications TEXT,
+      emergency_contact TEXT,
+      emergency_phone TEXT,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS clinical_records (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+      appointment_id INTEGER REFERENCES appointments(id),
+      date DATE NOT NULL,
+      diagnosis TEXT,
+      treatment TEXT,
+      observations TEXT,
+      tooth_chart JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS inventory (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL CHECK(category IN ('material','medication','equipment','product')),
+      quantity NUMERIC NOT NULL DEFAULT 0,
+      unit TEXT NOT NULL,
+      min_quantity NUMERIC NOT NULL DEFAULT 5,
+      price NUMERIC,
+      supplier TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS reminders (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      date DATE NOT NULL,
+      time TIME,
+      type TEXT NOT NULL DEFAULT 'task' CHECK(type IN ('task','patient')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','done')),
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);

@@ -6,6 +6,9 @@ import { initDB } from './database';
 import usersRouter from './routes/users';
 import doctorsRouter from './routes/doctors';
 import appointmentsRouter from './routes/appointments';
+import medicalRouter from './routes/medical';
+import inventoryRouter from './routes/inventory';
+import remindersRouter from './routes/reminders';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,6 +23,9 @@ app.use(express.json());
 app.use('/api/users', usersRouter);
 app.use('/api/doctors', doctorsRouter);
 app.use('/api/appointments', appointmentsRouter);
+app.use('/api/medical', medicalRouter);
+app.use('/api/inventory', inventoryRouter);
+app.use('/api/reminders', remindersRouter);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 initDB()
