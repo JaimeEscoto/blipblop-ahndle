@@ -1,7 +1,8 @@
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
 import { Appointment } from '../api/client';
 
-export function generateAppointmentPDF(appt: Appointment) {
+export async function generateAppointmentPDF(appt: Appointment) {
   // Tarjeta horizontal compacta (tipo postal / revista)
   const W = 190;
   const H = 110;
@@ -55,12 +56,16 @@ export function generateAppointmentPDF(appt: Appointment) {
   doc.setTextColor(255, 255, 255);
   doc.text('¡Cita!', 14, 78);
 
-  // mini etiqueta en franja inferior
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
+  // Código correlativo de la cita en la franja inferior del panel
+  const code = appt.public_code || `ID${appt.id}`;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
   doc.setTextColor(...blueSoft);
-  doc.text(`N.º ${appt.id}`, 14, H - 5);
-  doc.text('TE ESPERAMOS', PW - 14, H - 5, { align: 'right' });
+  doc.text('CÓDIGO DE CITA', PW / 2, H - 8.5, { align: 'center', charSpace: 0.8 });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(...white);
+  doc.text(code, PW / 2, H - 3, { align: 'center', charSpace: 1 });
 
   // ════════════════════════════════════════════════════════
   // ÁREA DERECHA — detalles
@@ -126,8 +131,36 @@ export function generateAppointmentPDF(appt: Appointment) {
   doc.setTextColor(...blueDark);
   doc.text(appt.time, sepX + 6, by + 20);
 
+  // ── QR de la invitación (esquina inferior derecha) ──────
+  const qrSize = 28;
+  const qrX = RR - qrSize;
+  const qrY = 70;
+  const base = (typeof window !== 'undefined' && window.location?.origin)
+    ? window.location.origin
+    : 'https://blipblop-ahndle-1-fe.onrender.com';
+  const inviteUrl = `${base}/cita/${code}`;
+  try {
+    const qrDataUrl = await QRCode.toDataURL(inviteUrl, {
+      margin: 1,
+      width: 280,
+      color: { dark: '#1d3a8a', light: '#ffffff' },
+    });
+    // marco blanco para que el QR contraste sobre el fondo gris
+    doc.setFillColor(...white);
+    doc.roundedRect(qrX - 2, qrY - 2, qrSize + 4, qrSize + 4, 2, 2, 'F');
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...blue);
+    doc.text('Escanea para ver tu cita', qrX + qrSize / 2, qrY + qrSize + 5, { align: 'center' });
+  } catch {
+    // si el QR falla, el PDF se genera igual sin él
+  }
+
   // ── Detalles inferiores (médico / motivo) ───────────────
-  let dy = 72;
+  // se limita el ancho para no invadir el QR
+  const textW = qrX - 6 - RX;
+  let dy = 74;
   const chip = (label: string, value: string) => {
     if (!value) return;
     doc.setFont('helvetica', 'bold');
@@ -135,16 +168,16 @@ export function generateAppointmentPDF(appt: Appointment) {
     doc.setTextColor(...grayMid);
     doc.text(label.toUpperCase(), RX, dy);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10.5);
+    doc.setFontSize(10);
     doc.setTextColor(...ink);
-    const lines = doc.splitTextToSize(value, RR - RX);
-    doc.text(lines[0], RX, dy + 5);
-    dy += 12;
+    const lines = doc.splitTextToSize(value, textW);
+    doc.text(lines.slice(0, 2), RX, dy + 5);
+    dy += 6 + Math.min(lines.length, 2) * 5;
   };
   chip('Tu doctor', `Dr. ${appt.doctor_name}  ·  ${appt.doctor_specialty}`);
   chip('Motivo', appt.reason || 'Consulta general');
 
-  // nota al pie derecha
+  // nota al pie izquierda del área derecha
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7);
   doc.setTextColor(...grayMid);

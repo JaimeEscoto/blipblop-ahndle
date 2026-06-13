@@ -1,7 +1,20 @@
 import { Router, Request, Response } from 'express';
 import pool from '../database';
+import { generateAppointmentCode } from '../utils/code';
 
 const router = Router();
+
+// SELECT reducido para la vista pública (sin email/teléfono del paciente)
+const SELECT_PUBLIC = `
+  SELECT a.id, a.public_code, a.reason, a.status,
+    TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
+    TO_CHAR(a.time, 'HH24:MI') AS time,
+    u.name AS user_name,
+    d.name AS doctor_name, d.specialty AS doctor_specialty
+  FROM appointments a
+  JOIN users u ON a.user_id = u.id
+  JOIN doctors d ON a.doctor_id = d.id
+`;
 
 const SELECT_WITH_RELATIONS = `
   SELECT a.*,
@@ -17,6 +30,14 @@ const SELECT_WITH_RELATIONS = `
 router.get('/', async (_req: Request, res: Response) => {
   const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} ORDER BY a.date DESC, a.time DESC`);
   res.json(rows);
+});
+
+// Endpoint público: el paciente accede al escanear el QR (sin autenticación).
+// Debe declararse antes de '/:id' para no ser capturado por esa ruta.
+router.get('/public/:code', async (req: Request, res: Response) => {
+  const { rows } = await pool.query(`${SELECT_PUBLIC} WHERE a.public_code = $1`, [req.params.code]);
+  if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
+  res.json(rows[0]);
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
@@ -37,8 +58,8 @@ router.post('/', async (req: Request, res: Response) => {
   if (conflict.rows[0]) return res.status(409).json({ error: 'El médico ya tiene una cita en ese horario' });
 
   const { rows } = await pool.query(
-    'INSERT INTO appointments (user_id, doctor_id, date, time, reason, notes) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-    [user_id, doctor_id, date, time, reason || null, notes || null]
+    'INSERT INTO appointments (user_id, doctor_id, date, time, reason, notes, public_code) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+    [user_id, doctor_id, date, time, reason || null, notes || null, generateAppointmentCode()]
   );
   const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
   res.status(201).json(result[0]);

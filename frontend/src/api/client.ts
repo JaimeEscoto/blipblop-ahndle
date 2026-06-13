@@ -24,8 +24,14 @@ export interface Appointment {
   id: number; user_id: number; doctor_id: number;
   date: string; time: string; reason: string | null;
   status: 'scheduled' | 'completed' | 'cancelled';
-  notes: string | null; created_at: string;
+  notes: string | null; created_at: string; public_code: string | null;
   user_name: string; user_email: string; user_phone: string | null;
+  doctor_name: string; doctor_specialty: string;
+}
+export interface PublicAppointment {
+  id: number; public_code: string; reason: string | null;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  date: string; time: string; user_name: string;
   doctor_name: string; doctor_specialty: string;
 }
 export interface MedicalInfo {
@@ -72,6 +78,7 @@ export const api = {
     create: (d: any) => request<Appointment>('/appointments', { method:'POST', body:JSON.stringify(d) }),
     update: (id: number, d: any) => request<Appointment>(`/appointments/${id}`, { method:'PUT', body:JSON.stringify(d) }),
     updateStatus: (id: number, status: string) => request<Appointment>(`/appointments/${id}/status`, { method:'PATCH', body:JSON.stringify({ status }) }),
+    getPublic: (code: string) => request<PublicAppointment>(`/appointments/public/${code}`),
     delete: (id: number) => request<void>(`/appointments/${id}`, { method:'DELETE' }),
   },
   medical: {

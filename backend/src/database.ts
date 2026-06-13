@@ -1,6 +1,7 @@
 import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 import { Pool } from 'pg';
+import { generateAppointmentCode } from './utils/code';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -89,6 +90,23 @@ export async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  // --- Migración: código público para las citas (QR de invitación) ---
+  await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS public_code TEXT`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS appointments_public_code_idx ON appointments(public_code)`);
+  // Rellena las citas existentes que aún no tienen código
+  const { rows: pending } = await pool.query(`SELECT id FROM appointments WHERE public_code IS NULL`);
+  for (const r of pending) {
+    let ok = false;
+    while (!ok) {
+      try {
+        await pool.query(`UPDATE appointments SET public_code=$1 WHERE id=$2`, [generateAppointmentCode(), r.id]);
+        ok = true;
+      } catch {
+        // colisión improbable de código: reintenta con otro
+      }
+    }
+  }
 }
 
 export default pool;

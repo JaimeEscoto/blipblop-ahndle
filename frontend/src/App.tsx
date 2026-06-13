@@ -6,10 +6,13 @@ import Patients from './pages/Patients';
 import Records from './pages/Records';
 import Inventory from './pages/Inventory';
 import Reminders from './pages/Reminders';
+import PublicAppointment from './pages/PublicAppointment';
 
 export default function App() {
   return (
     <Routes>
+      {/* Ruta pública (paciente al escanear el QR) — sin layout de la clínica */}
+      <Route path="/cita/:code" element={<PublicAppointment />} />
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/citas" replace />} />
         <Route path="/citas"         element={<Appointments />} />
