@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, Appointment, Doctor, User } from '../api/client';
-import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -28,6 +28,9 @@ export default function Appointments() {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<Status | 'all'>('all');
+  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modal, setModal] = useState<{ type: 'create' | 'edit'; appt?: Appointment } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -145,6 +148,90 @@ export default function Appointments() {
 
   const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' });
 
+  // ── Tarjeta de cita reutilizable (lista y calendario) ──
+  const ApptCard = (a: Appointment) => {
+    const cfg = STATUS_CONFIG[a.status];
+    const Icon = cfg.icon;
+    return (
+      <div key={a.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.className}`}>
+                <Icon className="w-3 h-3" />{cfg.label}
+              </span>
+            </div>
+            <p className="font-semibold text-gray-900 truncate">{a.user_name}</p>
+            <p className="text-sm text-gray-600">Dr. {a.doctor_name} · <span className="text-gray-400">{a.doctor_specialty}</span></p>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Calendar className="w-3.5 h-3.5" />{formatDate(a.date)}
+              </span>
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Clock className="w-3.5 h-3.5" />{a.time}
+              </span>
+            </div>
+            {a.reason && <p className="text-xs text-gray-400 mt-1 truncate">{a.reason}</p>}
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Descargar PDF">
+              <Download className="w-4 h-4" />
+            </button>
+            <button onClick={() => openEdit(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button onClick={() => setDeleteId(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        {a.status === 'scheduled' && (
+          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+            <button onClick={() => openComplete(a)} className="flex-1 text-xs py-1.5 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100">
+              Marcar completada
+            </button>
+            <button onClick={() => handleStatusChange(a.id, 'cancelled')} className="flex-1 text-xs py-1.5 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100">
+              Cancelar cita
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Lógica del calendario mensual ──
+  const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const monthLabel = capFirst(calMonth.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }));
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Citas (filtradas por estado) agrupadas por fecha YYYY-MM-DD
+  const byDate = appointments.reduce<Record<string, Appointment[]>>((acc, a) => {
+    if (filterStatus !== 'all' && a.status !== filterStatus) return acc;
+    (acc[a.date] = acc[a.date] || []).push(a);
+    return acc;
+  }, {});
+
+  // Celdas del mes: arranca en lunes
+  const buildCalendarCells = () => {
+    const year = calMonth.getFullYear(), month = calMonth.getMonth();
+    const first = new Date(year, month, 1);
+    const offset = (first.getDay() + 6) % 7; // lunes = 0
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: (string | null)[] = [];
+    for (let i = 0; i < offset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    }
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  };
+
+  const changeMonth = (delta: number) => {
+    setSelectedDate(null);
+    setCalMonth(m => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
@@ -157,86 +244,130 @@ export default function Appointments() {
         </button>
       </div>
 
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Buscar paciente, médico o motivo..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+      {/* Selector de vista */}
+      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+        <button onClick={() => setView('list')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'list' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+          <List className="w-4 h-4" /> Lista
+        </button>
+        <button onClick={() => setView('calendar')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'calendar' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+          <CalendarDays className="w-4 h-4" /> Calendario
+        </button>
       </div>
 
-      {/* Status filter */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-        {(['all', 'scheduled', 'completed', 'cancelled'] as const).map(s => (
-          <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {s === 'all' ? 'Todas' : STATUS_CONFIG[s].label}
-          </button>
-        ))}
-      </div>
+      {view === 'list' && (
+        <>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Buscar paciente, médico o motivo..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
 
-      <div className="space-y-3">
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm">No se encontraron citas</div>
-        )}
-        {filtered.map(a => {
-          const cfg = STATUS_CONFIG[a.status];
-          const Icon = cfg.icon;
-          return (
-            <div key={a.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.className}`}>
-                      <Icon className="w-3 h-3" />{cfg.label}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-gray-900 truncate">{a.user_name}</p>
-                  <p className="text-sm text-gray-600">Dr. {a.doctor_name} · <span className="text-gray-400">{a.doctor_specialty}</span></p>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="flex items-center gap-1 text-xs text-gray-500">
-                      <Calendar className="w-3.5 h-3.5" />{formatDate(a.date)}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-gray-500">
-                      <Clock className="w-3.5 h-3.5" />{a.time}
-                    </span>
-                  </div>
-                  {a.reason && <p className="text-xs text-gray-400 mt-1 truncate">{a.reason}</p>}
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Descargar PDF">
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => openEdit(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => setDeleteId(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              {/* Quick status actions */}
-              {a.status === 'scheduled' && (
-                <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
-                  <button onClick={() => openComplete(a)} className="flex-1 text-xs py-1.5 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100">
-                    Marcar completada
-                  </button>
-                  <button onClick={() => handleStatusChange(a.id, 'cancelled')} className="flex-1 text-xs py-1.5 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100">
-                    Cancelar cita
-                  </button>
-                </div>
-              )}
+          {/* Status filter */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+            {(['all', 'scheduled', 'completed', 'cancelled'] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => setFilterStatus(s)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {s === 'all' ? 'Todas' : STATUS_CONFIG[s].label}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-gray-400 text-sm">No se encontraron citas</div>
+            )}
+            {filtered.map(a => ApptCard(a))}
+          </div>
+        </>
+      )}
+
+      {view === 'calendar' && (
+        <div>
+          {/* Cabecera del mes */}
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={() => changeMonth(-1)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
+            <span className="font-semibold text-gray-900">{monthLabel}</span>
+            <button onClick={() => changeMonth(1)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
+          </div>
+
+          {/* Filtro de estado también en calendario */}
+          <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+            {(['all', 'scheduled', 'completed', 'cancelled'] as const).map(s => (
+              <button key={s} onClick={() => setFilterStatus(s)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {s === 'all' ? 'Todas' : STATUS_CONFIG[s].label}
+              </button>
+            ))}
+          </div>
+
+          {/* Cuadrícula */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-2">
+            <div className="grid grid-cols-7 mb-1">
+              {WEEKDAYS.map(d => <div key={d} className="text-center text-[11px] font-medium text-gray-400 py-1">{d}</div>)}
             </div>
-          );
-        })}
-      </div>
+            <div className="grid grid-cols-7 gap-1">
+              {buildCalendarCells().map((cell, i) => {
+                if (!cell) return <div key={`e${i}`} className="aspect-square" />;
+                const day = Number(cell.split('-')[2]);
+                const dayAppts = byDate[cell] || [];
+                const isToday = cell === todayStr;
+                const isSelected = cell === selectedDate;
+                return (
+                  <button key={cell} onClick={() => setSelectedDate(isSelected ? null : cell)}
+                    className={`aspect-square rounded-lg border flex flex-col items-center justify-start p-1 transition-colors ${
+                      isSelected ? 'border-blue-500 bg-blue-50' : isToday ? 'border-blue-200 bg-blue-50/40' : 'border-gray-100 hover:bg-gray-50'
+                    }`}>
+                    <span className={`text-xs ${isToday ? 'font-bold text-blue-600' : 'text-gray-700'}`}>{day}</span>
+                    {dayAppts.length > 0 && (
+                      <div className="mt-auto flex items-center gap-0.5 flex-wrap justify-center">
+                        {dayAppts.slice(0, 3).map(a => (
+                          <span key={a.id} className={`w-1.5 h-1.5 rounded-full ${
+                            a.status === 'completed' ? 'bg-green-500' : a.status === 'cancelled' ? 'bg-red-400' : 'bg-blue-500'
+                          }`} />
+                        ))}
+                        {dayAppts.length > 3 && <span className="text-[8px] text-gray-400 leading-none">+{dayAppts.length - 3}</span>}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Leyenda */}
+          <div className="flex gap-3 mt-2 mb-4 text-[11px] text-gray-500">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />Programada</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />Completada</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />Cancelada</span>
+          </div>
+
+          {/* Citas del día seleccionado */}
+          {selectedDate && (
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                {capFirst(new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }))}
+              </p>
+              <div className="space-y-3">
+                {(byDate[selectedDate] || []).length === 0
+                  ? <div className="text-center py-8 text-gray-400 text-sm">Sin citas este día</div>
+                  : [...(byDate[selectedDate] || [])].sort((a, b) => a.time.localeCompare(b.time)).map(a => ApptCard(a))
+                }
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {modal && (
         <Modal title={modal.type === 'create' ? 'Nueva Cita' : 'Editar Cita'} onClose={() => setModal(null)}>
