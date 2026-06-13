@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, User, Doctor, ClinicalRecord, MedicalInfo } from '../api/client';
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronUp, Heart, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronUp, Heart, FileText, Activity } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Odontogram from '../components/Odontogram';
@@ -17,6 +17,7 @@ export default function Records() {
   const [modal, setModal] = useState<{ type: 'record' | 'info'; userId: number; record?: ClinicalRecord } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'history' | 'info' | 'odontogram'>('history');
+  const [openChart, setOpenChart] = useState<number | null>(null);
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -155,6 +156,20 @@ export default function Records() {
                               <button onClick={() => setDeleteId(r.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
                           </div>
+                          {r.tooth_chart && Object.keys(r.tooth_chart).length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-50">
+                              <button onClick={() => setOpenChart(openChart === r.id ? null : r.id)}
+                                className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline">
+                                <Activity className="w-3.5 h-3.5" />
+                                {openChart === r.id ? 'Ocultar odontograma' : 'Ver odontograma de esta entrada'}
+                              </button>
+                              {openChart === r.id && (
+                                <div className="mt-3">
+                                  <Odontogram value={r.tooth_chart} onChange={() => {}} readOnly />
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))
                     }

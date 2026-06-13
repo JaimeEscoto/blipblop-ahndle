@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, Al
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Odontogram from '../components/Odontogram';
 
 type Status = 'scheduled' | 'completed' | 'cancelled';
 
@@ -33,6 +34,13 @@ export default function Appointments() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Modal de completar cita → entrada clínica con odontograma
+  const [completeAppt, setCompleteAppt] = useState<Appointment | null>(null);
+  const [completeForm, setCompleteForm] = useState({ diagnosis: '', treatment: '', observations: '', tooth_chart: {} as Record<string, string> });
+  const [loadingChart, setLoadingChart] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState('');
+
   const load = useCallback(async () => {
     const [appts, docs, usrs] = await Promise.all([api.appointments.list(), api.doctors.list(), api.users.list()]);
     setAppointments(appts);
@@ -54,6 +62,14 @@ export default function Appointments() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Completar requiere entrada al historial: redirigir al flujo guiado
+    if (modal?.type === 'edit' && form.status === 'completed' && modal.appt!.status !== 'completed') {
+      setError('');
+      const appt = modal.appt!;
+      setModal(null);
+      await openComplete(appt);
+      return;
+    }
     setError(''); setLoading(true);
     try {
       const payload = { user_id: Number(form.user_id), doctor_id: Number(form.doctor_id), date: form.date, time: form.time, reason: form.reason, notes: form.notes, status: form.status };
@@ -73,6 +89,50 @@ export default function Appointments() {
   const handleStatusChange = async (id: number, status: Status) => {
     await api.appointments.updateStatus(id, status);
     await load();
+  };
+
+  // Abrir modal de completar: carga el odontograma previo del paciente
+  const openComplete = async (a: Appointment) => {
+    setCompleteAppt(a);
+    setCompleteForm({ diagnosis: a.reason || '', treatment: '', observations: '', tooth_chart: {} });
+    setCompleteError('');
+    setLoadingChart(true);
+    try {
+      const recs = await api.medical.getRecords(a.user_id);
+      // El registro más reciente trae el odontograma "como estaba antes"
+      const lastChart = recs.length > 0 ? (recs[0].tooth_chart || {}) : {};
+      setCompleteForm(f => ({ ...f, tooth_chart: { ...lastChart } }));
+    } catch {
+      // si falla la carga, se parte de un odontograma vacío
+    } finally {
+      setLoadingChart(false);
+    }
+  };
+
+  // Guardar entrada clínica y recién entonces finalizar la cita
+  const handleComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!completeAppt) return;
+    setCompleteError(''); setCompleting(true);
+    try {
+      await api.medical.createRecord({
+        user_id: completeAppt.user_id,
+        doctor_id: completeAppt.doctor_id,
+        appointment_id: completeAppt.id,
+        date: new Date().toISOString().split('T')[0],
+        diagnosis: completeForm.diagnosis,
+        treatment: completeForm.treatment,
+        observations: completeForm.observations,
+        tooth_chart: completeForm.tooth_chart,
+      });
+      await api.appointments.updateStatus(completeAppt.id, 'completed');
+      await load();
+      setCompleteAppt(null);
+    } catch (err: any) {
+      setCompleteError(err.message);
+    } finally {
+      setCompleting(false);
+    }
   };
 
   const filtered = appointments.filter(a => {
@@ -165,7 +225,7 @@ export default function Appointments() {
               {/* Quick status actions */}
               {a.status === 'scheduled' && (
                 <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
-                  <button onClick={() => handleStatusChange(a.id, 'completed')} className="flex-1 text-xs py-1.5 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100">
+                  <button onClick={() => openComplete(a)} className="flex-1 text-xs py-1.5 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100">
                     Marcar completada
                   </button>
                   <button onClick={() => handleStatusChange(a.id, 'cancelled')} className="flex-1 text-xs py-1.5 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100">
@@ -233,6 +293,56 @@ export default function Appointments() {
               </button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {loading ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {completeAppt && (
+        <Modal title="Completar cita — entrada al historial" onClose={() => setCompleteAppt(null)}>
+          <form onSubmit={handleComplete} className="space-y-3">
+            {completeError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{completeError}</p>}
+
+            <div className="bg-gray-50 rounded-lg px-3 py-2 text-sm">
+              <p className="font-semibold text-gray-900">{completeAppt.user_name}</p>
+              <p className="text-xs text-gray-500">Dr. {completeAppt.doctor_name} · {completeAppt.doctor_specialty}</p>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Para finalizar la cita debes registrar una entrada en el historial del paciente.
+            </p>
+
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Diagnóstico</label>
+              <input className="input" value={completeForm.diagnosis} onChange={e => setCompleteForm({ ...completeForm, diagnosis: e.target.value })} placeholder="Caries en molar superior..." />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Tratamiento realizado</label>
+              <input className="input" value={completeForm.treatment} onChange={e => setCompleteForm({ ...completeForm, treatment: e.target.value })} placeholder="Obturación con resina compuesta..." />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Observaciones</label>
+              <textarea className="input resize-none" rows={2} value={completeForm.observations} onChange={e => setCompleteForm({ ...completeForm, observations: e.target.value })} placeholder="Próxima cita en 6 meses..." />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-2 block">Odontograma</label>
+              <p className="text-[11px] text-gray-400 mb-2">
+                Cargado como estaba en el último registro. Ajusta lo que cambió en esta cita; se guardará como un nuevo registro del historial.
+              </p>
+              {loadingChart
+                ? <p className="text-sm text-gray-400 text-center py-4">Cargando odontograma...</p>
+                : <Odontogram value={completeForm.tooth_chart} onChange={tc => setCompleteForm({ ...completeForm, tooth_chart: tc })} />
+              }
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setCompleteAppt(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                Cancelar
+              </button>
+              <button type="submit" disabled={completing || loadingChart} className="flex-1 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-60">
+                {completing ? 'Guardando...' : 'Guardar y completar'}
               </button>
             </div>
           </form>
