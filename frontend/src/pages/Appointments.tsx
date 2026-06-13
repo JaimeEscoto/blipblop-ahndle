@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, Appointment, Doctor, User } from '../api/client';
-import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
+import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -150,6 +151,9 @@ export default function Appointments() {
                   {a.reason && <p className="text-xs text-gray-400 mt-1 truncate">{a.reason}</p>}
                 </div>
                 <div className="flex gap-1 shrink-0">
+                  <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Descargar PDF">
+                    <Download className="w-4 h-4" />
+                  </button>
                   <button onClick={() => openEdit(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
                     <Pencil className="w-4 h-4" />
                   </button>
