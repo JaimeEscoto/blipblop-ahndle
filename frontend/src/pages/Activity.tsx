@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, ActivityLog, ActivityAccount } from '../api/client';
 import {
-  Plus, Pencil, Trash2, LogIn, Activity as ActivityIcon, RefreshCw, ChevronDown, ChevronRight,
+  Plus, Pencil, Trash2, LogIn, Eye, Activity as ActivityIcon, RefreshCw, ChevronDown, ChevronRight,
 } from 'lucide-react';
 
 // Módulos disponibles para filtrar (debe coincidir con las etiquetas del backend).
@@ -9,9 +9,37 @@ const ENTITIES = ['Paciente', 'Médico', 'Cita', 'Inventario', 'Recordatorio', '
 
 function actionIcon(action: string) {
   if (action.startsWith('Inició')) return { Icon: LogIn, color: 'text-indigo-600', bg: 'bg-indigo-100' };
+  if (action.startsWith('Consultó')) return { Icon: Eye, color: 'text-sky-600', bg: 'bg-sky-100' };
   if (action.startsWith('Creó')) return { Icon: Plus, color: 'text-green-600', bg: 'bg-green-100' };
   if (action.startsWith('Eliminó')) return { Icon: Trash2, color: 'text-red-600', bg: 'bg-red-100' };
   return { Icon: Pencil, color: 'text-amber-600', bg: 'bg-amber-100' };
+}
+
+// Traduce las claves técnicas a etiquetas legibles para el detalle.
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Nombre', email: 'Correo', phone: 'Teléfono', document_id: 'Documento',
+  document_type: 'Tipo de documento', birth_date: 'Fecha de nacimiento', gender: 'Género',
+  address: 'Dirección', city: 'Ciudad', department: 'Departamento', occupation: 'Ocupación',
+  specialty: 'Especialidad', license_number: 'No. de licencia',
+  user_id: 'Paciente (id)', doctor_id: 'Médico (id)', appointment_id: 'Cita (id)',
+  date: 'Fecha', time: 'Hora', reason: 'Motivo', notes: 'Notas', status: 'Estado',
+  diagnosis: 'Diagnóstico', treatment: 'Tratamiento', observations: 'Observaciones',
+  blood_type: 'Tipo de sangre', allergies: 'Alergias', medical_conditions: 'Condiciones médicas',
+  current_medications: 'Medicamentos actuales', emergency_contact: 'Contacto de emergencia',
+  emergency_phone: 'Tel. de emergencia', category: 'Categoría', quantity: 'Cantidad',
+  unit: 'Unidad', min_quantity: 'Cantidad mínima', price: 'Precio', supplier: 'Proveedor',
+  title: 'Título', description: 'Descripción', type: 'Tipo', tooth_chart: 'Odontograma',
+};
+const STATUS_LABELS: Record<string, string> = {
+  cancelled: 'Cancelada', completed: 'Completada', scheduled: 'Programada',
+  done: 'Completado', pending: 'Pendiente',
+};
+
+function formatValue(key: string, value: any): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (key === 'status') return STATUS_LABELS[value] || String(value);
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
 }
 
 export default function Activity() {
@@ -104,9 +132,22 @@ export default function Activity() {
               </button>
               {open && hasDetails && (
                 <div className="px-4 pb-4 -mt-1">
-                  <pre className="text-xs bg-gray-50 rounded-lg p-3 overflow-x-auto text-gray-600 border border-gray-100">
-                    {JSON.stringify(log.details, null, 2)}
-                  </pre>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2 font-medium">Detalle de la operación</p>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                      {Object.entries(log.details!).map(([k, v]) => (
+                        <div key={k} className="flex gap-2 text-sm">
+                          <dt className="text-gray-500 shrink-0">{FIELD_LABELS[k] || k}:</dt>
+                          <dd className="text-gray-800 font-medium break-words min-w-0">{formatValue(k, v)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {log.path && (
+                      <p className="text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-100">
+                        {log.method} {log.path}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

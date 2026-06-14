@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import pool from './database';
 
-// Etiquetas legibles (en español) para cada módulo del sistema.
-// La clave es el primer segmento de la ruta (o "modulo/subrecurso").
+// Etiquetas legibles (en español) de cada módulo. Se usan para filtrar.
 const ENTITY_LABELS: Record<string, string> = {
   users: 'Paciente',
   doctors: 'Médico',
@@ -12,13 +11,6 @@ const ENTITY_LABELS: Record<string, string> = {
   invitations: 'Invitación',
   'medical/records': 'Registro clínico',
   'medical/info': 'Información médica',
-};
-
-const ACTION_VERBS: Record<string, string> = {
-  POST: 'Creó',
-  PUT: 'Editó',
-  PATCH: 'Actualizó',
-  DELETE: 'Eliminó',
 };
 
 // Campos sensibles que nunca se guardan en la bitácora.
@@ -34,21 +26,109 @@ function sanitize(body: any) {
   return Object.keys(clone).length ? clone : null;
 }
 
-// A partir de una ruta como "/api/medical/records/5" deduce:
-//   entity: "Registro clínico", entityId: "5"
-function resolveEntity(path: string): { entity: string; entityId: string | null } {
-  const segments = path.replace(/^\/api\//, '').split('/').filter(Boolean);
-  if (!segments.length) return { entity: path, entityId: null };
+const STATUS_ES: Record<string, string> = {
+  cancelled: 'cancelada', completed: 'completada', scheduled: 'programada',
+  done: 'completado', pending: 'pendiente',
+};
 
-  // ¿Coincide un módulo con subrecurso? p.ej. medical/records
-  const twoLevel = `${segments[0]}/${segments[1] || ''}`;
-  if (ENTITY_LABELS[twoLevel]) {
-    return { entity: ENTITY_LABELS[twoLevel], entityId: segments[2] || null };
+interface BuiltEntry {
+  action: string;
+  entity: string;
+  entityId: string | null;
+  summary: string;
+}
+
+// Construye una descripción legible de la operación. Devuelve null cuando
+// la operación no debe registrarse (p.ej. GET de listados o sondeos).
+function buildEntry(
+  method: string,
+  originalUrl: string,
+  body: any,
+  resp: any
+): BuiltEntry | null {
+  const seg = originalUrl.split('?')[0].replace(/^\/api\//, '').split('/').filter(Boolean);
+  const [mod, a, b] = seg;
+  const r = resp && typeof resp === 'object' ? resp : {};
+  // id del recurso: el de la URL, o el del objeto devuelto.
+  const urlId = [a, b].find(s => /^\d+$/.test(s || '')) || null;
+  const id = urlId || (r.id != null ? String(r.id) : null);
+  const tag = (label: string) => (id ? `${label} #${id}` : label);
+
+  // --- Consultas (GET): solo las sensibles, nunca los listados ---
+  if (method === 'GET') {
+    if (mod === 'medical' && a === 'records' && b) {
+      return { action: 'Consultó', entity: 'Registro clínico', entityId: b, summary: `Consultó el expediente del paciente #${b}` };
+    }
+    if (mod === 'medical' && a === 'info' && b) {
+      return { action: 'Consultó', entity: 'Información médica', entityId: b, summary: `Consultó la información médica del paciente #${b}` };
+    }
+    return null; // listados y sondeos no se registran
   }
-  const label = ENTITY_LABELS[segments[0]] || segments[0];
-  // El primer segmento numérico tras el módulo se toma como id.
-  const entityId = segments.find((s, i) => i > 0 && /^\d+$/.test(s)) || null;
-  return { entity: label, entityId };
+
+  switch (mod) {
+    case 'appointments': {
+      const who = r.user_name ? ` de ${r.user_name}` : '';
+      const withDoc = r.doctor_name ? ` con ${r.doctor_name}` : '';
+      const when = r.date ? ` el ${r.date}${r.time ? ` a las ${r.time}` : ''}` : '';
+      if (method === 'POST') return { action: 'Creó', entity: 'Cita', entityId: id, summary: `Agendó una cita${who}${withDoc}${when}` };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Cita', entityId: id, summary: tag('Eliminó la cita') };
+      if (a && b === 'status') {
+        const est = STATUS_ES[body?.status] || body?.status || '';
+        const verb = body?.status === 'cancelled' ? 'Canceló' : body?.status === 'completed' ? 'Completó' : 'Reactivó';
+        return { action: 'Editó', entity: 'Cita', entityId: id, summary: `${verb} la cita${who}${withDoc} (ahora ${est})` };
+      }
+      return { action: 'Editó', entity: 'Cita', entityId: id, summary: tag(`Editó la cita${who}`) };
+    }
+    case 'users': {
+      const name = r.name ? ` ${r.name}` : '';
+      if (method === 'POST') return { action: 'Creó', entity: 'Paciente', entityId: id, summary: `Registró al paciente${name}` };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Paciente', entityId: id, summary: tag('Eliminó al paciente') };
+      return { action: 'Editó', entity: 'Paciente', entityId: id, summary: name ? tag(`Editó los datos de${name}`) : tag('Editó un paciente') };
+    }
+    case 'doctors': {
+      const name = r.name ? ` ${r.name}` : '';
+      const spec = r.specialty ? ` (${r.specialty})` : '';
+      if (method === 'POST') return { action: 'Creó', entity: 'Médico', entityId: id, summary: `Agregó al médico${name}${spec}` };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Médico', entityId: id, summary: tag('Eliminó un médico') };
+      return { action: 'Editó', entity: 'Médico', entityId: id, summary: name ? tag(`Editó al médico${name}`) : tag('Editó un médico') };
+    }
+    case 'inventory': {
+      const name = r.name ? ` "${r.name}"` : '';
+      if (method === 'POST') return { action: 'Creó', entity: 'Inventario', entityId: id, summary: `Agregó al inventario${name}` };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Inventario', entityId: id, summary: tag('Eliminó un producto del inventario') };
+      if (b === 'quantity') return { action: 'Editó', entity: 'Inventario', entityId: id, summary: `Ajustó la existencia de${name || ' un producto'} a ${r.quantity ?? body?.quantity} ${r.unit ?? ''}`.trim() };
+      return { action: 'Editó', entity: 'Inventario', entityId: id, summary: name ? `Editó el producto${name}` : tag('Editó un producto') };
+    }
+    case 'reminders': {
+      const title = r.title ? ` "${r.title}"` : '';
+      if (method === 'POST') return { action: 'Creó', entity: 'Recordatorio', entityId: id, summary: `Creó el recordatorio${title}` };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Recordatorio', entityId: id, summary: tag('Eliminó un recordatorio') };
+      if (b === 'status') {
+        const verb = (r.status ?? body?.status) === 'done' ? 'Completó' : 'Reabrió';
+        return { action: 'Editó', entity: 'Recordatorio', entityId: id, summary: `${verb} el recordatorio${title}` };
+      }
+      return { action: 'Editó', entity: 'Recordatorio', entityId: id, summary: tag('Editó un recordatorio') };
+    }
+    case 'invitations': {
+      if (method === 'POST') return { action: 'Creó', entity: 'Invitación', entityId: id, summary: `Invitó a ${r.email || body?.email || 'un usuario'}` };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Invitación', entityId: id, summary: tag('Eliminó una invitación') };
+      return { action: 'Editó', entity: 'Invitación', entityId: id, summary: tag('Modificó una invitación') };
+    }
+    case 'medical': {
+      if (a === 'info') {
+        return { action: 'Editó', entity: 'Información médica', entityId: b || id, summary: `Actualizó la información médica del paciente${b ? ` #${b}` : ''}` };
+      }
+      // records
+      const dx = body?.diagnosis ? `: ${body.diagnosis}` : '';
+      if (method === 'POST') return { action: 'Creó', entity: 'Registro clínico', entityId: id, summary: `Registró una atención clínica${dx}` };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Registro clínico', entityId: id, summary: tag('Eliminó un registro clínico') };
+      return { action: 'Editó', entity: 'Registro clínico', entityId: id, summary: tag('Editó un registro clínico') };
+    }
+    default: {
+      const verb = method === 'POST' ? 'Creó' : method === 'DELETE' ? 'Eliminó' : 'Actualizó';
+      return { action: verb, entity: mod || originalUrl, entityId: id, summary: tag(`${verb} ${mod || ''}`.trim()) };
+    }
+  }
 }
 
 interface ActivityInput {
@@ -92,12 +172,14 @@ export async function recordActivity(data: ActivityInput) {
   }
 }
 
-// Middleware global: registra automáticamente toda operación que modifica
-// datos (POST/PUT/PATCH/DELETE) y termina correctamente.
+// Middleware global: registra automáticamente lo que hace cada usuario.
+// Operaciones que modifican datos (POST/PUT/PATCH/DELETE) y consultas
+// sensibles (abrir un expediente / la información médica de un paciente).
 export function auditLog(req: Request, res: Response, next: NextFunction) {
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+  const tracked = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  if (!tracked) return next();
 
-  // Capturamos el cuerpo de la respuesta para conocer el id de lo creado.
+  // Capturamos el cuerpo de la respuesta para conocer nombres e ids reales.
   const originalJson = res.json.bind(res);
   let responseBody: any;
   res.json = (body: any) => {
@@ -106,23 +188,20 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
   };
 
   res.on('finish', () => {
-    // Solo operaciones exitosas y de usuarios autenticados.
-    if (res.statusCode >= 400) return;
-    if (!req.account) return;
+    if (res.statusCode >= 400) return;        // solo operaciones exitosas
+    if (!req.account) return;                  // solo usuarios autenticados
 
-    const { entity, entityId } = resolveEntity(req.path);
-    const verb = ACTION_VERBS[req.method] || req.method;
-    const id = entityId || (responseBody && responseBody.id ? String(responseBody.id) : null);
-    const summary = `${verb} ${entity}${id ? ` #${id}` : ''}`;
+    const entry = buildEntry(req.method, req.originalUrl, req.body, responseBody);
+    if (!entry) return;                        // listados/sondeos: no se registran
 
     recordActivity({
       accountId: req.account.id,
       accountEmail: req.account.email,
       accountName: req.account.name,
-      action: verb,
-      entity,
-      entityId: id,
-      summary,
+      action: entry.action,
+      entity: entry.entity,
+      entityId: entry.entityId,
+      summary: entry.summary,
       method: req.method,
       path: req.originalUrl,
       statusCode: res.statusCode,
