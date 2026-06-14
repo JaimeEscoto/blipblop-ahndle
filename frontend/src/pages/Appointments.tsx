@@ -335,22 +335,25 @@ export default function Appointments() {
                 const isToday = cell === todayStr;
                 const isSelected = cell === selectedDate;
                 const chipCls: Record<Status, string> = {
-                  scheduled: 'bg-blue-100 text-blue-700',
-                  completed: 'bg-green-100 text-green-700',
-                  cancelled: 'bg-red-100 text-red-600 line-through',
+                  scheduled: 'bg-blue-50 border-blue-500 text-blue-900',
+                  completed: 'bg-green-50 border-green-500 text-green-900',
+                  cancelled: 'bg-red-50 border-red-400 text-red-700',
                 };
                 return (
                   <button key={cell} onClick={() => setSelectedDate(isSelected ? null : cell)}
-                    className={`min-h-[80px] rounded-lg border flex flex-col items-stretch p-1 text-left transition-colors overflow-hidden ${
+                    className={`min-h-[96px] rounded-lg border flex flex-col items-stretch p-1 text-left transition-colors overflow-hidden ${
                       isSelected ? 'border-blue-500 bg-blue-50' : isToday ? 'border-blue-200 bg-blue-50/40' : 'border-gray-100 hover:bg-gray-50'
                     }`}>
                     <span className={`text-xs mb-0.5 ${isToday ? 'font-bold text-blue-600' : 'text-gray-500'}`}>{day}</span>
                     <div className="flex flex-col gap-0.5">
                       {dayAppts.slice(0, 3).map(a => (
-                        <span key={a.id} className={`text-[9px] leading-tight rounded px-1 py-0.5 truncate ${chipCls[a.status]}`}
-                          title={`${a.time} · ${a.user_name} · Dr. ${a.doctor_name}`}>
-                          <span className="font-semibold">{a.time}</span> {a.user_name.split(' ')[0]}
-                        </span>
+                        <div key={a.id} className={`rounded border-l-2 px-1 py-0.5 leading-tight ${chipCls[a.status]}`}
+                          title={`${a.time} · ${a.user_name} · Dr. ${a.doctor_name} (${a.doctor_specialty})${a.reason ? ' · ' + a.reason : ''}`}>
+                          <p className="text-[9px] font-semibold truncate">
+                            {a.time} {a.user_name}{a.status === 'cancelled' && ' ✕'}
+                          </p>
+                          <p className="text-[8px] opacity-70 truncate">Dr. {a.doctor_name}</p>
+                        </div>
                       ))}
                       {dayAppts.length > 3 && <span className="text-[9px] text-gray-400 px-1">+{dayAppts.length - 3} más</span>}
                     </div>
