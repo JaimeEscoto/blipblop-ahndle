@@ -110,6 +110,18 @@ export async function initDB() {
     );
   `);
 
+  // --- Migración: datos demográficos del paciente (Honduras) ---
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS document_type TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS occupation TEXT;
+    ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+  `);
+
   // --- Superusuario: siempre tiene acceso, sin invitación ---
   const superEmail = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();
   await pool.query(

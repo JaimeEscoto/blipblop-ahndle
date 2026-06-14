@@ -31,8 +31,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export interface User {
-  id: number; name: string; email: string;
-  phone: string | null; document_id: string | null; created_at: string;
+  id: number; name: string; email: string | null;
+  phone: string | null; document_id: string | null;
+  document_type: string | null; birth_date: string | null;
+  gender: string | null; address: string | null;
+  city: string | null; department: string | null;
+  occupation: string | null; created_at: string;
 }
 export interface Doctor {
   id: number; name: string; specialty: string; email: string;
