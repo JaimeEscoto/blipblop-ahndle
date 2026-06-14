@@ -47,7 +47,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-gradient-to-r from-[#0f2f4f] via-[#1e6f9f] to-[#36c1d6] text-white shadow-md sticky top-0 z-30">
+      <header className="bg-blue-900 text-white shadow-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">
             <span className="bg-white rounded-xl px-3.5 py-2 shadow-sm">
