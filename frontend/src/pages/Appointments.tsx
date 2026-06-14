@@ -54,7 +54,9 @@ export default function Appointments() {
   useEffect(() => { load(); }, [load]);
 
   const openCreate = () => {
-    setForm({ ...EMPTY_FORM, date: new Date().toISOString().split('T')[0] });
+    const d = new Date();
+    const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setForm({ ...EMPTY_FORM, date: local });
     setError(''); setModal({ type: 'create' });
   };
 
@@ -72,6 +74,15 @@ export default function Appointments() {
       setModal(null);
       await openComplete(appt);
       return;
+    }
+    // No permitir agendar en el pasado (al crear o al reprogramar la fecha/hora)
+    const changedDateTime = modal?.type === 'create' || form.date !== modal?.appt?.date || form.time !== modal?.appt?.time;
+    if (changedDateTime && form.date && form.time) {
+      const when = new Date(`${form.date}T${form.time}`);
+      if (when.getTime() < Date.now()) {
+        setError('No se pueden agendar citas en una fecha u hora pasada.');
+        return;
+      }
     }
     setError(''); setLoading(true);
     try {
@@ -203,7 +214,7 @@ export default function Appointments() {
   const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const monthLabel = capFirst(calMonth.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }));
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
 
   // Citas (filtradas por estado) agrupadas por fecha YYYY-MM-DD
   const byDate = appointments.reduce<Record<string, Appointment[]>>((acc, a) => {
@@ -318,27 +329,31 @@ export default function Appointments() {
             </div>
             <div className="grid grid-cols-7 gap-1">
               {buildCalendarCells().map((cell, i) => {
-                if (!cell) return <div key={`e${i}`} className="aspect-square" />;
+                if (!cell) return <div key={`e${i}`} className="min-h-[80px]" />;
                 const day = Number(cell.split('-')[2]);
-                const dayAppts = byDate[cell] || [];
+                const dayAppts = [...(byDate[cell] || [])].sort((a, b) => a.time.localeCompare(b.time));
                 const isToday = cell === todayStr;
                 const isSelected = cell === selectedDate;
+                const chipCls: Record<Status, string> = {
+                  scheduled: 'bg-blue-100 text-blue-700',
+                  completed: 'bg-green-100 text-green-700',
+                  cancelled: 'bg-red-100 text-red-600 line-through',
+                };
                 return (
                   <button key={cell} onClick={() => setSelectedDate(isSelected ? null : cell)}
-                    className={`aspect-square rounded-lg border flex flex-col items-center justify-start p-1 transition-colors ${
+                    className={`min-h-[80px] rounded-lg border flex flex-col items-stretch p-1 text-left transition-colors overflow-hidden ${
                       isSelected ? 'border-blue-500 bg-blue-50' : isToday ? 'border-blue-200 bg-blue-50/40' : 'border-gray-100 hover:bg-gray-50'
                     }`}>
-                    <span className={`text-xs ${isToday ? 'font-bold text-blue-600' : 'text-gray-700'}`}>{day}</span>
-                    {dayAppts.length > 0 && (
-                      <div className="mt-auto flex items-center gap-0.5 flex-wrap justify-center">
-                        {dayAppts.slice(0, 3).map(a => (
-                          <span key={a.id} className={`w-1.5 h-1.5 rounded-full ${
-                            a.status === 'completed' ? 'bg-green-500' : a.status === 'cancelled' ? 'bg-red-400' : 'bg-blue-500'
-                          }`} />
-                        ))}
-                        {dayAppts.length > 3 && <span className="text-[8px] text-gray-400 leading-none">+{dayAppts.length - 3}</span>}
-                      </div>
-                    )}
+                    <span className={`text-xs mb-0.5 ${isToday ? 'font-bold text-blue-600' : 'text-gray-500'}`}>{day}</span>
+                    <div className="flex flex-col gap-0.5">
+                      {dayAppts.slice(0, 3).map(a => (
+                        <span key={a.id} className={`text-[9px] leading-tight rounded px-1 py-0.5 truncate ${chipCls[a.status]}`}
+                          title={`${a.time} · ${a.user_name} · Dr. ${a.doctor_name}`}>
+                          <span className="font-semibold">{a.time}</span> {a.user_name.split(' ')[0]}
+                        </span>
+                      ))}
+                      {dayAppts.length > 3 && <span className="text-[9px] text-gray-400 px-1">+{dayAppts.length - 3} más</span>}
+                    </div>
                   </button>
                 );
               })}
@@ -390,7 +405,7 @@ export default function Appointments() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
-                <input required type="date" className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                <input required type="date" min={modal?.type === 'create' ? todayStr : undefined} className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-1 block">Hora *</label>

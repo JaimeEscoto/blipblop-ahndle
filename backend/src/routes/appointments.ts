@@ -4,6 +4,14 @@ import { generateAppointmentCode } from '../utils/code';
 
 const router = Router();
 
+// Fecha "hoy" en la zona horaria de la clínica (independiente del TZ del servidor)
+function clinicToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+}
+function isPastDate(date: string): boolean {
+  return date < clinicToday();
+}
+
 // SELECT reducido para la vista pública (sin email/teléfono del paciente)
 const SELECT_PUBLIC = `
   SELECT a.id, a.public_code, a.reason, a.status,
@@ -51,6 +59,9 @@ router.post('/', async (req: Request, res: Response) => {
   if (!user_id || !doctor_id || !date || !time) {
     return res.status(400).json({ error: 'Paciente, médico, fecha y hora son requeridos' });
   }
+  if (isPastDate(date)) {
+    return res.status(400).json({ error: 'No se pueden agendar citas en una fecha pasada' });
+  }
   const conflict = await pool.query(
     `SELECT id FROM appointments WHERE doctor_id=$1 AND date=$2 AND time=$3 AND status != 'cancelled'`,
     [doctor_id, date, time]
@@ -67,6 +78,11 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   const { user_id, doctor_id, date, time, reason, status, notes } = req.body;
+  // Solo bloquea reprogramar a una fecha pasada; permite editar otros campos de citas viejas
+  const current = await pool.query('SELECT TO_CHAR(date, $2) AS date FROM appointments WHERE id=$1', [req.params.id, 'YYYY-MM-DD']);
+  if (current.rows[0] && date !== current.rows[0].date && isPastDate(date)) {
+    return res.status(400).json({ error: 'No se pueden reprogramar citas a una fecha pasada' });
+  }
   const conflict = await pool.query(
     `SELECT id FROM appointments WHERE doctor_id=$1 AND date=$2 AND time=$3 AND status != 'cancelled' AND id != $4`,
     [doctor_id, date, time, req.params.id]
