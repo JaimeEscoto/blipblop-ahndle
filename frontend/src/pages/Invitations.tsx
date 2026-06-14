@@ -1,0 +1,96 @@
+import { useState, useEffect, useCallback } from 'react';
+import { api, Invitation } from '../api/client';
+import { Plus, Trash2, Mail, CheckCircle, Clock } from 'lucide-react';
+import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
+
+export default function Invitations() {
+  const [list, setList] = useState<Invitation[]>([]);
+  const [modal, setModal] = useState(false);
+  const [email, setEmail] = useState('');
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    try { setList(await api.invitations.list()); } catch { /* noop */ }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try {
+      await api.invitations.create(email.trim());
+      setEmail(''); setModal(false); await load();
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    await api.invitations.delete(deleteId);
+    setDeleteId(null); await load();
+  };
+
+  const fmt = (d: string) => new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Invitaciones</h1>
+          <p className="text-sm text-gray-500">Controla quién puede crear cuenta en el sistema</p>
+        </div>
+        <button onClick={() => { setError(''); setModal(true); }} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+          <Plus className="w-4 h-4" /> Invitar
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {list.length === 0 && <div className="text-center py-12 text-gray-400 text-sm">Aún no has enviado invitaciones</div>}
+        {list.map(inv => (
+          <div key={inv.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`shrink-0 p-2 rounded-lg ${inv.status === 'accepted' ? 'bg-green-100' : 'bg-amber-100'}`}>
+                <Mail className={`w-4 h-4 ${inv.status === 'accepted' ? 'text-green-600' : 'text-amber-600'}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900 truncate">{inv.email}</p>
+                <p className="text-xs text-gray-400">Invitado el {fmt(inv.created_at)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {inv.status === 'accepted' ? (
+                <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full"><CheckCircle className="w-3.5 h-3.5" />Registrado</span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full"><Clock className="w-3.5 h-3.5" />Pendiente</span>
+              )}
+              <button onClick={() => setDeleteId(inv.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {modal && (
+        <Modal title="Invitar a alguien" onClose={() => setModal(false)}>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Correo de Google *</label>
+              <input required type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="persona@gmail.com" />
+              <p className="text-xs text-gray-400 mt-1">La persona podrá registrarse iniciando sesión con este correo de Google.</p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setModal(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+              <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+                {loading ? 'Enviando...' : 'Crear invitación'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {deleteId && <ConfirmDialog message="¿Eliminar esta invitación? Si la persona aún no se registró, perderá el acceso." onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />}
+    </div>
+  );
+}

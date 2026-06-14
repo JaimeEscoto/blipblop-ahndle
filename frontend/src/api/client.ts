@@ -2,11 +2,29 @@ const BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
 
+const TOKEN_KEY = 'clinic_token';
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const setToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+// Callback que la app registra para cerrar sesión cuando el backend devuelve 401
+let onUnauthorized: (() => void) | null = null;
+export const setUnauthorizedHandler = (fn: () => void) => { onUnauthorized = fn; };
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...options,
   });
+  if (res.status === 401) {
+    clearToken();
+    onUnauthorized?.();
+    throw new Error('Sesión expirada');
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error en la solicitud');
   return data as T;
@@ -60,7 +78,24 @@ export interface Reminder {
   user_name: string | null; user_phone: string | null; created_at: string;
 }
 
+export interface Account {
+  id: number; email: string; name: string | null; role: 'superuser' | 'staff';
+}
+export interface Invitation {
+  id: number; email: string; status: 'pending' | 'accepted';
+  invited_by: string | null; created_at: string; accepted_at: string | null;
+}
+
 export const api = {
+  auth: {
+    google: (credential: string) => request<{ token: string; account: Account }>('/auth/google', { method:'POST', body:JSON.stringify({ credential }) }),
+    me: () => request<{ account: Account }>('/auth/me'),
+  },
+  invitations: {
+    list: () => request<Invitation[]>('/invitations'),
+    create: (email: string) => request<Invitation>('/invitations', { method:'POST', body:JSON.stringify({ email }) }),
+    delete: (id: number) => request<void>(`/invitations/${id}`, { method:'DELETE' }),
+  },
   users: {
     list: () => request<User[]>('/users'),
     create: (d: Omit<User,'id'|'created_at'>) => request<User>('/users', { method:'POST', body:JSON.stringify(d) }),

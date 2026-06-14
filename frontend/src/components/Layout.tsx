@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, Mail, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
-const navItems = [
+const baseNavItems = [
   { to: '/inicio',       label: 'Inicio',         icon: Home },
   { to: '/citas',        label: 'Citas',         icon: Calendar },
   { to: '/expedientes',  label: 'Expedientes',   icon: FileText },
@@ -14,6 +15,10 @@ const navItems = [
 ];
 
 export default function Layout() {
+  const { account, logout } = useAuth();
+  const navItems = account?.role === 'superuser'
+    ? [...baseNavItems, { to: '/invitaciones', label: 'Invitaciones', icon: Mail }]
+    : baseNavItems;
   const [menuOpen, setMenuOpen] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [pendingReminders, setPendingReminders] = useState(0);
@@ -47,7 +52,7 @@ export default function Layout() {
             <span className="font-bold text-lg tracking-tight">ClínicaPro</span>
           </div>
           {/* Desktop nav */}
-          <nav className="hidden md:flex gap-1">
+          <nav className="hidden md:flex items-center gap-1">
             {navItems.map(({ to, label, icon: Icon }) => {
               const badge = getBadge(to);
               return (
@@ -66,6 +71,9 @@ export default function Layout() {
                 </NavLink>
               );
             })}
+            <button onClick={logout} title="Cerrar sesión" className="ml-1 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
+              <LogOut className="w-4 h-4" />
+            </button>
           </nav>
           {/* Mobile menu button */}
           <button className="md:hidden p-2 rounded-lg hover:bg-blue-700" onClick={() => setMenuOpen(!menuOpen)}>
@@ -93,6 +101,12 @@ export default function Layout() {
                 </NavLink>
               );
             })}
+            <div className="border-t border-blue-700 mt-1 pt-2">
+              {account && <p className="px-3 text-xs text-blue-200 mb-1 truncate">{account.email}</p>}
+              <button onClick={() => { setMenuOpen(false); logout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
+                <LogOut className="w-4 h-4" /> Cerrar sesión
+              </button>
+            </div>
           </nav>
         )}
       </header>

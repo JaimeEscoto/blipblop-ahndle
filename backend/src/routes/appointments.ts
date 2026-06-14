@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import pool from '../database';
 import { generateAppointmentCode } from '../utils/code';
+import { requireAuth } from '../auth';
 
 const router = Router();
 
@@ -35,17 +36,20 @@ const SELECT_WITH_RELATIONS = `
   JOIN doctors d ON a.doctor_id = d.id
 `;
 
-router.get('/', async (_req: Request, res: Response) => {
-  const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} ORDER BY a.date DESC, a.time DESC`);
-  res.json(rows);
-});
-
 // Endpoint público: el paciente accede al escanear el QR (sin autenticación).
-// Debe declararse antes de '/:id' para no ser capturado por esa ruta.
+// Se declara ANTES del guard para que no requiera sesión.
 router.get('/public/:code', async (req: Request, res: Response) => {
   const { rows } = await pool.query(`${SELECT_PUBLIC} WHERE a.public_code = $1`, [req.params.code]);
   if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
   res.json(rows[0]);
+});
+
+// A partir de aquí, todo requiere sesión válida
+router.use(requireAuth);
+
+router.get('/', async (_req: Request, res: Response) => {
+  const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} ORDER BY a.date DESC, a.time DESC`);
+  res.json(rows);
 });
 
 router.get('/:id', async (req: Request, res: Response) => {

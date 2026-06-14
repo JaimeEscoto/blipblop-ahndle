@@ -89,7 +89,34 @@ export async function initDB() {
       user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS accounts (
+      id SERIAL PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      role TEXT NOT NULL DEFAULT 'staff' CHECK(role IN ('superuser','staff')),
+      google_sub TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      last_login TIMESTAMPTZ
+    );
+
+    CREATE TABLE IF NOT EXISTS invitations (
+      id SERIAL PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted')),
+      invited_by TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      accepted_at TIMESTAMPTZ
+    );
   `);
+
+  // --- Superusuario: siempre tiene acceso, sin invitación ---
+  const superEmail = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();
+  await pool.query(
+    `INSERT INTO accounts (email, name, role) VALUES ($1, $2, 'superuser')
+     ON CONFLICT (email) DO UPDATE SET role = 'superuser'`,
+    [superEmail, 'Superusuario']
+  );
 
   // --- Migración: código público para las citas (QR de invitación) ---
   await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS public_code TEXT`);
