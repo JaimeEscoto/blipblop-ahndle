@@ -46,10 +46,10 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-gradient-to-r from-[#0f2f4f] via-[#1e6f9f] to-[#36c1d6] text-white shadow-md sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">
-            <span className="bg-white rounded-lg px-2.5 py-1.5 shadow-sm">
-              <img src="/logo.png" alt="odontiacloud" className="h-7 w-auto block" />
+            <span className="bg-white rounded-xl px-3.5 py-2 shadow-sm">
+              <img src="/logo.png" alt="odontiacloud" className="h-10 w-auto block" />
             </span>
           </div>
           {/* Desktop nav */}

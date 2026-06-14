@@ -58,7 +58,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#eaf6fb] via-blue-50 to-[#e6fbfd] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8 text-center">
-        <img src="/logo.png" alt="odontiacloud" className="h-14 w-auto mx-auto mb-4" />
+        <img src="/logo.png" alt="odontiacloud" className="h-20 w-auto mx-auto mb-4" />
         <p className="text-sm text-gray-500 mb-6">Inicia sesión para administrar la clínica</p>
 
         <div className="flex justify-center min-h-[44px]">
