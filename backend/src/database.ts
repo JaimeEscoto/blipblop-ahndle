@@ -108,6 +108,24 @@ export async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       accepted_at TIMESTAMPTZ
     );
+
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id SERIAL PRIMARY KEY,
+      account_id INTEGER,
+      account_email TEXT,
+      account_name TEXT,
+      action TEXT NOT NULL,
+      entity TEXT,
+      entity_id TEXT,
+      summary TEXT NOT NULL,
+      method TEXT,
+      path TEXT,
+      status_code INTEGER,
+      details JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS activity_log_created_idx ON activity_log(created_at DESC);
+    CREATE INDEX IF NOT EXISTS activity_log_account_idx ON activity_log(account_email);
   `);
 
   // --- Migración: datos demográficos del paciente (Honduras) ---

@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, Mail, LogOut } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, Mail, LogOut, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -17,7 +17,9 @@ const baseNavItems = [
 export default function Layout() {
   const { account, logout } = useAuth();
   const navItems = account?.role === 'superuser'
-    ? [...baseNavItems, { to: '/invitaciones', label: 'Invitaciones', icon: Mail }]
+    ? [...baseNavItems,
+        { to: '/invitaciones', label: 'Invitaciones', icon: Mail },
+        { to: '/actividad', label: 'Actividad', icon: Activity }]
     : baseNavItems;
   const [menuOpen, setMenuOpen] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);

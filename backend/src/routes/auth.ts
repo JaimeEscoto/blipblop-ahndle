@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import pool from '../database';
 import { verifyGoogleToken, signSession, requireAuth, SessionAccount } from '../auth';
+import { recordActivity } from '../audit';
 
 const router = Router();
 
@@ -44,6 +45,20 @@ router.post('/google', async (req: Request, res: Response) => {
   }
 
   const token = signSession(account);
+
+  // Registra el inicio de sesión en la bitácora.
+  recordActivity({
+    accountId: account.id,
+    accountEmail: account.email,
+    accountName: account.name,
+    action: 'Inició sesión',
+    entity: 'Sesión',
+    summary: 'Inició sesión',
+    method: 'POST',
+    path: '/api/auth/google',
+    statusCode: 200,
+  });
+
   res.json({ token, account });
 });
 

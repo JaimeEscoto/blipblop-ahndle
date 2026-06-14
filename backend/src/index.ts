@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import { initDB } from './database';
 import { requireAuth } from './auth';
+import { auditLog } from './audit';
 import authRouter from './routes/auth';
 import invitationsRouter from './routes/invitations';
 import usersRouter from './routes/users';
@@ -12,6 +13,7 @@ import appointmentsRouter from './routes/appointments';
 import medicalRouter from './routes/medical';
 import inventoryRouter from './routes/inventory';
 import remindersRouter from './routes/reminders';
+import activityRouter from './routes/activity';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,12 +25,18 @@ const allowedOrigins = process.env.FRONTEND_URL
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
+// Bitácora: registra automáticamente toda operación que modifica datos.
+// Va antes de los routers para poder envolver la respuesta; lee req.account,
+// que cada router rellena con requireAuth antes de ejecutar el handler.
+app.use(auditLog);
+
 // Públicas
 app.use('/api/auth', authRouter);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Solo superusuario (el router aplica su propio guard)
 app.use('/api/invitations', invitationsRouter);
+app.use('/api/activity', activityRouter);
 
 // El router de citas protege todo internamente salvo /public/:code
 app.use('/api/appointments', appointmentsRouter);

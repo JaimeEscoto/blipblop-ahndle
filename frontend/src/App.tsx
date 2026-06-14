@@ -10,6 +10,7 @@ import PublicAppointment from './pages/PublicAppointment';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Invitations from './pages/Invitations';
+import Activity from './pages/Activity';
 import { useAuth } from './auth/AuthContext';
 
 function Splash() {
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/inventario"    element={<Inventory />} />
           <Route path="/recordatorios" element={<Reminders />} />
           <Route path="/invitaciones"  element={account.role === 'superuser' ? <Invitations /> : <Navigate to="/inicio" replace />} />
+          <Route path="/actividad"     element={account.role === 'superuser' ? <Activity /> : <Navigate to="/inicio" replace />} />
           <Route path="*"              element={<Navigate to="/inicio" replace />} />
         </Route>
       )}

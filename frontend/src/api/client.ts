@@ -90,6 +90,18 @@ export interface Invitation {
   invited_by: string | null; created_at: string; accepted_at: string | null;
 }
 
+export interface ActivityLog {
+  id: number; account_id: number | null;
+  account_email: string | null; account_name: string | null;
+  action: string; entity: string | null; entity_id: string | null;
+  summary: string; method: string | null; path: string | null;
+  status_code: number | null; details: Record<string, any> | null;
+  created_at: string;
+}
+export interface ActivityAccount {
+  account_email: string; account_name: string | null; events: number;
+}
+
 export const api = {
   auth: {
     google: (credential: string) => request<{ token: string; account: Account }>('/auth/google', { method:'POST', body:JSON.stringify({ credential }) }),
@@ -99,6 +111,17 @@ export const api = {
     list: () => request<Invitation[]>('/invitations'),
     create: (email: string) => request<Invitation>('/invitations', { method:'POST', body:JSON.stringify({ email }) }),
     delete: (id: number) => request<void>(`/invitations/${id}`, { method:'DELETE' }),
+  },
+  activity: {
+    list: (params?: { account?: string; entity?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.account) q.set('account', params.account);
+      if (params?.entity) q.set('entity', params.entity);
+      if (params?.limit) q.set('limit', String(params.limit));
+      const qs = q.toString();
+      return request<ActivityLog[]>(`/activity${qs ? `?${qs}` : ''}`);
+    },
+    accounts: () => request<ActivityAccount[]>('/activity/accounts'),
   },
   users: {
     list: () => request<User[]>('/users'),
