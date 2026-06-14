@@ -2,6 +2,20 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { Appointment } from '../api/client';
 
+// Carga una imagen del sitio como dataURL para incrustarla en el PDF
+async function loadImageDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise<string | null>(resolve => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(r.result as string);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(blob);
+    });
+  } catch { return null; }
+}
+
 export async function generateAppointmentPDF(appt: Appointment) {
   // Tarjeta horizontal compacta (tipo postal / revista)
   const W = 190;
@@ -17,6 +31,12 @@ export async function generateAppointmentPDF(appt: Appointment) {
   const grayMid  = [148, 163, 184] as [number, number, number];
   const white    = [255, 255, 255] as [number, number, number];
   const ink       = [30, 41, 59]   as [number, number, number];
+  // Colores de marca (odontiacloud)
+  const brandNavy = [15, 47, 79]   as [number, number, number];
+  const brandDeep = [9, 32, 55]    as [number, number, number];
+
+  // Logo de marca
+  const logoData = await loadImageDataUrl('/logo.png');
 
   // ── Fondo general gris muy claro ────────────────────────
   doc.setFillColor(...grayLite);
@@ -26,29 +46,31 @@ export async function generateAppointmentPDF(appt: Appointment) {
   // PANEL IZQUIERDO (azul) — identidad
   // ════════════════════════════════════════════════════════
   const PW = 62; // ancho panel
-  doc.setFillColor(...blue);
+  doc.setFillColor(...brandNavy);
   doc.rect(0, 0, PW, H, 'F');
   // franja inferior más oscura
-  doc.setFillColor(...blueDark);
+  doc.setFillColor(...brandDeep);
   doc.rect(0, H - 14, PW, 14, 'F');
 
-  // Espacio para logo (recuadro redondeado claro)
+  // Logo de la clínica (recuadro blanco de fondo)
   doc.setFillColor(...white);
-  doc.roundedRect(14, 12, 34, 22, 3, 3, 'F');
-  doc.setTextColor(...grayMid);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text('tu logo', 31, 24.5, { align: 'center' });
+  doc.roundedRect(11, 11, 40, 22, 3, 3, 'F');
+  if (logoData) {
+    // proporción ~600x315 → 1.9:1
+    const lw = 36, lh = lw * (315 / 600);
+    doc.addImage(logoData, 'PNG', 13, 11 + (22 - lh) / 2, lw, lh);
+  } else {
+    doc.setTextColor(...grayMid);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('odontiacloud', 31, 24, { align: 'center' });
+  }
 
-  // Nombre clínica
-  doc.setTextColor(...white);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(17);
-  doc.text('ClínicaPro', 14, 48);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  // Tagline
   doc.setTextColor(...blueSoft);
-  doc.text('cuidamos tu sonrisa', 14, 53.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('cuidamos tu sonrisa', 14, 44);
 
   // Palabra grande vertical-ish "CITA"
   doc.setFont('helvetica', 'bold');

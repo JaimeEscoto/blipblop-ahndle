@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, PublicAppointment as PublicAppt } from '../api/client';
-import { Calendar, Clock, Stethoscope, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 const STATUS: Record<string, { label: string; cls: string; Icon: typeof CheckCircle }> = {
   scheduled: { label: 'Programada', cls: 'bg-blue-100 text-blue-700', Icon: AlertCircle },
@@ -34,9 +34,10 @@ export default function PublicAppointment() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-gray-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Encabezado clínica */}
-        <div className="flex items-center justify-center gap-2 mb-5 text-blue-700">
-          <Stethoscope className="w-6 h-6" />
-          <span className="font-bold text-xl tracking-tight">ClínicaPro</span>
+        <div className="flex justify-center mb-5">
+          <span className="bg-white rounded-xl shadow-sm px-4 py-2">
+            <img src="/logo.png" alt="odontiacloud" className="h-11 w-auto block" />
+          </span>
         </div>
 
         {loading && (
@@ -55,8 +56,8 @@ export default function PublicAppointment() {
           const StIcon = st.Icon;
           return (
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              {/* Cabecera azul */}
-              <div className="bg-blue-600 text-white px-6 py-5">
+              {/* Cabecera con degradado de marca */}
+              <div className="bg-gradient-to-r from-[#0f2f4f] via-[#1e6f9f] to-[#36c1d6] text-white px-6 py-5">
                 <p className="text-blue-100 text-xs uppercase tracking-wide">Invitación a tu cita</p>
                 <h1 className="text-2xl font-bold mt-1">¡Hola, {appt.user_name}!</h1>
                 <span className={`inline-flex items-center gap-1 mt-3 text-xs px-2.5 py-1 rounded-full font-medium ${st.cls}`}>
@@ -108,7 +109,7 @@ export default function PublicAppointment() {
           );
         })()}
 
-        <p className="text-center text-xs text-gray-400 mt-5">ClínicaPro · cuidamos tu sonrisa</p>
+        <p className="text-center text-xs text-gray-400 mt-5">odontiacloud · cuidamos tu sonrisa</p>
       </div>
     </div>
   );

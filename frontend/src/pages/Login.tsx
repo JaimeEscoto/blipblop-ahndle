@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { Stethoscope } from 'lucide-react';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -57,12 +56,9 @@ export default function Login() {
   }, [login]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-gray-100 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#eaf6fb] via-blue-50 to-[#e6fbfd] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8 text-center">
-        <div className="flex items-center justify-center gap-2 mb-2 text-blue-700">
-          <Stethoscope className="w-7 h-7" />
-          <span className="font-bold text-2xl tracking-tight">ClínicaPro</span>
-        </div>
+        <img src="/logo.png" alt="odontiacloud" className="h-14 w-auto mx-auto mb-4" />
         <p className="text-sm text-gray-500 mb-6">Inicia sesión para administrar la clínica</p>
 
         <div className="flex justify-center min-h-[44px]">

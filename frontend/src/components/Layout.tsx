@@ -45,11 +45,12 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-blue-600 text-white shadow-md sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Stethoscope className="w-6 h-6" />
-            <span className="font-bold text-lg tracking-tight">ClínicaPro</span>
+      <header className="bg-gradient-to-r from-[#0f2f4f] via-[#1e6f9f] to-[#36c1d6] text-white shadow-md sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="bg-white rounded-lg px-2.5 py-1.5 shadow-sm">
+              <img src="/logo.png" alt="odontiacloud" className="h-7 w-auto block" />
+            </span>
           </div>
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">
@@ -124,7 +125,7 @@ export default function Layout() {
             <NavLink key={to} to={to}
               className={({ isActive }) =>
                 `relative flex-1 flex flex-col items-center py-2 text-xs font-medium transition-colors ${
-                  isActive ? 'text-blue-600' : 'text-gray-500 hover:text-blue-500'
+                  isActive ? 'text-[#1e6f9f]' : 'text-gray-500 hover:text-[#36c1d6]'
                 }`}>
               <Icon className="w-5 h-5 mb-0.5" />
               {label}

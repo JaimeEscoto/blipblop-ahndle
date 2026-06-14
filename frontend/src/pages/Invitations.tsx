@@ -15,7 +15,7 @@ export default function Invitations() {
 
   // Mensaje de invitación listo para enviar
   const inviteMessage = (inv: Invitation) =>
-    `¡Hola! Te invité a usar el sistema de la clínica ClínicaPro. ` +
+    `¡Hola! Te invité a usar el sistema de la clínica odontiacloud. ` +
     `Para entrar, ingresa a ${window.location.origin} e inicia sesión con tu cuenta de Google del correo ${inv.email}. ` +
     `El acceso es solo por invitación, así que usa exactamente ese correo. ¡Nos vemos dentro!`;
 
