@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 
 const navItems = [
+  { to: '/inicio',       label: 'Inicio',         icon: Home },
   { to: '/citas',        label: 'Citas',         icon: Calendar },
   { to: '/expedientes',  label: 'Expedientes',   icon: FileText },
   { to: '/medicos',      label: 'Médicos',        icon: Stethoscope },

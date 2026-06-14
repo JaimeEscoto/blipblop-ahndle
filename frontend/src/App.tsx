@@ -7,6 +7,7 @@ import Records from './pages/Records';
 import Inventory from './pages/Inventory';
 import Reminders from './pages/Reminders';
 import PublicAppointment from './pages/PublicAppointment';
+import Home from './pages/Home';
 
 export default function App() {
   return (
@@ -14,7 +15,8 @@ export default function App() {
       {/* Ruta pública (paciente al escanear el QR) — sin layout de la clínica */}
       <Route path="/cita/:code" element={<PublicAppointment />} />
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/citas" replace />} />
+        <Route index element={<Home />} />
+        <Route path="/inicio"        element={<Home />} />
         <Route path="/citas"         element={<Appointments />} />
         <Route path="/expedientes"   element={<Records />} />
         <Route path="/medicos"       element={<Doctors />} />
