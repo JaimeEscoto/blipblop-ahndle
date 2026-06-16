@@ -10,8 +10,7 @@ import Reminders from './pages/Reminders';
 import PublicAppointment from './pages/PublicAppointment';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Invitations from './pages/Invitations';
-import Activity from './pages/Activity';
+import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import { useAuth } from './auth/AuthContext';
 
@@ -41,8 +40,10 @@ export default function App() {
           <Route path="/inventario"    element={<Inventory />} />
           <Route path="/recordatorios" element={<Reminders />} />
           <Route path="/ajustes"       element={<Settings />} />
-          <Route path="/invitaciones"  element={account.role === 'superuser' ? <Invitations /> : <Navigate to="/inicio" replace />} />
-          <Route path="/actividad"     element={account.role === 'superuser' ? <Activity /> : <Navigate to="/inicio" replace />} />
+          <Route path="/superadmin"    element={account.role === 'superuser' ? <SuperAdmin /> : <Navigate to="/inicio" replace />} />
+          {/* Rutas antiguas: ahora viven dentro de Super Admin */}
+          <Route path="/invitaciones"  element={<Navigate to="/superadmin" replace />} />
+          <Route path="/actividad"     element={<Navigate to="/superadmin" replace />} />
           <Route path="*"              element={<Navigate to="/inicio" replace />} />
         </Route>
       )}

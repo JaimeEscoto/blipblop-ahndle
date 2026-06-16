@@ -125,6 +125,21 @@ export const api = {
     },
     accounts: () => request<ActivityAccount[]>('/activity/accounts'),
   },
+  admin: {
+    // Descarga el respaldo SQL como archivo (no es JSON, por eso no usa request()).
+    backup: async (): Promise<{ blob: Blob; filename: string }> => {
+      const token = getToken();
+      const res = await fetch(`${BASE}/admin/backup`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.status === 401) { clearToken(); onUnauthorized?.(); throw new Error('Sesión expirada'); }
+      if (!res.ok) throw new Error('No se pudo generar el respaldo');
+      const blob = await res.blob();
+      const disp = res.headers.get('Content-Disposition') || '';
+      const m = disp.match(/filename="?([^"]+)"?/);
+      return { blob, filename: m?.[1] || 'backup.sql' };
+    },
+  },
   users: {
     list: () => request<User[]>('/users'),
     create: (d: Omit<User,'id'|'created_at'>) => request<User>('/users', { method:'POST', body:JSON.stringify(d) }),

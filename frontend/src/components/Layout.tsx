@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, Mail, LogOut, Activity, Settings } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, LogOut, Shield, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
@@ -21,8 +21,7 @@ export default function Layout() {
   const navItems = [
     ...baseNavItems,
     ...(account?.role === 'superuser'
-      ? [{ to: '/invitaciones', label: 'menu.invitations', icon: Mail },
-         { to: '/actividad', label: 'menu.activity', icon: Activity }]
+      ? [{ to: '/superadmin', label: 'menu.superadmin', icon: Shield }]
       : []),
     { to: '/ajustes', label: 'menu.settings', icon: Settings },
   ];

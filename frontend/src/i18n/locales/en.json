@@ -28,6 +28,7 @@
     "reminders": "Reminders",
     "invitations": "Invitations",
     "activity": "Activity",
+    "superadmin": "Super Admin",
     "settings": "Settings",
     "logout": "Log out"
   },
@@ -344,6 +345,19 @@
     "unknown": "Unknown",
     "operationDetail": "Operation detail",
     "changesDetail": "Changes made"
+  },
+  "superadmin": {
+    "title": "Super Admin",
+    "subtitle": "Advanced administration tools",
+    "activity": "Activity",
+    "invitations": "Invitations",
+    "backup": "Backup",
+    "backupTitle": "Database backup",
+    "backupDesc": "Download a .sql file with the full schema and all data. You can restore it with psql onto an empty database.",
+    "backupWarning": "The file contains sensitive patient data and recreates every table on restore. Keep it in a safe place.",
+    "backupButton": "Download backup (.sql)",
+    "backupGenerating": "Generating backup...",
+    "backupError": "Could not generate the backup"
   },
   "publicAppointment": {
     "loading": "Loading your appointment...",

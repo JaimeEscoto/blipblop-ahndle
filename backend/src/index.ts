@@ -14,13 +14,19 @@ import medicalRouter from './routes/medical';
 import inventoryRouter from './routes/inventory';
 import remindersRouter from './routes/reminders';
 import activityRouter from './routes/activity';
+import adminRouter from './routes/admin';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Orígenes de la app móvil (Capacitor): Android usa https://localhost,
+// iOS usa capacitor://localhost. Siempre permitidos para que la app nativa
+// pueda consumir la API.
+const capacitorOrigins = ['https://localhost', 'capacitor://localhost'];
+
 const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL]
-  : ['http://localhost:5173', 'http://localhost:4173'];
+  ? [process.env.FRONTEND_URL, ...capacitorOrigins]
+  : ['http://localhost:5173', 'http://localhost:4173', ...capacitorOrigins];
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
@@ -37,6 +43,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 // Solo superusuario (el router aplica su propio guard)
 app.use('/api/invitations', invitationsRouter);
 app.use('/api/activity', activityRouter);
+app.use('/api/admin', adminRouter);
 
 // El router de citas protege todo internamente salvo /public/:code
 app.use('/api/appointments', appointmentsRouter);

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api, ActivityLog, ActivityAccount } from '../api/client';
 import { dateLocale } from '../i18n/format';
 import {
-  Plus, Pencil, Trash2, LogIn, Eye, Activity as ActivityIcon, RefreshCw, ChevronDown, ChevronRight,
+  Plus, Pencil, Trash2, LogIn, Eye, Activity as ActivityIcon, RefreshCw, ChevronDown, ChevronRight, Download,
 } from 'lucide-react';
 
 // Módulos disponibles para filtrar (debe coincidir con las etiquetas del backend).
@@ -12,6 +12,7 @@ const ENTITIES = ['Paciente', 'Médico', 'Cita', 'Inventario', 'Recordatorio', '
 function actionIcon(action: string) {
   if (action.startsWith('Inició')) return { Icon: LogIn, color: 'text-indigo-600', bg: 'bg-indigo-100' };
   if (action.startsWith('Consultó')) return { Icon: Eye, color: 'text-sky-600', bg: 'bg-sky-100' };
+  if (action.startsWith('Descargó')) return { Icon: Download, color: 'text-violet-600', bg: 'bg-violet-100' };
   if (action.startsWith('Creó')) return { Icon: Plus, color: 'text-green-600', bg: 'bg-green-100' };
   if (action.startsWith('Eliminó')) return { Icon: Trash2, color: 'text-red-600', bg: 'bg-red-100' };
   return { Icon: Pencil, color: 'text-amber-600', bg: 'bg-amber-100' };
