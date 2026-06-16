@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmDialogProps {
   message: string;
@@ -7,6 +8,7 @@ interface ConfirmDialogProps {
 }
 
 export default function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
@@ -19,10 +21,10 @@ export default function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmD
         </div>
         <div className="flex gap-2 justify-end">
           <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
-            Eliminar
+            {t('common.delete')}
           </button>
         </div>
       </div>

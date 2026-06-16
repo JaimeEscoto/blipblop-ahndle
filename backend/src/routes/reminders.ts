@@ -35,6 +35,13 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id/status', async (req: Request, res: Response) => {
   const { status } = req.body;
   if (!['pending', 'done'].includes(status)) return res.status(400).json({ error: 'Estado inválido' });
+  const before = await pool.query(
+    `SELECT r.*, u.name as user_name, u.phone as user_phone,
+       TO_CHAR(r.date,'YYYY-MM-DD') as date, TO_CHAR(r.time,'HH24:MI') as time
+     FROM reminders r LEFT JOIN users u ON r.user_id = u.id WHERE r.id=$1`,
+    [req.params.id]
+  );
+  req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
     'UPDATE reminders SET status=$1 WHERE id=$2 RETURNING id', [status, req.params.id]
   );
@@ -49,9 +56,9 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {
-  const { rowCount } = await pool.query('DELETE FROM reminders WHERE id=$1', [req.params.id]);
-  if (!rowCount) return res.status(404).json({ error: 'Recordatorio no encontrado' });
-  res.json({ message: 'Recordatorio eliminado' });
+  const { rows } = await pool.query('DELETE FROM reminders WHERE id=$1 RETURNING *', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Recordatorio no encontrado' });
+  res.json(rows[0]);
 });
 
 export default router;

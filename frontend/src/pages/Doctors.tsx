@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, Doctor } from '../api/client';
 import { Plus, Pencil, Trash2, Search, Phone, Mail, Award } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -13,6 +14,8 @@ const SPECIALTIES = [
 const EMPTY: Omit<Doctor, 'id' | 'created_at'> = { name: '', specialty: '', email: '', phone: '', license_number: '' };
 
 export default function Doctors() {
+  const { t } = useTranslation();
+  const specialtyLabel = (s: string) => t(`doctors.specialties.${s}`, { defaultValue: s });
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<{ type: 'create' | 'edit'; doctor?: Doctor } | null>(null);
@@ -74,11 +77,11 @@ export default function Doctors() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Médicos</h1>
-          <p className="text-sm text-gray-500">{doctors.length} registrados</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('doctors.title')}</h1>
+          <p className="text-sm text-gray-500">{t('doctors.registeredCount', { count: doctors.length })}</p>
         </div>
         <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Nuevo
+          <Plus className="w-4 h-4" /> {t('common.new')}
         </button>
       </div>
 
@@ -86,7 +89,7 @@ export default function Doctors() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Buscar por nombre o especialidad..."
+          placeholder={t('doctors.searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -94,7 +97,7 @@ export default function Doctors() {
 
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm">No se encontraron médicos</div>
+          <div className="text-center py-12 text-gray-400 text-sm">{t('doctors.noneFound')}</div>
         )}
         {filtered.map(d => (
           <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
@@ -103,7 +106,7 @@ export default function Doctors() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-semibold text-gray-900">Dr. {d.name}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${specialtyColors[d.specialty] || 'bg-blue-100 text-blue-700'}`}>
-                    {d.specialty}
+                    {specialtyLabel(d.specialty)}
                   </span>
                 </div>
                 <div className="mt-1.5 space-y-0.5">
@@ -120,7 +123,7 @@ export default function Doctors() {
                   {d.license_number && (
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
                       <Award className="w-3.5 h-3.5 shrink-0" />
-                      <span>Reg. {d.license_number}</span>
+                      <span>{t('doctors.license', { license: d.license_number })}</span>
                     </div>
                   )}
                 </div>
@@ -139,38 +142,38 @@ export default function Doctors() {
       </div>
 
       {modal && (
-        <Modal title={modal.type === 'create' ? 'Nuevo Médico' : 'Editar Médico'} onClose={() => setModal(null)}>
+        <Modal title={modal.type === 'create' ? t('doctors.createTitle') : t('doctors.editTitle')} onClose={() => setModal(null)}>
           <form onSubmit={handleSubmit} className="space-y-3">
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Nombre completo *</label>
-              <input required className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ana Martínez" />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.fullName')} *</label>
+              <input required className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('doctors.fullNamePlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Especialidad *</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.specialty')} *</label>
               <select required className="input" value={form.specialty} onChange={e => setForm({ ...form, specialty: e.target.value })}>
-                <option value="">Seleccionar especialidad</option>
-                {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="">{t('doctors.selectSpecialty')}</option>
+                {SPECIALTIES.map(s => <option key={s} value={s}>{specialtyLabel(s)}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Email *</label>
-              <input required type="email" className="input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="dra.martinez@clinica.com" />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.email')} *</label>
+              <input required type="email" className="input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('doctors.emailPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Teléfono</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.phone')}</label>
               <input className="input" value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+57 300 000 0000" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Número de registro médico</label>
-              <input className="input" value={form.license_number || ''} onChange={e => setForm({ ...form, license_number: e.target.value })} placeholder="RM-12345" />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.licenseNumber')}</label>
+              <input className="input" value={form.license_number || ''} onChange={e => setForm({ ...form, license_number: e.target.value })} placeholder={t('doctors.licenseNumberPlaceholder')} />
             </div>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </form>
@@ -179,7 +182,7 @@ export default function Doctors() {
 
       {deleteId && (
         <ConfirmDialog
-          message="¿Eliminar este médico? También se eliminarán sus citas asociadas."
+          message={t('doctors.deleteConfirm')}
           onConfirm={handleDelete}
           onCancel={() => setDeleteId(null)}
         />

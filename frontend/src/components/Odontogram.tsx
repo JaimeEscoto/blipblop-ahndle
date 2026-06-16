@@ -1,12 +1,13 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-const TOOTH_STATES: Record<string, { label: string; color: string }> = {
-  healthy:   { label: 'Sano',      color: '#ffffff' },
-  cavity:    { label: 'Caries',    color: '#ef4444' },
-  filled:    { label: 'Obturado',  color: '#3b82f6' },
-  extracted: { label: 'Extraído',  color: '#6b7280' },
-  crown:     { label: 'Corona',    color: '#f59e0b' },
-  implant:   { label: 'Implante',  color: '#8b5cf6' },
+const TOOTH_STATES: Record<string, { color: string }> = {
+  healthy:   { color: '#ffffff' },
+  cavity:    { color: '#ef4444' },
+  filled:    { color: '#3b82f6' },
+  extracted: { color: '#6b7280' },
+  crown:     { color: '#f59e0b' },
+  implant:   { color: '#8b5cf6' },
 };
 
 const UPPER = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
@@ -19,6 +20,8 @@ interface OdontogramProps {
 }
 
 export default function Odontogram({ value, onChange, readOnly = false }: OdontogramProps) {
+  const { t } = useTranslation();
+  const stateLabel = (k: string) => t(`odontogram.states.${k}`, { defaultValue: k });
   const [selected, setSelected] = useState<string | null>(null);
   const [activeState, setActiveState] = useState('cavity');
 
@@ -64,7 +67,7 @@ export default function Odontogram({ value, onChange, readOnly = false }: Odonto
       <div
         onClick={() => handleTooth(tooth)}
         className={`flex flex-col items-center gap-0.5 ${readOnly ? '' : 'cursor-pointer'}`}
-        title={`${tooth} — ${cfg.label}`}
+        title={`${tooth} — ${stateLabel(state)}`}
       >
         <span className="text-[9px] text-gray-400">{tooth}</span>
         <svg
@@ -102,23 +105,23 @@ export default function Odontogram({ value, onChange, readOnly = false }: Odonto
               }`}
             >
               <span className="w-3 h-3 rounded border border-gray-300 inline-block" style={{ backgroundColor: v.color }} />
-              {v.label}
+              {stateLabel(k)}
             </button>
           ))}
         </div>
       )}
       {/* Upper teeth */}
       <div>
-        <p className="text-[10px] text-gray-400 mb-1">Superior</p>
+        <p className="text-[10px] text-gray-400 mb-1">{t('odontogram.upper')}</p>
         <div className="flex gap-1 flex-wrap">
-          {UPPER.map(t => <ToothBox key={t} tooth={t} />)}
+          {UPPER.map(tooth => <ToothBox key={tooth} tooth={tooth} />)}
         </div>
       </div>
       {/* Lower teeth */}
       <div>
-        <p className="text-[10px] text-gray-400 mb-1">Inferior</p>
+        <p className="text-[10px] text-gray-400 mb-1">{t('odontogram.lower')}</p>
         <div className="flex gap-1 flex-wrap">
-          {LOWER.map(t => <ToothBox key={t} tooth={t} />)}
+          {LOWER.map(tooth => <ToothBox key={tooth} tooth={tooth} />)}
         </div>
       </div>
       {/* Legend readonly */}
@@ -126,7 +129,7 @@ export default function Odontogram({ value, onChange, readOnly = false }: Odonto
         {Object.entries(TOOTH_STATES).map(([k, v]) => (
           <span key={k} className="flex items-center gap-1 text-[10px] text-gray-500">
             <span className="w-2.5 h-2.5 rounded border border-gray-300 inline-block" style={{ backgroundColor: v.color }} />
-            {v.label}
+            {stateLabel(k)}
           </span>
         ))}
       </div>

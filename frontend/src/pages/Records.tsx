@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, User, Doctor, ClinicalRecord, MedicalInfo } from '../api/client';
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronUp, Heart, FileText, Activity } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -8,6 +9,7 @@ import Odontogram from '../components/Odontogram';
 const BLOOD_TYPES = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
 
 export default function Records() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [search, setSearch] = useState('');
@@ -101,15 +103,15 @@ export default function Records() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Expedientes</h1>
-          <p className="text-sm text-gray-500">Historial clínico por paciente</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('records.title')}</h1>
+          <p className="text-sm text-gray-500">{t('records.subtitle')}</p>
         </div>
       </div>
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Buscar paciente..." value={search} onChange={e => setSearch(e.target.value)} />
+          placeholder={t('records.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       <div className="space-y-2">
@@ -130,7 +132,7 @@ export default function Records() {
                   {(['history','info','odontogram'] as const).map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
                       className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
-                      {tab === 'history' ? 'Historial' : tab === 'info' ? 'Datos médicos' : 'Odontograma'}
+                      {tab === 'history' ? t('records.tabHistory') : tab === 'info' ? t('records.tabInfo') : t('records.tabOdontogram')}
                     </button>
                   ))}
                 </div>
@@ -138,17 +140,17 @@ export default function Records() {
                 {activeTab === 'history' && (
                   <div>
                     <button onClick={() => openRecord(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 font-medium hover:underline">
-                      <Plus className="w-4 h-4" /> Nueva entrada clínica
+                      <Plus className="w-4 h-4" /> {t('records.newEntry')}
                     </button>
                     {(records[u.id] || []).length === 0
-                      ? <p className="text-sm text-gray-400 text-center py-4">Sin historial clínico</p>
+                      ? <p className="text-sm text-gray-400 text-center py-4">{t('records.noHistory')}</p>
                       : (records[u.id] || []).map(r => (
                         <div key={r.id} className="border border-gray-100 rounded-lg p-3 mb-2">
                           <div className="flex justify-between items-start">
                             <div>
                               <p className="text-xs text-gray-400">{r.date} · Dr. {r.doctor_name}</p>
                               {r.diagnosis && <p className="text-sm font-medium mt-1">{r.diagnosis}</p>}
-                              {r.treatment && <p className="text-xs text-gray-500 mt-0.5">Tratamiento: {r.treatment}</p>}
+                              {r.treatment && <p className="text-xs text-gray-500 mt-0.5">{t('records.treatmentLabel', { value: r.treatment })}</p>}
                               {r.observations && <p className="text-xs text-gray-400 mt-0.5 italic">{r.observations}</p>}
                             </div>
                             <div className="flex gap-1">
@@ -161,7 +163,7 @@ export default function Records() {
                               <button onClick={() => setOpenChart(openChart === r.id ? null : r.id)}
                                 className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline">
                                 <Activity className="w-3.5 h-3.5" />
-                                {openChart === r.id ? 'Ocultar odontograma' : 'Ver odontograma de esta entrada'}
+                                {openChart === r.id ? t('records.hideChart') : t('records.showChart')}
                               </button>
                               {openChart === r.id && (
                                 <div className="mt-3">
@@ -179,17 +181,17 @@ export default function Records() {
                 {activeTab === 'info' && (
                   <div>
                     <button onClick={() => openInfo(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 font-medium hover:underline">
-                      <Pencil className="w-4 h-4" /> Editar datos médicos
+                      <Pencil className="w-4 h-4" /> {t('records.editMedical')}
                     </button>
                     {medicalInfos[u.id] ? (
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {[
-                          ['Tipo de sangre', medicalInfos[u.id]?.blood_type],
-                          ['Alergias', medicalInfos[u.id]?.allergies],
-                          ['Condiciones', medicalInfos[u.id]?.medical_conditions],
-                          ['Medicamentos', medicalInfos[u.id]?.current_medications],
-                          ['Contacto emergencia', medicalInfos[u.id]?.emergency_contact],
-                          ['Tel. emergencia', medicalInfos[u.id]?.emergency_phone],
+                          [t('records.bloodType'), medicalInfos[u.id]?.blood_type],
+                          [t('records.allergies'), medicalInfos[u.id]?.allergies],
+                          [t('records.conditionsShort'), medicalInfos[u.id]?.medical_conditions],
+                          [t('records.medicationsShort'), medicalInfos[u.id]?.current_medications],
+                          [t('records.emergencyContactShort'), medicalInfos[u.id]?.emergency_contact],
+                          [t('records.emergencyPhoneShort'), medicalInfos[u.id]?.emergency_phone],
                         ].map(([label, val]) => val ? (
                           <div key={label as string} className="col-span-2 sm:col-span-1">
                             <p className="text-xs text-gray-400">{label}</p>
@@ -197,16 +199,16 @@ export default function Records() {
                           </div>
                         ) : null)}
                       </div>
-                    ) : <p className="text-sm text-gray-400 text-center py-4">Sin datos médicos registrados</p>}
+                    ) : <p className="text-sm text-gray-400 text-center py-4">{t('records.noMedical')}</p>}
                   </div>
                 )}
 
                 {activeTab === 'odontogram' && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-3">Último registro del odontograma</p>
+                    <p className="text-xs text-gray-400 mb-3">{t('records.lastChart')}</p>
                     {(records[u.id] || []).length > 0
                       ? <Odontogram value={records[u.id][0].tooth_chart || {}} onChange={() => {}} readOnly />
-                      : <p className="text-sm text-gray-400 text-center py-4">Sin odontograma. Crea una entrada clínica primero.</p>
+                      : <p className="text-sm text-gray-400 text-center py-4">{t('records.noChart')}</p>
                     }
                   </div>
                 )}
@@ -218,7 +220,7 @@ export default function Records() {
 
       {modal && (
         <Modal
-          title={modal.type === 'info' ? 'Datos médicos' : modal.record ? 'Editar entrada' : 'Nueva entrada clínica'}
+          title={modal.type === 'info' ? t('records.infoTitle') : modal.record ? t('records.editEntry') : t('records.newEntryTitle')}
           onClose={() => setModal(null)}
         >
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -227,18 +229,18 @@ export default function Records() {
             {modal.type === 'info' ? (
               <>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Tipo de sangre</label>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.bloodType')}</label>
                   <select className="input" value={form.blood_type} onChange={e => setForm({...form, blood_type: e.target.value})}>
-                    <option value="">Seleccionar</option>
+                    <option value="">{t('common.select')}</option>
                     {BLOOD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
                 {[
-                  ['allergies','Alergias','Penicilina, látex...'],
-                  ['medical_conditions','Condiciones médicas','Diabetes, hipertensión...'],
-                  ['current_medications','Medicamentos actuales','Metformina 500mg...'],
-                  ['emergency_contact','Contacto de emergencia','Nombre del familiar'],
-                  ['emergency_phone','Teléfono de emergencia','+57 300 000 0000'],
+                  ['allergies', t('records.allergies'), t('records.allergiesPlaceholder')],
+                  ['medical_conditions', t('records.conditions'), t('records.conditionsPlaceholder')],
+                  ['current_medications', t('records.medications'), t('records.medicationsPlaceholder')],
+                  ['emergency_contact', t('records.emergencyContact'), t('records.emergencyContactPlaceholder')],
+                  ['emergency_phone', t('records.emergencyPhone'), t('records.emergencyPhonePlaceholder')],
                 ].map(([field, label, placeholder]) => (
                   <div key={field}>
                     <label className="text-xs font-medium text-gray-700 mb-1 block">{label}</label>
@@ -251,47 +253,47 @@ export default function Records() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">Médico *</label>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.doctor')} *</label>
                     <select required className="input" value={form.doctor_id} onChange={e => setForm({...form, doctor_id: e.target.value})}>
-                      <option value="">Seleccionar</option>
+                      <option value="">{t('common.select')}</option>
                       {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.date')} *</label>
                     <input required type="date" className="input" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Diagnóstico</label>
-                  <input className="input" value={form.diagnosis} onChange={e => setForm({...form, diagnosis: e.target.value})} placeholder="Caries en molar superior..." />
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.diagnosis')}</label>
+                  <input className="input" value={form.diagnosis} onChange={e => setForm({...form, diagnosis: e.target.value})} placeholder={t('records.diagnosisPlaceholder')} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Tratamiento</label>
-                  <input className="input" value={form.treatment} onChange={e => setForm({...form, treatment: e.target.value})} placeholder="Obturación con resina compuesta..." />
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.treatment')}</label>
+                  <input className="input" value={form.treatment} onChange={e => setForm({...form, treatment: e.target.value})} placeholder={t('records.treatmentPlaceholder')} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Observaciones</label>
-                  <textarea className="input resize-none" rows={2} value={form.observations} onChange={e => setForm({...form, observations: e.target.value})} placeholder="Próxima cita en 6 meses..." />
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.observations')}</label>
+                  <textarea className="input resize-none" rows={2} value={form.observations} onChange={e => setForm({...form, observations: e.target.value})} placeholder={t('records.observationsPlaceholder')} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-2 block">Odontograma</label>
+                  <label className="text-xs font-medium text-gray-700 mb-2 block">{t('records.tabOdontogram')}</label>
                   <Odontogram value={form.tooth_chart || {}} onChange={tc => setForm({...form, tooth_chart: tc})} />
                 </div>
               </>
             )}
 
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">{t('common.cancel')}</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </form>
         </Modal>
       )}
 
-      {deleteId && <ConfirmDialog message="¿Eliminar esta entrada del historial clínico?" onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />}
+      {deleteId && <ConfirmDialog message={t('records.deleteConfirm')} onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />}
     </div>
   );
 }

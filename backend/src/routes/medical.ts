@@ -12,6 +12,8 @@ router.get('/info/:userId', async (req: Request, res: Response) => {
 
 router.post('/info/:userId', async (req: Request, res: Response) => {
   const { blood_type, allergies, medical_conditions, current_medications, emergency_contact, emergency_phone } = req.body;
+  const before = await pool.query('SELECT * FROM medical_info WHERE user_id=$1', [req.params.userId]);
+  req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
     `INSERT INTO medical_info (user_id, blood_type, allergies, medical_conditions, current_medications, emergency_contact, emergency_phone)
      VALUES ($1,$2,$3,$4,$5,$6,$7)
@@ -58,6 +60,12 @@ router.post('/records', async (req: Request, res: Response) => {
 
 router.put('/records/:id', async (req: Request, res: Response) => {
   const { doctor_id, date, diagnosis, treatment, observations, tooth_chart } = req.body;
+  const beforeRec = await pool.query(
+    `SELECT cr.*, d.name as doctor_name, TO_CHAR(cr.date,'YYYY-MM-DD') as date
+     FROM clinical_records cr JOIN doctors d ON cr.doctor_id = d.id WHERE cr.id = $1`,
+    [req.params.id]
+  );
+  req.auditBefore = beforeRec.rows[0] || null;
   const { rows } = await pool.query(
     `UPDATE clinical_records SET doctor_id=$1, date=$2, diagnosis=$3, treatment=$4, observations=$5, tooth_chart=$6
      WHERE id=$7 RETURNING id`,
@@ -74,9 +82,9 @@ router.put('/records/:id', async (req: Request, res: Response) => {
 });
 
 router.delete('/records/:id', async (req: Request, res: Response) => {
-  const { rowCount } = await pool.query('DELETE FROM clinical_records WHERE id=$1', [req.params.id]);
-  if (!rowCount) return res.status(404).json({ error: 'Registro no encontrado' });
-  res.json({ message: 'Registro eliminado' });
+  const { rows } = await pool.query('DELETE FROM clinical_records WHERE id=$1 RETURNING *', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Registro no encontrado' });
+  res.json(rows[0]);
 });
 
 export default router;

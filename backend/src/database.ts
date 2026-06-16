@@ -140,6 +140,9 @@ export async function initDB() {
     ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
   `);
 
+  // --- Migración: idioma preferido por usuario (ES/EN) ---
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'es'`);
+
   // --- Superusuario: siempre tiene acceso, sin invitación ---
   const superEmail = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();
   await pool.query(

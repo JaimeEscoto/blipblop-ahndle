@@ -84,6 +84,7 @@ export interface Reminder {
 
 export interface Account {
   id: number; email: string; name: string | null; role: 'superuser' | 'staff';
+  language: 'es' | 'en';
 }
 export interface Invitation {
   id: number; email: string; status: 'pending' | 'accepted';
@@ -104,8 +105,9 @@ export interface ActivityAccount {
 
 export const api = {
   auth: {
-    google: (credential: string) => request<{ token: string; account: Account }>('/auth/google', { method:'POST', body:JSON.stringify({ credential }) }),
+    google: (credential: string, language?: 'es' | 'en') => request<{ token: string; account: Account }>('/auth/google', { method:'POST', body:JSON.stringify({ credential, language }) }),
     me: () => request<{ account: Account }>('/auth/me'),
+    setLanguage: (language: 'es' | 'en') => request<{ account: Account }>('/auth/language', { method:'PUT', body:JSON.stringify({ language }) }),
   },
   invitations: {
     list: () => request<Invitation[]>('/invitations'),

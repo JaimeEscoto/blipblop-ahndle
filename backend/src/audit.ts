@@ -15,15 +15,57 @@ const ENTITY_LABELS: Record<string, string> = {
 
 // Campos sensibles que nunca se guardan en la bitácora.
 const REDACTED = ['credential', 'password', 'token', 'google_sub'];
+// Campos internos sin valor para el lector (ids técnicos, marcas de tiempo).
+const NOISE = ['id', 'created_at', 'updated_at', 'public_code', 'accepted_at', 'last_login'];
 
 function sanitize(body: any) {
   if (!body || typeof body !== 'object') return null;
   const clone: Record<string, any> = {};
   for (const [k, v] of Object.entries(body)) {
-    if (REDACTED.includes(k)) continue;
+    if (REDACTED.includes(k) || NOISE.includes(k)) continue;
     clone[k] = v;
   }
   return Object.keys(clone).length ? clone : null;
+}
+
+const isBlank = (v: any) => v === null || v === undefined || v === '';
+
+// Compara dos valores tolerando null/'' y objetos (JSON).
+function sameValue(a: any, b: any): boolean {
+  if (isBlank(a) && isBlank(b)) return true;
+  if (a && b && typeof a === 'object' && typeof b === 'object') {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  return String(a) === String(b);
+}
+
+// Diferencia campo a campo entre el estado anterior y el posterior.
+// Devuelve { campo: { from, to } } solo con lo que realmente cambió.
+function diffRecord(before: any, after: any) {
+  if (!before || typeof before !== 'object' || !after || typeof after !== 'object') return null;
+  const changes: Record<string, { from: any; to: any }> = {};
+  for (const k of Object.keys(before)) {
+    if (REDACTED.includes(k) || NOISE.includes(k)) continue;
+    if (!(k in after)) continue; // campo no devuelto por la respuesta
+    if (!sameValue(before[k], after[k])) {
+      changes[k] = { from: isBlank(before[k]) ? null : before[k], to: isBlank(after[k]) ? null : after[k] };
+    }
+  }
+  return Object.keys(changes).length ? changes : null;
+}
+
+// Decide qué guardar en la columna `details` según la operación.
+function buildDetails(req: Request, responseBody: any) {
+  // DELETE: el cuerpo de la petición viene vacío; el detalle de lo que se
+  // borró está en el registro devuelto por la respuesta.
+  if (req.method === 'DELETE') return sanitize(responseBody);
+  // Edición con estado previo capturado: mostramos qué campos cambiaron.
+  if (req.auditBefore) {
+    const changes = diffRecord(req.auditBefore, responseBody);
+    if (changes) return changes;
+  }
+  // Creación (o edición sin estado previo): los valores enviados.
+  return sanitize(req.body);
 }
 
 const STATUS_ES: Record<string, string> = {
@@ -71,7 +113,7 @@ function buildEntry(
       const withDoc = r.doctor_name ? ` con ${r.doctor_name}` : '';
       const when = r.date ? ` el ${r.date}${r.time ? ` a las ${r.time}` : ''}` : '';
       if (method === 'POST') return { action: 'Creó', entity: 'Cita', entityId: id, summary: `Agendó una cita${who}${withDoc}${when}` };
-      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Cita', entityId: id, summary: tag('Eliminó la cita') };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Cita', entityId: id, summary: (who || withDoc || when) ? `Eliminó la cita${who}${withDoc}${when}` : tag('Eliminó la cita') };
       if (a && b === 'status') {
         const est = STATUS_ES[body?.status] || body?.status || '';
         const verb = body?.status === 'cancelled' ? 'Canceló' : body?.status === 'completed' ? 'Completó' : 'Reactivó';
@@ -82,27 +124,27 @@ function buildEntry(
     case 'users': {
       const name = r.name ? ` ${r.name}` : '';
       if (method === 'POST') return { action: 'Creó', entity: 'Paciente', entityId: id, summary: `Registró al paciente${name}` };
-      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Paciente', entityId: id, summary: tag('Eliminó al paciente') };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Paciente', entityId: id, summary: name ? tag(`Eliminó al paciente${name}`) : tag('Eliminó al paciente') };
       return { action: 'Editó', entity: 'Paciente', entityId: id, summary: name ? tag(`Editó los datos de${name}`) : tag('Editó un paciente') };
     }
     case 'doctors': {
       const name = r.name ? ` ${r.name}` : '';
       const spec = r.specialty ? ` (${r.specialty})` : '';
       if (method === 'POST') return { action: 'Creó', entity: 'Médico', entityId: id, summary: `Agregó al médico${name}${spec}` };
-      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Médico', entityId: id, summary: tag('Eliminó un médico') };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Médico', entityId: id, summary: name ? tag(`Eliminó al médico${name}${spec}`) : tag('Eliminó un médico') };
       return { action: 'Editó', entity: 'Médico', entityId: id, summary: name ? tag(`Editó al médico${name}`) : tag('Editó un médico') };
     }
     case 'inventory': {
       const name = r.name ? ` "${r.name}"` : '';
       if (method === 'POST') return { action: 'Creó', entity: 'Inventario', entityId: id, summary: `Agregó al inventario${name}` };
-      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Inventario', entityId: id, summary: tag('Eliminó un producto del inventario') };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Inventario', entityId: id, summary: name ? `Eliminó del inventario${name}` : tag('Eliminó un producto del inventario') };
       if (b === 'quantity') return { action: 'Editó', entity: 'Inventario', entityId: id, summary: `Ajustó la existencia de${name || ' un producto'} a ${r.quantity ?? body?.quantity} ${r.unit ?? ''}`.trim() };
       return { action: 'Editó', entity: 'Inventario', entityId: id, summary: name ? `Editó el producto${name}` : tag('Editó un producto') };
     }
     case 'reminders': {
       const title = r.title ? ` "${r.title}"` : '';
       if (method === 'POST') return { action: 'Creó', entity: 'Recordatorio', entityId: id, summary: `Creó el recordatorio${title}` };
-      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Recordatorio', entityId: id, summary: tag('Eliminó un recordatorio') };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Recordatorio', entityId: id, summary: title ? `Eliminó el recordatorio${title}` : tag('Eliminó un recordatorio') };
       if (b === 'status') {
         const verb = (r.status ?? body?.status) === 'done' ? 'Completó' : 'Reabrió';
         return { action: 'Editó', entity: 'Recordatorio', entityId: id, summary: `${verb} el recordatorio${title}` };
@@ -111,7 +153,7 @@ function buildEntry(
     }
     case 'invitations': {
       if (method === 'POST') return { action: 'Creó', entity: 'Invitación', entityId: id, summary: `Invitó a ${r.email || body?.email || 'un usuario'}` };
-      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Invitación', entityId: id, summary: tag('Eliminó una invitación') };
+      if (method === 'DELETE') return { action: 'Eliminó', entity: 'Invitación', entityId: id, summary: (r.email || body?.email) ? `Eliminó la invitación de ${r.email || body?.email}` : tag('Eliminó una invitación') };
       return { action: 'Editó', entity: 'Invitación', entityId: id, summary: tag('Modificó una invitación') };
     }
     case 'medical': {
@@ -205,7 +247,7 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
       method: req.method,
       path: req.originalUrl,
       statusCode: res.statusCode,
-      details: sanitize(req.body),
+      details: buildDetails(req, responseBody),
     });
   });
 

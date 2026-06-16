@@ -32,6 +32,8 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   const { name, specialty, email, phone, license_number } = req.body;
   try {
+    const before = await pool.query('SELECT * FROM doctors WHERE id=$1', [req.params.id]);
+    req.auditBefore = before.rows[0] || null;
     const { rows } = await pool.query(
       'UPDATE doctors SET name=$1, specialty=$2, email=$3, phone=$4, license_number=$5 WHERE id=$6 RETURNING *',
       [name, specialty, email, phone || null, license_number || null, req.params.id]
@@ -45,9 +47,9 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {
-  const { rowCount } = await pool.query('DELETE FROM doctors WHERE id=$1', [req.params.id]);
-  if (!rowCount) return res.status(404).json({ error: 'Médico no encontrado' });
-  res.json({ message: 'Médico eliminado' });
+  const { rows } = await pool.query('DELETE FROM doctors WHERE id=$1 RETURNING *', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Médico no encontrado' });
+  res.json(rows[0]);
 });
 
 export default router;

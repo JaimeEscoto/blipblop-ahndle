@@ -1,6 +1,8 @@
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { Appointment } from '../api/client';
+import i18n from '../i18n';
+import { dateLocale } from '../i18n/format';
 
 // Carga una imagen del sitio como dataURL para incrustarla en el PDF
 async function loadImageDataUrl(url: string): Promise<string | null> {
@@ -17,6 +19,8 @@ async function loadImageDataUrl(url: string): Promise<string | null> {
 }
 
 export async function generateAppointmentPDF(appt: Appointment) {
+  const t = (key: string, opts?: any) => i18n.t(`pdf.${key}`, opts) as string;
+  const loc = dateLocale();
   // Tarjeta horizontal compacta (tipo postal / revista)
   const W = 190;
   const H = 110;
@@ -70,20 +74,20 @@ export async function generateAppointmentPDF(appt: Appointment) {
   doc.setTextColor(...blueSoft);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('cuidamos tu sonrisa', 14, 44);
+  doc.text(t('tagline'), 14, 44);
 
   // Palabra grande vertical-ish "CITA"
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(40);
   doc.setTextColor(255, 255, 255);
-  doc.text('¡Cita!', 14, 78);
+  doc.text(t('cita'), 14, 78);
 
   // Código correlativo de la cita en la franja inferior del panel
   const code = appt.public_code || `ID${appt.id}`;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6);
   doc.setTextColor(...blueSoft);
-  doc.text('CÓDIGO DE CITA', PW / 2, H - 8.5, { align: 'center', charSpace: 0.8 });
+  doc.text(t('appointmentCode'), PW / 2, H - 8.5, { align: 'center', charSpace: 0.8 });
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(...white);
@@ -99,7 +103,7 @@ export async function generateAppointmentPDF(appt: Appointment) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(...gray);
-  doc.text('¡Hola,', RX, 18);
+  doc.text(t('hello'), RX, 18);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.setTextColor(...blue);
@@ -117,9 +121,9 @@ export async function generateAppointmentPDF(appt: Appointment) {
   doc.roundedRect(RX, by, RR - RX, 26, 3, 3, 'F');
 
   const fecha = new Date(appt.date + 'T00:00:00');
-  const dia = fecha.toLocaleDateString('es-CO', { day: '2-digit' });
-  const mes = fecha.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '').toUpperCase();
-  const diaSem = fecha.toLocaleDateString('es-CO', { weekday: 'long' });
+  const dia = fecha.toLocaleDateString(loc, { day: '2-digit' });
+  const mes = fecha.toLocaleDateString(loc, { month: 'short' }).replace('.', '').toUpperCase();
+  const diaSem = fecha.toLocaleDateString(loc, { weekday: 'long' });
   const diaSemCap = diaSem.charAt(0).toUpperCase() + diaSem.slice(1);
 
   // número de día enorme
@@ -147,7 +151,7 @@ export async function generateAppointmentPDF(appt: Appointment) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...gray);
-  doc.text('HORA', sepX + 6, by + 10);
+  doc.text(t('hour'), sepX + 6, by + 10);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(19);
   doc.setTextColor(...blueDark);
@@ -174,7 +178,7 @@ export async function generateAppointmentPDF(appt: Appointment) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.5);
     doc.setTextColor(...blue);
-    doc.text('Escanea para ver tu cita', qrX + qrSize / 2, qrY + qrSize + 5, { align: 'center' });
+    doc.text(t('scanToView'), qrX + qrSize / 2, qrY + qrSize + 5, { align: 'center' });
   } catch {
     // si el QR falla, el PDF se genera igual sin él
   }
@@ -196,16 +200,16 @@ export async function generateAppointmentPDF(appt: Appointment) {
     doc.text(lines.slice(0, 2), RX, dy + 5);
     dy += 6 + Math.min(lines.length, 2) * 5;
   };
-  chip('Tu doctor', `Dr. ${appt.doctor_name}  ·  ${appt.doctor_specialty}`);
-  chip('Motivo', appt.reason || 'Consulta general');
+  chip(t('yourDoctor'), `Dr. ${appt.doctor_name}  ·  ${appt.doctor_specialty}`);
+  chip(t('reason'), appt.reason || t('generalConsult'));
 
   // nota al pie izquierda del área derecha
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7);
   doc.setTextColor(...grayMid);
-  doc.text('Llega 10 min antes y trae este pase :)', RX, H - 6);
+  doc.text(t('footer'), RX, H - 6);
 
   // ── Descarga ────────────────────────────────────────────
   const safeName = appt.user_name.replace(/\s+/g, '_');
-  doc.save(`Cita_${safeName}_${appt.date}.pdf`);
+  doc.save(`${t('fileName')}_${safeName}_${appt.date}.pdf`);
 }

@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api, PublicAppointment as PublicAppt } from '../api/client';
+import { dateLocale } from '../i18n/format';
 import { Calendar, Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-const STATUS: Record<string, { label: string; cls: string; Icon: typeof CheckCircle }> = {
-  scheduled: { label: 'Programada', cls: 'bg-blue-100 text-blue-700', Icon: AlertCircle },
-  completed: { label: 'Completada', cls: 'bg-green-100 text-green-700', Icon: CheckCircle },
-  cancelled: { label: 'Cancelada', cls: 'bg-red-100 text-red-700', Icon: XCircle },
+const STATUS: Record<string, { cls: string; Icon: typeof CheckCircle }> = {
+  scheduled: { cls: 'bg-blue-100 text-blue-700', Icon: AlertCircle },
+  completed: { cls: 'bg-green-100 text-green-700', Icon: CheckCircle },
+  cancelled: { cls: 'bg-red-100 text-red-700', Icon: XCircle },
 };
 
 export default function PublicAppointment() {
+  const { t } = useTranslation();
   const { code } = useParams<{ code: string }>();
   const [appt, setAppt] = useState<PublicAppt | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,12 +22,12 @@ export default function PublicAppointment() {
     if (!code) return;
     api.appointments.getPublic(code)
       .then(setAppt)
-      .catch(() => setError('No encontramos esta cita. Verifica el código o contacta a la clínica.'))
+      .catch(() => setError(t('publicAppointment.notFound')))
       .finally(() => setLoading(false));
   }, [code]);
 
   const fmtDate = (d: string) => {
-    const f = new Date(d + 'T00:00:00').toLocaleDateString('es-CO', {
+    const f = new Date(d + 'T00:00:00').toLocaleDateString(dateLocale(), {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
     return f.charAt(0).toUpperCase() + f.slice(1);
@@ -41,7 +44,7 @@ export default function PublicAppointment() {
         </div>
 
         {loading && (
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center text-gray-400">Cargando tu cita...</div>
+          <div className="bg-white rounded-2xl shadow-lg p-8 text-center text-gray-400">{t('publicAppointment.loading')}</div>
         )}
 
         {!loading && error && (
@@ -58,10 +61,10 @@ export default function PublicAppointment() {
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
               {/* Cabecera con degradado de marca */}
               <div className="bg-gradient-to-r from-[#0f2f4f] via-[#1e6f9f] to-[#36c1d6] text-white px-6 py-5">
-                <p className="text-blue-100 text-xs uppercase tracking-wide">Invitación a tu cita</p>
-                <h1 className="text-2xl font-bold mt-1">¡Hola, {appt.user_name}!</h1>
+                <p className="text-blue-100 text-xs uppercase tracking-wide">{t('publicAppointment.inviteLabel')}</p>
+                <h1 className="text-2xl font-bold mt-1">{t('publicAppointment.greeting', { name: appt.user_name })}</h1>
                 <span className={`inline-flex items-center gap-1 mt-3 text-xs px-2.5 py-1 rounded-full font-medium ${st.cls}`}>
-                  <StIcon className="w-3.5 h-3.5" /> {st.label}
+                  <StIcon className="w-3.5 h-3.5" /> {t(`status.${appt.status}`)}
                 </span>
               </div>
 
@@ -80,13 +83,13 @@ export default function PublicAppointment() {
               {/* Médico y motivo */}
               <div className="px-6 py-5 space-y-4">
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide">Tu doctor</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide">{t('publicAppointment.yourDoctor')}</p>
                   <p className="text-sm text-gray-800 mt-0.5">Dr. {appt.doctor_name}</p>
                   <p className="text-xs text-gray-500">{appt.doctor_specialty}</p>
                 </div>
                 {appt.reason && (
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">Motivo</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">{t('publicAppointment.reason')}</p>
                     <p className="text-sm text-gray-800 mt-0.5">{appt.reason}</p>
                   </div>
                 )}
@@ -96,20 +99,20 @@ export default function PublicAppointment() {
               <div className="bg-blue-50 px-6 py-4">
                 <p className="text-xs text-blue-800 flex items-start gap-2">
                   <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                  Por favor llega 10 minutos antes y trae tu documento de identidad.
+                  {t('publicAppointment.arriveNote')}
                 </p>
               </div>
 
               {/* Código */}
               <div className="px-6 py-3 text-center border-t border-gray-100">
-                <p className="text-[11px] text-gray-400">Código de cita</p>
+                <p className="text-[11px] text-gray-400">{t('publicAppointment.appointmentCode')}</p>
                 <p className="text-sm font-bold text-gray-700 tracking-widest">{appt.public_code}</p>
               </div>
             </div>
           );
         })()}
 
-        <p className="text-center text-xs text-gray-400 mt-5">odontiacloud · cuidamos tu sonrisa</p>
+        <p className="text-center text-xs text-gray-400 mt-5">{t('publicAppointment.tagline')}</p>
       </div>
     </div>
   );

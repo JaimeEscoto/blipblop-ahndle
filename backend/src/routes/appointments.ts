@@ -93,6 +93,8 @@ router.put('/:id', async (req: Request, res: Response) => {
   );
   if (conflict.rows[0]) return res.status(409).json({ error: 'El médico ya tiene una cita en ese horario' });
 
+  const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [req.params.id]);
+  req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
     `UPDATE appointments SET user_id=$1, doctor_id=$2, date=$3, time=$4, reason=$5, status=$6, notes=$7
      WHERE id=$8 RETURNING id`,
@@ -108,6 +110,8 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
   if (!['scheduled', 'completed', 'cancelled'].includes(status)) {
     return res.status(400).json({ error: 'Estado inválido' });
   }
+  const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [req.params.id]);
+  req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
     'UPDATE appointments SET status=$1 WHERE id=$2 RETURNING id',
     [status, req.params.id]
@@ -118,9 +122,19 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {
-  const { rowCount } = await pool.query('DELETE FROM appointments WHERE id=$1', [req.params.id]);
-  if (!rowCount) return res.status(404).json({ error: 'Cita no encontrada' });
-  res.json({ message: 'Cita eliminada' });
+  const { rows } = await pool.query(
+    `WITH deleted AS (DELETE FROM appointments WHERE id=$1 RETURNING *)
+     SELECT deleted.*,
+       TO_CHAR(deleted.date, 'YYYY-MM-DD') AS date,
+       TO_CHAR(deleted.time, 'HH24:MI') AS time,
+       u.name AS user_name, d.name AS doctor_name, d.specialty AS doctor_specialty
+     FROM deleted
+     JOIN users u ON deleted.user_id = u.id
+     JOIN doctors d ON deleted.doctor_id = d.id`,
+    [req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
+  res.json(rows[0]);
 });
 
 export default router;

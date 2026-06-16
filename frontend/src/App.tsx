@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Layout from './components/Layout';
 import Appointments from './pages/Appointments';
 import Doctors from './pages/Doctors';
@@ -11,10 +12,12 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Invitations from './pages/Invitations';
 import Activity from './pages/Activity';
+import Settings from './pages/Settings';
 import { useAuth } from './auth/AuthContext';
 
 function Splash() {
-  return <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">Cargando...</div>;
+  const { t } = useTranslation();
+  return <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">{t('common.loading')}</div>;
 }
 
 export default function App() {
@@ -37,6 +40,7 @@ export default function App() {
           <Route path="/pacientes"     element={<Patients />} />
           <Route path="/inventario"    element={<Inventory />} />
           <Route path="/recordatorios" element={<Reminders />} />
+          <Route path="/ajustes"       element={<Settings />} />
           <Route path="/invitaciones"  element={account.role === 'superuser' ? <Invitations /> : <Navigate to="/inicio" replace />} />
           <Route path="/actividad"     element={account.role === 'superuser' ? <Activity /> : <Navigate to="/inicio" replace />} />
           <Route path="*"              element={<Navigate to="/inicio" replace />} />

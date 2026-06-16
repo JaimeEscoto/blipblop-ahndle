@@ -43,6 +43,8 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   const v = pick(req.body);
   try {
+    const before = await pool.query('SELECT * FROM users WHERE id=$1', [req.params.id]);
+    req.auditBefore = before.rows[0] || null;
     const { rows } = await pool.query(
       `UPDATE users SET name=$1, email=$2, phone=$3, document_id=$4, document_type=$5, birth_date=$6,
          gender=$7, address=$8, city=$9, department=$10, occupation=$11 WHERE id=$12 RETURNING *`,
@@ -57,9 +59,9 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {
-  const { rowCount } = await pool.query('DELETE FROM users WHERE id=$1', [req.params.id]);
-  if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
-  res.json({ message: 'Usuario eliminado' });
+  const { rows } = await pool.query('DELETE FROM users WHERE id=$1 RETURNING *', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
+  res.json(rows[0]);
 });
 
 export default router;

@@ -26,6 +26,8 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   const { name, category, quantity, unit, min_quantity, price, supplier } = req.body;
+  const before = await pool.query('SELECT * FROM inventory WHERE id=$1', [req.params.id]);
+  req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
     `UPDATE inventory SET name=$1, category=$2, quantity=$3, unit=$4, min_quantity=$5, price=$6, supplier=$7
      WHERE id=$8 RETURNING *`,
@@ -37,6 +39,8 @@ router.put('/:id', async (req: Request, res: Response) => {
 
 router.patch('/:id/quantity', async (req: Request, res: Response) => {
   const { quantity } = req.body;
+  const before = await pool.query('SELECT * FROM inventory WHERE id=$1', [req.params.id]);
+  req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
     'UPDATE inventory SET quantity=$1 WHERE id=$2 RETURNING *',
     [quantity, req.params.id]
@@ -46,9 +50,9 @@ router.patch('/:id/quantity', async (req: Request, res: Response) => {
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {
-  const { rowCount } = await pool.query('DELETE FROM inventory WHERE id=$1', [req.params.id]);
-  if (!rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
-  res.json({ message: 'Producto eliminado' });
+  const { rows } = await pool.query('DELETE FROM inventory WHERE id=$1 RETURNING *', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Producto no encontrado' });
+  res.json(rows[0]);
 });
 
 export default router;

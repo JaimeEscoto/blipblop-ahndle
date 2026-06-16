@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, ActivityLog, ActivityAccount } from '../api/client';
+import { dateLocale } from '../i18n/format';
 import {
   Plus, Pencil, Trash2, LogIn, Eye, Activity as ActivityIcon, RefreshCw, ChevronDown, ChevronRight,
 } from 'lucide-react';
@@ -29,6 +31,8 @@ const FIELD_LABELS: Record<string, string> = {
   emergency_phone: 'Tel. de emergencia', category: 'Categoría', quantity: 'Cantidad',
   unit: 'Unidad', min_quantity: 'Cantidad mínima', price: 'Precio', supplier: 'Proveedor',
   title: 'Título', description: 'Descripción', type: 'Tipo', tooth_chart: 'Odontograma',
+  user_name: 'Paciente', doctor_name: 'Médico', doctor_specialty: 'Especialidad',
+  invited_by: 'Invitado por', role: 'Rol',
 };
 const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelada', completed: 'Completada', scheduled: 'Programada',
@@ -42,7 +46,13 @@ function formatValue(key: string, value: any): string {
   return String(value);
 }
 
+// Un cambio de edición se guarda como { from, to } (valor anterior y nuevo).
+function isChange(v: any): v is { from: any; to: any } {
+  return v != null && typeof v === 'object' && 'from' in v && 'to' in v;
+}
+
 export default function Activity() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [accounts, setAccounts] = useState<ActivityAccount[]>([]);
   const [account, setAccount] = useState('');
@@ -66,7 +76,7 @@ export default function Activity() {
   useEffect(() => { api.activity.accounts().then(setAccounts).catch(() => {}); }, []);
 
   const fmt = (d: string) =>
-    new Date(d).toLocaleString('es-CO', {
+    new Date(d).toLocaleString(dateLocale(), {
       day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
 
@@ -74,18 +84,18 @@ export default function Activity() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Actividad</h1>
-          <p className="text-sm text-gray-500">Registro de lo que hace cada usuario en el sistema</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('activity.title')}</h1>
+          <p className="text-sm text-gray-500">{t('activity.subtitle')}</p>
         </div>
         <button onClick={load} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('activity.refresh')}
         </button>
       </div>
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <select className="input sm:max-w-xs" value={account} onChange={e => setAccount(e.target.value)}>
-          <option value="">Todos los usuarios</option>
+          <option value="">{t('activity.allUsers')}</option>
           {accounts.map(a => (
             <option key={a.account_email} value={a.account_email}>
               {a.account_name || a.account_email} ({a.events})
@@ -93,7 +103,7 @@ export default function Activity() {
           ))}
         </select>
         <select className="input sm:max-w-xs" value={entity} onChange={e => setEntity(e.target.value)}>
-          <option value="">Todos los módulos</option>
+          <option value="">{t('activity.allModules')}</option>
           {ENTITIES.map(en => <option key={en} value={en}>{en}</option>)}
         </select>
       </div>
@@ -102,7 +112,7 @@ export default function Activity() {
         {!loading && logs.length === 0 && (
           <div className="text-center py-12 text-gray-400 text-sm flex flex-col items-center gap-2">
             <ActivityIcon className="w-8 h-8 text-gray-300" />
-            No hay actividad registrada con estos filtros
+            {t('activity.none')}
           </div>
         )}
         {logs.map(log => {
@@ -121,7 +131,7 @@ export default function Activity() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900 truncate">
-                    <span className="text-blue-700">{log.account_name || log.account_email || 'Desconocido'}</span>
+                    <span className="text-blue-700">{log.account_name || log.account_email || t('activity.unknown')}</span>
                     {' — '}{log.summary}
                   </p>
                   <p className="text-xs text-gray-400">{fmt(log.created_at)}</p>
@@ -130,15 +140,25 @@ export default function Activity() {
                   ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
                   : <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />)}
               </button>
-              {open && hasDetails && (
+              {open && hasDetails && (() => {
+                const showsChanges = Object.values(log.details!).some(isChange);
+                return (
                 <div className="px-4 pb-4 -mt-1">
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2 font-medium">Detalle de la operación</p>
+                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2 font-medium">{t(showsChanges ? 'activity.changesDetail' : 'activity.operationDetail')}</p>
                     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
                       {Object.entries(log.details!).map(([k, v]) => (
                         <div key={k} className="flex gap-2 text-sm">
                           <dt className="text-gray-500 shrink-0">{FIELD_LABELS[k] || k}:</dt>
-                          <dd className="text-gray-800 font-medium break-words min-w-0">{formatValue(k, v)}</dd>
+                          <dd className="text-gray-800 font-medium break-words min-w-0">
+                            {isChange(v) ? (
+                              <span className="inline-flex flex-wrap items-center gap-1.5">
+                                <span className="text-gray-400 line-through">{formatValue(k, v.from)}</span>
+                                <span className="text-gray-400">→</span>
+                                <span className="text-gray-900">{formatValue(k, v.to)}</span>
+                              </span>
+                            ) : formatValue(k, v)}
+                          </dd>
                         </div>
                       ))}
                     </dl>
@@ -149,7 +169,8 @@ export default function Activity() {
                     )}
                   </div>
                 </div>
-              )}
+                );
+              })()}
             </div>
           );
         })}

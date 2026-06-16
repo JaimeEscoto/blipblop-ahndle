@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, User } from '../api/client';
 import { Plus, Pencil, Trash2, Search, Phone, Mail, CreditCard, MapPin, Cake, Upload, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -75,6 +76,7 @@ const EMPTY = {
 };
 
 export default function Patients() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<{ type: 'create' | 'edit'; user?: User } | null>(null);
@@ -168,9 +170,9 @@ export default function Patients() {
     reader.onload = () => {
       try {
         const grid = parseCSV(String(reader.result));
-        if (grid.length < 2) { setImportError('El archivo no tiene filas de datos.'); setImportRows([]); return; }
+        if (grid.length < 2) { setImportError(t('patients.errNoDataRows')); setImportRows([]); return; }
         const headers = grid[0].map(normalizeHeader).map(h => HEADER_MAP[h] || '');
-        if (!headers.includes('name')) { setImportError('Falta la columna "nombre" en el archivo.'); setImportRows([]); return; }
+        if (!headers.includes('name')) { setImportError(t('patients.errNoNameColumn')); setImportRows([]); return; }
         const parsed: ImportRow[] = [];
         for (let r = 1; r < grid.length; r++) {
           const obj: any = {};
@@ -179,10 +181,10 @@ export default function Patients() {
           if (obj.birth_date) obj.birth_date = normalizeDate(obj.birth_date);
           parsed.push(obj);
         }
-        if (parsed.length === 0) { setImportError('No se encontraron pacientes con nombre.'); setImportRows([]); return; }
+        if (parsed.length === 0) { setImportError(t('patients.errNoNamedPatients')); setImportRows([]); return; }
         setImportRows(parsed);
       } catch {
-        setImportError('No se pudo leer el archivo. Verifica que sea un CSV válido.');
+        setImportError(t('patients.errReadFile'));
       }
     };
     reader.readAsText(file);
@@ -206,7 +208,7 @@ export default function Patients() {
         }
         ok++;
       } catch (e: any) {
-        fail.push({ name: row.name, reason: e.message || 'Error' });
+        fail.push({ name: row.name, reason: e.message || t('patients.errGeneric') });
       }
     }
     setImporting(false);
@@ -240,15 +242,15 @@ export default function Patients() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Pacientes</h1>
-          <p className="text-sm text-gray-500">{users.length} registrados</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('patients.title')}</h1>
+          <p className="text-sm text-gray-500">{t('patients.registeredCount', { count: users.length })}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={openImport} className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
-            <Upload className="w-4 h-4" /> Importar
+            <Upload className="w-4 h-4" /> {t('patients.import')}
           </button>
           <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Nuevo
+            <Plus className="w-4 h-4" /> {t('common.new')}
           </button>
         </div>
       </div>
@@ -257,7 +259,7 @@ export default function Patients() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Buscar por nombre, email o documento..."
+          placeholder={t('patients.searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -265,7 +267,7 @@ export default function Patients() {
 
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm">No se encontraron pacientes</div>
+          <div className="text-center py-12 text-gray-400 text-sm">{t('patients.noneFound')}</div>
         )}
         {filtered.map(u => {
           const a = age(u.birth_date);
@@ -278,7 +280,7 @@ export default function Patients() {
                     {u.document_id && (
                       <div className="flex items-center gap-1.5 text-xs text-gray-500">
                         <CreditCard className="w-3.5 h-3.5 shrink-0" />
-                        <span>{u.document_type || 'Doc.'}: {u.document_id}</span>
+                        <span>{u.document_type || t('patients.doc')}: {u.document_id}</span>
                       </div>
                     )}
                     {u.phone && (
@@ -298,7 +300,7 @@ export default function Patients() {
                     )}
                     {a !== null && (
                       <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Cake className="w-3.5 h-3.5 shrink-0" /><span>{a} años{u.gender ? ` · ${u.gender}` : ''}</span>
+                        <Cake className="w-3.5 h-3.5 shrink-0" /><span>{t('patients.yearsOld', { count: a })}{u.gender ? ` · ${u.gender}` : ''}</span>
                       </div>
                     )}
                   </div>
@@ -318,72 +320,72 @@ export default function Patients() {
       </div>
 
       {modal && (
-        <Modal title={modal.type === 'create' ? 'Nuevo Paciente' : 'Editar Paciente'} onClose={() => setModal(null)}>
+        <Modal title={modal.type === 'create' ? t('patients.createTitle') : t('patients.editTitle')} onClose={() => setModal(null)}>
           <form onSubmit={handleSubmit} className="space-y-3">
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-            {sectionTitle('Datos generales')}
-            {field('Nombre completo', 'name', 'Juan García López', 'text', true)}
+            {sectionTitle(t('patients.sectionGeneral'))}
+            {field(t('patients.fullName'), 'name', t('patients.fullNamePlaceholder'), 'text', true)}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Tipo de documento</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.documentType')}</label>
                 <select className="input" value={form.document_type} onChange={e => set('document_type', e.target.value)}>
                   {DOC_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-              {field('Número de documento', 'document_id', '0801-1990-12345')}
+              {field(t('patients.documentNumber'), 'document_id', t('patients.documentNumberPlaceholder'))}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {field('Fecha de nacimiento', 'birth_date', '', 'date')}
+              {field(t('patients.birthDate'), 'birth_date', '', 'date')}
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Género</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.gender')}</label>
                 <select className="input" value={form.gender} onChange={e => set('gender', e.target.value)}>
-                  <option value="">Seleccionar</option>
+                  <option value="">{t('common.select')}</option>
                   {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
             </div>
-            {field('Ocupación', 'occupation', 'Comerciante, estudiante...')}
+            {field(t('patients.occupation'), 'occupation', t('patients.occupationPlaceholder'))}
 
-            {sectionTitle('Contacto y dirección')}
+            {sectionTitle(t('patients.sectionContact'))}
             <div className="grid grid-cols-2 gap-3">
-              {field('Teléfono', 'phone', '+504 9999 9999')}
-              {field('Email', 'email', 'correo@ejemplo.com', 'email')}
+              {field(t('patients.phone'), 'phone', '+504 9999 9999')}
+              {field(t('patients.email'), 'email', t('patients.emailPlaceholder'), 'email')}
             </div>
-            {field('Dirección', 'address', 'Colonia, calle, número de casa...')}
+            {field(t('patients.address'), 'address', t('patients.addressPlaceholder'))}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Departamento</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.department')}</label>
                 <select className="input" value={form.department} onChange={e => set('department', e.target.value)}>
-                  <option value="">Seleccionar</option>
+                  <option value="">{t('common.select')}</option>
                   {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-              {field('Municipio / Ciudad', 'city', 'Tegucigalpa, San Pedro Sula...')}
+              {field(t('patients.city'), 'city', t('patients.cityPlaceholder'))}
             </div>
 
-            {sectionTitle('Datos médicos básicos')}
+            {sectionTitle(t('patients.sectionMedical'))}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Tipo de sangre</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.bloodType')}</label>
                 <select className="input" value={form.blood_type} onChange={e => set('blood_type', e.target.value)}>
-                  <option value="">Seleccionar</option>
+                  <option value="">{t('common.select')}</option>
                   {BLOOD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
-              {field('Alergias', 'allergies', 'Penicilina, látex...')}
+              {field(t('patients.allergies'), 'allergies', t('patients.allergiesPlaceholder'))}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {field('Contacto de emergencia', 'emergency_contact', 'Nombre del familiar')}
-              {field('Tel. de emergencia', 'emergency_phone', '+504 9999 9999')}
+              {field(t('patients.emergencyContact'), 'emergency_contact', t('patients.emergencyContactPlaceholder'))}
+              {field(t('patients.emergencyPhone'), 'emergency_phone', '+504 9999 9999')}
             </div>
 
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </form>
@@ -391,7 +393,7 @@ export default function Patients() {
       )}
 
       {importOpen && (
-        <Modal title="Importar pacientes" onClose={() => setImportOpen(false)}>
+        <Modal title={t('patients.importTitle')} onClose={() => setImportOpen(false)}>
           <div className="space-y-3">
             {importError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{importError}</p>}
 
@@ -399,47 +401,47 @@ export default function Patients() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg px-3 py-2.5">
                   <CheckCircle className="w-5 h-5" />
-                  <span className="text-sm font-medium">{importDone.ok} paciente{importDone.ok !== 1 ? 's' : ''} importado{importDone.ok !== 1 ? 's' : ''} correctamente</span>
+                  <span className="text-sm font-medium">{t('patients.importedCount', { count: importDone.ok })}</span>
                 </div>
                 {importDone.fail.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700 mb-1"><AlertCircle className="w-4 h-4" />{importDone.fail.length} con error</p>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700 mb-1"><AlertCircle className="w-4 h-4" />{t('patients.withError', { count: importDone.fail.length })}</p>
                     <ul className="text-xs text-amber-700 space-y-0.5 max-h-32 overflow-y-auto">
                       {importDone.fail.map((f, i) => <li key={i}>• {f.name}: {f.reason}</li>)}
                     </ul>
                   </div>
                 )}
-                <button onClick={() => setImportOpen(false)} className="w-full py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Listo</button>
+                <button onClick={() => setImportOpen(false)} className="w-full py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">{t('common.done')}</button>
               </div>
             ) : (
               <>
-                <p className="text-sm text-gray-600">Sube un archivo CSV con tus pacientes. La única columna obligatoria es <span className="font-medium">nombre</span>.</p>
+                <p className="text-sm text-gray-600">{t('patients.importIntro')} <span className="font-medium">{t('patients.nameWord')}</span>.</p>
                 <button onClick={downloadTemplate} className="flex items-center gap-1.5 text-sm text-blue-600 font-medium hover:underline">
-                  <Download className="w-4 h-4" /> Descargar plantilla CSV
+                  <Download className="w-4 h-4" /> {t('patients.downloadTemplate')}
                 </button>
 
                 <label className="block border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30">
                   <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                  <span className="text-sm text-gray-600 font-medium">Elegir archivo CSV</span>
+                  <span className="text-sm text-gray-600 font-medium">{t('patients.chooseFile')}</span>
                   <input type="file" accept=".csv,text/csv" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
                 </label>
 
                 {importRows.length > 0 && (
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm font-medium text-gray-800 mb-1">{importRows.length} paciente{importRows.length !== 1 ? 's' : ''} detectado{importRows.length !== 1 ? 's' : ''}:</p>
+                    <p className="text-sm font-medium text-gray-800 mb-1">{t('patients.detectedCount', { count: importRows.length })}</p>
                     <ul className="text-xs text-gray-500 space-y-0.5 max-h-32 overflow-y-auto">
                       {importRows.slice(0, 10).map((r, i) => <li key={i}>• {r.name}{r.document_id ? ` (${r.document_id})` : ''}</li>)}
-                      {importRows.length > 10 && <li>… y {importRows.length - 10} más</li>}
+                      {importRows.length > 10 && <li>{t('patients.andMore', { count: importRows.length - 10 })}</li>}
                     </ul>
                   </div>
                 )}
 
                 <div className="flex gap-2 pt-1">
-                  <button type="button" onClick={() => setImportOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+                  <button type="button" onClick={() => setImportOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">{t('common.cancel')}</button>
                   <button onClick={runImport} disabled={importRows.length === 0 || importing}
                     className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-                    {importing ? 'Importando...' : `Importar ${importRows.length || ''}`}
+                    {importing ? t('patients.importing') : t('patients.importAction', { count: importRows.length || '' })}
                   </button>
                 </div>
               </>
@@ -450,7 +452,7 @@ export default function Patients() {
 
       {deleteId && (
         <ConfirmDialog
-          message="¿Eliminar este paciente? También se eliminarán sus citas asociadas."
+          message={t('patients.deleteConfirm')}
           onConfirm={handleDelete}
           onCancel={() => setDeleteId(null)}
         />

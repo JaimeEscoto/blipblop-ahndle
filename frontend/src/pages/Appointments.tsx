@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, Appointment, Doctor, User } from '../api/client';
+import { dateLocale } from '../i18n/format';
 import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
 import Modal from '../components/Modal';
@@ -8,10 +10,10 @@ import Odontogram from '../components/Odontogram';
 
 type Status = 'scheduled' | 'completed' | 'cancelled';
 
-const STATUS_CONFIG: Record<Status, { label: string; icon: typeof CheckCircle; className: string }> = {
-  scheduled: { label: 'Programada', icon: AlertCircle, className: 'bg-blue-100 text-blue-700' },
-  completed: { label: 'Completada', icon: CheckCircle, className: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelada', icon: XCircle, className: 'bg-red-100 text-red-700' },
+const STATUS_CONFIG: Record<Status, { icon: typeof CheckCircle; className: string }> = {
+  scheduled: { icon: AlertCircle, className: 'bg-blue-100 text-blue-700' },
+  completed: { icon: CheckCircle, className: 'bg-green-100 text-green-700' },
+  cancelled: { icon: XCircle, className: 'bg-red-100 text-red-700' },
 };
 
 const TIMES = Array.from({ length: 24 }, (_, h) =>
@@ -23,6 +25,8 @@ const TIMES = Array.from({ length: 24 }, (_, h) =>
 const EMPTY_FORM = { user_id: '', doctor_id: '', date: '', time: '', reason: '', notes: '', status: 'scheduled' as Status };
 
 export default function Appointments() {
+  const { t } = useTranslation();
+  const statusLabel = (s: Status) => t(`status.${s}`);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -80,7 +84,7 @@ export default function Appointments() {
     if (changedDateTime && form.date && form.time) {
       const when = new Date(`${form.date}T${form.time}`);
       if (when.getTime() < Date.now()) {
-        setError('No se pueden agendar citas en una fecha u hora pasada.');
+        setError(t('appointments.pastError'));
         return;
       }
     }
@@ -157,7 +161,7 @@ export default function Appointments() {
     return matchSearch && matchStatus;
   });
 
-  const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' });
+  const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
 
   // ── Tarjeta de cita reutilizable (lista y calendario) ──
   const ApptCard = (a: Appointment) => {
@@ -169,7 +173,7 @@ export default function Appointments() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.className}`}>
-                <Icon className="w-3 h-3" />{cfg.label}
+                <Icon className="w-3 h-3" />{statusLabel(a.status)}
               </span>
             </div>
             <p className="font-semibold text-gray-900 truncate">{a.user_name}</p>
@@ -185,7 +189,7 @@ export default function Appointments() {
             {a.reason && <p className="text-xs text-gray-400 mt-1 truncate">{a.reason}</p>}
           </div>
           <div className="flex gap-1 shrink-0">
-            <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Descargar PDF">
+            <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title={t('common.download')}>
               <Download className="w-4 h-4" />
             </button>
             <button onClick={() => openEdit(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
@@ -199,10 +203,10 @@ export default function Appointments() {
         {a.status === 'scheduled' && (
           <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
             <button onClick={() => openComplete(a)} className="flex-1 text-xs py-1.5 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100">
-              Marcar completada
+              {t('appointments.markCompleted')}
             </button>
             <button onClick={() => handleStatusChange(a.id, 'cancelled')} className="flex-1 text-xs py-1.5 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100">
-              Cancelar cita
+              {t('appointments.cancelAppointment')}
             </button>
           </div>
         )}
@@ -211,9 +215,14 @@ export default function Appointments() {
   };
 
   // ── Lógica del calendario mensual ──
-  const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  // Nombres de los días (corto) según el idioma, empezando en lunes
+  const WEEKDAYS = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(2024, 0, 1 + i); // 2024-01-01 fue lunes
+    const s = d.toLocaleDateString(dateLocale(), { weekday: 'short' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  });
   const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  const monthLabel = capFirst(calMonth.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }));
+  const monthLabel = capFirst(calMonth.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' }));
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
 
   // Citas (filtradas por estado) agrupadas por fecha YYYY-MM-DD
@@ -247,11 +256,11 @@ export default function Appointments() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Citas</h1>
-          <p className="text-sm text-gray-500">{appointments.length} en total</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('appointments.title')}</h1>
+          <p className="text-sm text-gray-500">{t('appointments.totalCount', { count: appointments.length })}</p>
         </div>
         <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Nueva
+          <Plus className="w-4 h-4" /> {t('common.newFem')}
         </button>
       </div>
 
@@ -259,11 +268,11 @@ export default function Appointments() {
       <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
         <button onClick={() => setView('list')}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'list' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
-          <List className="w-4 h-4" /> Lista
+          <List className="w-4 h-4" /> {t('appointments.listView')}
         </button>
         <button onClick={() => setView('calendar')}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'calendar' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
-          <CalendarDays className="w-4 h-4" /> Calendario
+          <CalendarDays className="w-4 h-4" /> {t('appointments.calendarView')}
         </button>
       </div>
 
@@ -273,7 +282,7 @@ export default function Appointments() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Buscar paciente, médico o motivo..."
+              placeholder={t('appointments.searchPlaceholder')}
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -289,14 +298,14 @@ export default function Appointments() {
                   filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {s === 'all' ? 'Todas' : STATUS_CONFIG[s].label}
+                {s === 'all' ? t('appointments.filterAll') : statusLabel(s)}
               </button>
             ))}
           </div>
 
           <div className="space-y-3">
             {filtered.length === 0 && (
-              <div className="text-center py-12 text-gray-400 text-sm">No se encontraron citas</div>
+              <div className="text-center py-12 text-gray-400 text-sm">{t('appointments.noneFound')}</div>
             )}
             {filtered.map(a => ApptCard(a))}
           </div>
@@ -317,7 +326,7 @@ export default function Appointments() {
             {(['all', 'scheduled', 'completed', 'cancelled'] as const).map(s => (
               <button key={s} onClick={() => setFilterStatus(s)}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                {s === 'all' ? 'Todas' : STATUS_CONFIG[s].label}
+                {s === 'all' ? t('appointments.filterAll') : statusLabel(s)}
               </button>
             ))}
           </div>
@@ -355,7 +364,7 @@ export default function Appointments() {
                           <p className="text-[8px] opacity-70 truncate">Dr. {a.doctor_name}</p>
                         </div>
                       ))}
-                      {dayAppts.length > 3 && <span className="text-[9px] text-gray-400 px-1">+{dayAppts.length - 3} más</span>}
+                      {dayAppts.length > 3 && <span className="text-[9px] text-gray-400 px-1">{t('appointments.plusMore', { count: dayAppts.length - 3 })}</span>}
                     </div>
                   </button>
                 );
@@ -365,20 +374,20 @@ export default function Appointments() {
 
           {/* Leyenda */}
           <div className="flex gap-3 mt-2 mb-4 text-[11px] text-gray-500">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />Programada</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />Completada</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />Cancelada</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />{t('appointments.legendScheduled')}</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />{t('appointments.legendCompleted')}</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />{t('appointments.legendCancelled')}</span>
           </div>
 
           {/* Citas del día seleccionado */}
           {selectedDate && (
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-2">
-                {capFirst(new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }))}
+                {capFirst(new Date(selectedDate + 'T00:00:00').toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }))}
               </p>
               <div className="space-y-3">
                 {(byDate[selectedDate] || []).length === 0
-                  ? <div className="text-center py-8 text-gray-400 text-sm">Sin citas este día</div>
+                  ? <div className="text-center py-8 text-gray-400 text-sm">{t('appointments.noneThisDay')}</div>
                   : [...(byDate[selectedDate] || [])].sort((a, b) => a.time.localeCompare(b.time)).map(a => ApptCard(a))
                 }
               </div>
@@ -388,60 +397,60 @@ export default function Appointments() {
       )}
 
       {modal && (
-        <Modal title={modal.type === 'create' ? 'Nueva Cita' : 'Editar Cita'} onClose={() => setModal(null)}>
+        <Modal title={modal.type === 'create' ? t('appointments.createTitle') : t('appointments.editTitle')} onClose={() => setModal(null)}>
           <form onSubmit={handleSubmit} className="space-y-3">
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Paciente *</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.patient')} *</label>
               <select required className="input" value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })}>
-                <option value="">Seleccionar paciente</option>
+                <option value="">{t('appointments.selectPatient')}</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Médico *</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.doctor')} *</label>
               <select required className="input" value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })}>
-                <option value="">Seleccionar médico</option>
+                <option value="">{t('appointments.selectDoctor')}</option>
                 {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name} — {d.specialty}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.date')} *</label>
                 <input required type="date" min={modal?.type === 'create' ? todayStr : undefined} className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Hora *</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.time')} *</label>
                 <select required className="input" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}>
-                  <option value="">Hora</option>
-                  {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="">{t('appointments.timeShort')}</option>
+                  {TIMES.map(time => <option key={time} value={time}>{time}</option>)}
                 </select>
               </div>
             </div>
             {modal.type === 'edit' && (
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Estado</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.statusLabel')}</label>
                 <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value as Status })}>
-                  <option value="scheduled">Programada</option>
-                  <option value="completed">Completada</option>
-                  <option value="cancelled">Cancelada</option>
+                  <option value="scheduled">{t('status.scheduled')}</option>
+                  <option value="completed">{t('status.completed')}</option>
+                  <option value="cancelled">{t('status.cancelled')}</option>
                 </select>
               </div>
             )}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Motivo de la consulta</label>
-              <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Control anual, dolor de cabeza..." />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.reason')}</label>
+              <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder={t('appointments.reasonPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Notas adicionales</label>
-              <textarea className="input resize-none" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Información adicional..." />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.notes')}</label>
+              <textarea className="input resize-none" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder={t('appointments.notesPlaceholder')} />
             </div>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </form>
@@ -449,7 +458,7 @@ export default function Appointments() {
       )}
 
       {completeAppt && (
-        <Modal title="Completar cita — entrada al historial" onClose={() => setCompleteAppt(null)}>
+        <Modal title={t('appointments.completeTitle')} onClose={() => setCompleteAppt(null)}>
           <form onSubmit={handleComplete} className="space-y-3">
             {completeError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{completeError}</p>}
 
@@ -459,39 +468,39 @@ export default function Appointments() {
             </div>
 
             <p className="text-xs text-gray-500">
-              Para finalizar la cita debes registrar una entrada en el historial del paciente.
+              {t('appointments.completeIntro')}
             </p>
 
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Diagnóstico</label>
-              <input className="input" value={completeForm.diagnosis} onChange={e => setCompleteForm({ ...completeForm, diagnosis: e.target.value })} placeholder="Caries en molar superior..." />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.diagnosis')}</label>
+              <input className="input" value={completeForm.diagnosis} onChange={e => setCompleteForm({ ...completeForm, diagnosis: e.target.value })} placeholder={t('appointments.diagnosisPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Tratamiento realizado</label>
-              <input className="input" value={completeForm.treatment} onChange={e => setCompleteForm({ ...completeForm, treatment: e.target.value })} placeholder="Obturación con resina compuesta..." />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.treatment')}</label>
+              <input className="input" value={completeForm.treatment} onChange={e => setCompleteForm({ ...completeForm, treatment: e.target.value })} placeholder={t('appointments.treatmentPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Observaciones</label>
-              <textarea className="input resize-none" rows={2} value={completeForm.observations} onChange={e => setCompleteForm({ ...completeForm, observations: e.target.value })} placeholder="Próxima cita en 6 meses..." />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.observations')}</label>
+              <textarea className="input resize-none" rows={2} value={completeForm.observations} onChange={e => setCompleteForm({ ...completeForm, observations: e.target.value })} placeholder={t('appointments.observationsPlaceholder')} />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-2 block">Odontograma</label>
+              <label className="text-xs font-medium text-gray-700 mb-2 block">{t('records.tabOdontogram')}</label>
               <p className="text-[11px] text-gray-400 mb-2">
-                Cargado como estaba en el último registro. Ajusta lo que cambió en esta cita; se guardará como un nuevo registro del historial.
+                {t('appointments.odontogramHint')}
               </p>
               {loadingChart
-                ? <p className="text-sm text-gray-400 text-center py-4">Cargando odontograma...</p>
+                ? <p className="text-sm text-gray-400 text-center py-4">{t('appointments.loadingChart')}</p>
                 : <Odontogram value={completeForm.tooth_chart} onChange={tc => setCompleteForm({ ...completeForm, tooth_chart: tc })} />
               }
             </div>
 
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setCompleteAppt(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button type="submit" disabled={completing || loadingChart} className="flex-1 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-60">
-                {completing ? 'Guardando...' : 'Guardar y completar'}
+                {completing ? t('common.saving') : t('appointments.saveAndComplete')}
               </button>
             </div>
           </form>
@@ -500,7 +509,7 @@ export default function Appointments() {
 
       {deleteId && (
         <ConfirmDialog
-          message="¿Eliminar esta cita? Esta acción no se puede deshacer."
+          message={t('appointments.deleteConfirm')}
           onConfirm={handleDelete}
           onCancel={() => setDeleteId(null)}
         />

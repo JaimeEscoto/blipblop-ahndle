@@ -42,6 +42,9 @@ declare global {
   namespace Express {
     interface Request {
       account?: SessionAccount;
+      // Estado del registro ANTES de una edición, para que la bitácora
+      // pueda detallar qué campos cambiaron y su valor anterior.
+      auditBefore?: any;
     }
   }
 }

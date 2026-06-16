@@ -1,26 +1,31 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, Mail, LogOut, Activity } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, Mail, LogOut, Activity, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 const baseNavItems = [
-  { to: '/inicio',       label: 'Inicio',         icon: Home },
-  { to: '/citas',        label: 'Citas',         icon: Calendar },
-  { to: '/expedientes',  label: 'Expedientes',   icon: FileText },
-  { to: '/medicos',      label: 'Médicos',        icon: Stethoscope },
-  { to: '/pacientes',    label: 'Pacientes',      icon: Users },
-  { to: '/inventario',   label: 'Inventario',     icon: Package },
-  { to: '/recordatorios',label: 'Recordatorios',  icon: Bell },
+  { to: '/inicio',       label: 'menu.home',        icon: Home },
+  { to: '/citas',        label: 'menu.appointments', icon: Calendar },
+  { to: '/expedientes',  label: 'menu.records',     icon: FileText },
+  { to: '/medicos',      label: 'menu.doctors',     icon: Stethoscope },
+  { to: '/pacientes',    label: 'menu.patients',    icon: Users },
+  { to: '/inventario',   label: 'menu.inventory',   icon: Package },
+  { to: '/recordatorios',label: 'menu.reminders',   icon: Bell },
 ];
 
 export default function Layout() {
   const { account, logout } = useAuth();
-  const navItems = account?.role === 'superuser'
-    ? [...baseNavItems,
-        { to: '/invitaciones', label: 'Invitaciones', icon: Mail },
-        { to: '/actividad', label: 'Actividad', icon: Activity }]
-    : baseNavItems;
+  const { t } = useTranslation();
+  const navItems = [
+    ...baseNavItems,
+    ...(account?.role === 'superuser'
+      ? [{ to: '/invitaciones', label: 'menu.invitations', icon: Mail },
+         { to: '/actividad', label: 'menu.activity', icon: Activity }]
+      : []),
+    { to: '/ajustes', label: 'menu.settings', icon: Settings },
+  ];
   const [menuOpen, setMenuOpen] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [pendingReminders, setPendingReminders] = useState(0);
@@ -65,7 +70,7 @@ export default function Layout() {
                       isActive ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-700'
                     }`}>
                   <Icon className="w-4 h-4" />
-                  {label}
+                  {t(label)}
                   {badge > 0 && (
                     <span className="absolute -top-1 -right-1 bg-amber-400 text-gray-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                       {badge > 9 ? '9+' : badge}
@@ -74,7 +79,7 @@ export default function Layout() {
                 </NavLink>
               );
             })}
-            <button onClick={logout} title="Cerrar sesión" className="ml-1 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
+            <button onClick={logout} title={t('menu.logout')} className="ml-1 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
               <LogOut className="w-4 h-4" />
             </button>
           </nav>
@@ -95,7 +100,7 @@ export default function Layout() {
                       isActive ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-700'
                     }`}>
                   <Icon className="w-4 h-4" />
-                  {label}
+                  {t(label)}
                   {badge > 0 && (
                     <span className="ml-auto bg-amber-400 text-gray-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                       {badge}
@@ -107,7 +112,7 @@ export default function Layout() {
             <div className="border-t border-blue-700 mt-1 pt-2">
               {account && <p className="px-3 text-xs text-blue-200 mb-1 truncate">{account.email}</p>}
               <button onClick={() => { setMenuOpen(false); logout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
-                <LogOut className="w-4 h-4" /> Cerrar sesión
+                <LogOut className="w-4 h-4" /> {t('menu.logout')}
               </button>
             </div>
           </nav>
@@ -130,7 +135,7 @@ export default function Layout() {
                   isActive ? 'text-[#1e6f9f]' : 'text-gray-500 hover:text-[#36c1d6]'
                 }`}>
               <Icon className="w-5 h-5 mb-0.5" />
-              {label}
+              {t(label)}
               {badge > 0 && (
                 <span className="absolute top-1 right-1/4 bg-amber-400 text-gray-900 text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
                   {badge > 9 ? '9+' : badge}

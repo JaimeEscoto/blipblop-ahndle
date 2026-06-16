@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, Reminder, User } from '../api/client';
+import { dateLocale } from '../i18n/format';
 import { Plus, Trash2, Check, Bell, UserIcon, MessageCircle } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -11,6 +13,7 @@ const TIMES = Array.from({ length: 29 }, (_, i) => {
 });
 
 export default function Reminders() {
+  const { t } = useTranslation();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [tab, setTab] = useState<'pending'|'done'>('pending');
@@ -52,7 +55,11 @@ export default function Reminders() {
     if (!reminder.user_phone) return null;
     const phone = reminder.user_phone.replace(/\D/g, '');
     const msg = encodeURIComponent(
-      `Hola ${reminder.user_name}, le recordamos su cita odontológica el día ${reminder.date}${reminder.time ? ` a las ${reminder.time}` : ''}. Por favor confirme su asistencia. ¡Gracias!`
+      t('reminders.waMessage', {
+        name: reminder.user_name,
+        date: reminder.date,
+        time: reminder.time ? t('reminders.waTime', { time: reminder.time }) : '',
+      })
     );
     return `https://wa.me/${phone}?text=${msg}`;
   };
@@ -60,31 +67,31 @@ export default function Reminders() {
   const filtered = reminders.filter(r => r.status === tab);
   const pendingCount = reminders.filter(r => r.status === 'pending').length;
 
-  const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { weekday:'short', day:'numeric', month:'short' });
+  const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString(dateLocale(), { weekday:'short', day:'numeric', month:'short' });
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Recordatorios</h1>
-          <p className="text-sm text-gray-500">{pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('reminders.title')}</h1>
+          <p className="text-sm text-gray-500">{t('reminders.pendingCount', { count: pendingCount })}</p>
         </div>
         <button onClick={() => setModal(true)} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Nuevo
+          <Plus className="w-4 h-4" /> {t('common.new')}
         </button>
       </div>
 
       <div className="flex gap-2 mb-4 bg-gray-100 rounded-lg p-1">
-        {(['pending','done'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${tab === t ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
-            {t === 'pending' ? `Pendientes ${pendingCount > 0 ? `(${pendingCount})` : ''}` : 'Completados'}
+        {(['pending','done'] as const).map(tb => (
+          <button key={tb} onClick={() => setTab(tb)}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${tab === tb ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+            {tb === 'pending' ? `${t('reminders.tabPending')} ${pendingCount > 0 ? `(${pendingCount})` : ''}` : t('reminders.tabDone')}
           </button>
         ))}
       </div>
 
       <div className="space-y-3">
-        {filtered.length === 0 && <div className="text-center py-12 text-gray-400 text-sm">No hay recordatorios {tab === 'pending' ? 'pendientes' : 'completados'}</div>}
+        {filtered.length === 0 && <div className="text-center py-12 text-gray-400 text-sm">{tab === 'pending' ? t('reminders.nonePending') : t('reminders.noneDone')}</div>}
         {filtered.map(r => {
           const link = waLink(r);
           return (
@@ -96,7 +103,7 @@ export default function Reminders() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 text-sm">{r.title}</p>
-                    {r.user_name && <p className="text-xs text-gray-500">Paciente: {r.user_name}</p>}
+                    {r.user_name && <p className="text-xs text-gray-500">{t('reminders.patientLabel', { name: r.user_name })}</p>}
                     {r.description && <p className="text-xs text-gray-400 mt-0.5">{r.description}</p>}
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-xs text-gray-400">{formatDate(r.date)}{r.time ? ` · ${r.time}` : ''}</span>
@@ -106,14 +113,14 @@ export default function Reminders() {
                       <a href={link} target="_blank" rel="noopener noreferrer"
                         className="mt-2 inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2.5 py-1 rounded-lg hover:bg-green-100 font-medium">
                         <MessageCircle className="w-3.5 h-3.5" />
-                        Enviar recordatorio por WhatsApp
+                        {t('reminders.sendWhatsapp')}
                       </a>
                     )}
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   {r.status === 'pending' && (
-                    <button onClick={() => handleDone(r.id)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Marcar como hecho">
+                    <button onClick={() => handleDone(r.id)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title={t('reminders.markDone')}>
                       <Check className="w-4 h-4" />
                     </button>
                   )}
@@ -128,13 +135,13 @@ export default function Reminders() {
       </div>
 
       {modal && (
-        <Modal title="Nuevo recordatorio" onClose={() => setModal(false)}>
+        <Modal title={t('reminders.createTitle')} onClose={() => setModal(false)}>
           <form onSubmit={handleSubmit} className="space-y-3">
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Tipo</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.type')}</label>
               <div className="grid grid-cols-2 gap-2">
-                {[['task','Tarea interna','Bell'],['patient','Recordatorio a paciente','UserIcon']].map(([val, label]) => (
+                {[['task', t('reminders.typeTask')],['patient', t('reminders.typePatient')]].map(([val, label]) => (
                   <button key={val} type="button" onClick={() => setForm({...form, type: val, user_id: val === 'task' ? '' : form.user_id})}
                     className={`p-3 rounded-lg border text-sm font-medium text-left transition-colors ${form.type === val ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                     {label}
@@ -144,45 +151,45 @@ export default function Reminders() {
             </div>
             {form.type === 'patient' && (
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Paciente</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.patient')}</label>
                 <select className="input" value={form.user_id} onChange={e => setForm({...form, user_id: e.target.value})}>
-                  <option value="">Seleccionar paciente</option>
+                  <option value="">{t('reminders.selectPatient')}</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
             )}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Título *</label>
-              <input required className="input" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="Recordar cita de control..." />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.titleField')} *</label>
+              <input required className="input" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder={t('reminders.titlePlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Descripción</label>
-              <textarea className="input resize-none" rows={2} value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder="Detalles adicionales..." />
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.description')}</label>
+              <textarea className="input resize-none" rows={2} value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder={t('reminders.descriptionPlaceholder')} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.date')} *</label>
                 <input required type="date" className="input" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Hora</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.time')}</label>
                 <select className="input" value={form.time} onChange={e => setForm({...form, time: e.target.value})}>
-                  <option value="">Sin hora</option>
-                  {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="">{t('reminders.noTime')}</option>
+                  {TIMES.map(time => <option key={time} value={time}>{time}</option>)}
                 </select>
               </div>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+              <button type="button" onClick={() => setModal(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">{t('common.cancel')}</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </form>
         </Modal>
       )}
 
-      {deleteId && <ConfirmDialog message="¿Eliminar este recordatorio?" onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />}
+      {deleteId && <ConfirmDialog message={t('reminders.deleteConfirm')} onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />}
     </div>
   );
 }
