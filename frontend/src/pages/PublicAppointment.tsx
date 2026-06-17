@@ -41,8 +41,8 @@ export default function PublicAppointment() {
       <div className="relative z-10 w-full max-w-md">
         {/* Encabezado clínica */}
         <div className="flex justify-center mb-5">
-          <span className="bg-white rounded-xl shadow-sm px-5 py-3">
-            <img src="/logo.png" alt="odontiacloud" className="h-14 w-auto block" />
+          <span className="bg-white rounded-xl shadow-sm p-3 flex items-center justify-center">
+            <img src="/icono.png" alt="odontiacloud" className="h-16 w-16 object-contain block" />
           </span>
         </div>
 

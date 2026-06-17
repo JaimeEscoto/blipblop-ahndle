@@ -40,7 +40,7 @@ export async function generateAppointmentPDF(appt: Appointment) {
   const brandDeep = [9, 32, 55]    as [number, number, number];
 
   // Logo de marca
-  const logoData = await loadImageDataUrl('/logo.png');
+  const logoData = await loadImageDataUrl('/icono.png');
 
   // ── Fondo general gris muy claro ────────────────────────
   doc.setFillColor(...grayLite);
@@ -60,9 +60,9 @@ export async function generateAppointmentPDF(appt: Appointment) {
   doc.setFillColor(...white);
   doc.roundedRect(11, 11, 40, 22, 3, 3, 'F');
   if (logoData) {
-    // proporción ~600x315 → 1.9:1
-    const lw = 36, lh = lw * (315 / 600);
-    doc.addImage(logoData, 'PNG', 13, 11 + (22 - lh) / 2, lw, lh);
+    // ícono cuadrado centrado en el recuadro blanco (40x22)
+    const ls = 18;
+    doc.addImage(logoData, 'PNG', 11 + (40 - ls) / 2, 11 + (22 - ls) / 2, ls, ls);
   } else {
     doc.setTextColor(...grayMid);
     doc.setFont('helvetica', 'normal');

@@ -68,7 +68,7 @@ export default function Login() {
       <img src="/icono.png" alt="" aria-hidden="true"
         className="pointer-events-none select-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(80vw,560px)] max-w-none opacity-[0.07]" />
       <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-lg p-8 text-center">
-        <img src="/logo.png" alt="odontiacloud" className="h-20 w-auto mx-auto mb-4" />
+        <img src="/icono.png" alt="odontiacloud" className="h-24 w-24 object-contain mx-auto mb-4" />
         <p className="text-sm text-gray-500 mb-6">{t('login.subtitle')}</p>
 
         <div className="flex flex-col items-center gap-1.5 mb-6">

@@ -59,8 +59,8 @@ export default function Layout() {
       <header className="bg-blue-900 text-white shadow-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">
-            <span className="bg-white rounded-xl px-3.5 py-2 shadow-sm">
-              <img src="/logo.png" alt="odontiacloud" className="h-10 w-auto block" />
+            <span className="bg-white rounded-xl p-1.5 shadow-sm flex items-center justify-center">
+              <img src="/icono.png" alt="odontiacloud" className="h-9 w-9 object-contain block" />
             </span>
           </div>
           {/* Desktop nav */}
