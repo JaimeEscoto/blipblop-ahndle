@@ -49,7 +49,12 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col relative">
+      {/* Marca de agua: logo degradado al fondo */}
+      <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+        <img src="/icono.png" alt="" aria-hidden="true"
+          className="w-[min(70vw,520px)] max-w-none opacity-[0.05]" />
+      </div>
       {/* Header */}
       <header className="bg-blue-900 text-white shadow-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -119,7 +124,7 @@ export default function Layout() {
       </header>
 
       {/* Main */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+      <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         <Outlet />
       </main>
 
