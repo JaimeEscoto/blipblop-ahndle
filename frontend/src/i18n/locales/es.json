@@ -38,7 +38,31 @@
     "accessNote": "El acceso es solo por invitación. Si tu correo no está invitado, contacta al administrador.",
     "missingClientId": "Falta configurar VITE_GOOGLE_CLIENT_ID.",
     "failed": "No se pudo iniciar sesión",
-    "language": "Idioma"
+    "language": "Idioma",
+    "or": "o",
+    "emailLabel": "Correo",
+    "passwordLabel": "Contraseña",
+    "emailSignIn": "Entrar con correo",
+    "emailPlaceholder": "tucorreo@ejemplo.com",
+    "submit": "Entrar"
+  },
+  "createAccount": {
+    "title": "Crea tu cuenta",
+    "subtitle": "Completa tus datos para acceder al sistema",
+    "emailLabel": "Correo",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Tu nombre",
+    "passwordLabel": "Contraseña",
+    "passwordHint": "Mínimo 8 caracteres",
+    "confirmLabel": "Confirmar contraseña",
+    "submit": "Crear cuenta",
+    "creating": "Creando...",
+    "verifying": "Verificando invitación...",
+    "invalidLink": "Este enlace de invitación no es válido o ya fue usado. Pide al administrador que te invite de nuevo.",
+    "missingToken": "Falta el enlace de invitación.",
+    "passwordMismatch": "Las contraseñas no coinciden.",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+    "goToLogin": "Ir a iniciar sesión"
   },
   "settings": {
     "title": "Ajustes",
@@ -327,13 +351,15 @@
     "copied": "¡Copiado!",
     "copyMessage": "Copiar mensaje",
     "createTitle": "Invitar a alguien",
-    "googleEmail": "Correo de Google",
-    "googleEmailPlaceholder": "persona@gmail.com",
-    "googleEmailHint": "La persona podrá registrarse iniciando sesión con este correo de Google.",
+    "googleEmail": "Correo",
+    "googleEmailPlaceholder": "persona@ejemplo.com",
+    "googleEmailHint": "Si es un correo de Gmail, podrá entrar con Google. Si no, recibirá un enlace para crear su cuenta con contraseña.",
     "sending": "Enviando...",
     "createAction": "Crear invitación",
+    "copyLink": "Copiar enlace de registro",
     "deleteConfirm": "¿Eliminar esta invitación? Si la persona aún no se registró, perderá el acceso.",
-    "inviteMessage": "¡Hola! Te invité a usar el sistema de la clínica odontiacloud. Para entrar, ingresa a {{origin}} e inicia sesión con tu cuenta de Google del correo {{email}}. El acceso es solo por invitación, así que usa exactamente ese correo. ¡Nos vemos dentro!"
+    "inviteMessage": "¡Hola! Te invité a usar el sistema de la clínica odontiacloud. Para entrar, ingresa a {{origin}} e inicia sesión con tu cuenta de Google del correo {{email}}. El acceso es solo por invitación, así que usa exactamente ese correo. ¡Nos vemos dentro!",
+    "inviteMessagePassword": "¡Hola! Te invité a usar el sistema de la clínica odontiacloud. Para crear tu cuenta, entra a este enlace y define tu contraseña: {{link}} . El acceso es solo por invitación. ¡Nos vemos dentro!"
   },
   "activity": {
     "title": "Actividad",

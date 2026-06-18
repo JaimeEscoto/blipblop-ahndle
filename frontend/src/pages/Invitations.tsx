@@ -16,9 +16,16 @@ export default function Invitations() {
   const [error, setError] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
+  // Correos de Gmail pueden entrar con Google; los demás reciben un enlace
+  // directo a la página de "Crear cuenta" (con su token de invitación).
+  const isGmail = (email: string) => /@gmail\.com$/i.test(email.trim());
+  const signupLink = (inv: Invitation) => `${window.location.origin}/crear-cuenta?token=${inv.token}`;
+
   // Mensaje de invitación listo para enviar
   const inviteMessage = (inv: Invitation) =>
-    t('invitations.inviteMessage', { origin: window.location.origin, email: inv.email });
+    inv.token && !isGmail(inv.email)
+      ? t('invitations.inviteMessagePassword', { link: signupLink(inv) })
+      : t('invitations.inviteMessage', { origin: window.location.origin, email: inv.email });
 
   const copyMessage = async (inv: Invitation) => {
     try {

@@ -10,6 +10,7 @@ import Reminders from './pages/Reminders';
 import PublicAppointment from './pages/PublicAppointment';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import CreateAccount from './pages/CreateAccount';
 import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import { useAuth } from './auth/AuthContext';
@@ -26,6 +27,8 @@ export default function App() {
     <Routes>
       {/* Ruta pública (paciente al escanear el QR) — sin login */}
       <Route path="/cita/:code" element={<PublicAppointment />} />
+      {/* Crear cuenta desde el enlace de invitación — sin login */}
+      <Route path="/crear-cuenta" element={<CreateAccount />} />
 
       {!account ? (
         <Route path="*" element={loading ? <Splash /> : <Login />} />

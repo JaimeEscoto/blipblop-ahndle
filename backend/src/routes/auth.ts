@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import pool from '../database';
 import { verifyGoogleToken, signSession, requireAuth, SessionAccount } from '../auth';
 import { recordActivity } from '../audit';
@@ -60,6 +61,102 @@ router.post('/google', async (req: Request, res: Response) => {
     summary: 'Inició sesión',
     method: 'POST',
     path: '/api/auth/google',
+    statusCode: 200,
+  });
+
+  res.json({ token, account });
+});
+
+// Consulta pública del correo asociado a un token de invitación.
+// La usa la página de "Crear cuenta" para mostrar (y bloquear) el correo.
+router.get('/invitation/:token', async (req: Request, res: Response) => {
+  const r = await pool.query(
+    `SELECT email FROM invitations WHERE token = $1 AND status = 'pending'`,
+    [req.params.token]
+  );
+  if (!r.rows[0]) return res.status(404).json({ error: 'La invitación no es válida o ya fue usada.' });
+  res.json({ email: r.rows[0].email });
+});
+
+// Crear cuenta con correo + contraseña usando el enlace de invitación (token).
+router.post('/register', async (req: Request, res: Response) => {
+  const token = (req.body.token || '').trim();
+  const password: string = req.body.password || '';
+  const name = (req.body.name || '').trim() || null;
+  const preferredLang = req.body.language === 'en' ? 'en' : 'es';
+
+  if (!token) return res.status(400).json({ error: 'Falta el enlace de invitación.' });
+  if (password.length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+
+  const inv = await pool.query(
+    `SELECT id, email FROM invitations WHERE token = $1 AND status = 'pending'`,
+    [token]
+  );
+  if (!inv.rows[0]) return res.status(400).json({ error: 'La invitación no es válida o ya fue usada.' });
+  const email: string = inv.rows[0].email;
+
+  // Por si la cuenta ya existe (p. ej. ya entró con Google con ese mismo correo)
+  const existing = await pool.query('SELECT id FROM accounts WHERE email = $1', [email]);
+  if (existing.rows[0]) return res.status(409).json({ error: 'Ese correo ya tiene una cuenta. Inicia sesión.' });
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const created = await pool.query(
+    `INSERT INTO accounts (email, name, role, password_hash, language, last_login)
+     VALUES ($1, $2, 'staff', $3, $4, NOW()) RETURNING id, email, name, role, language`,
+    [email, name, passwordHash, preferredLang]
+  );
+  const account = created.rows[0];
+  await pool.query(`UPDATE invitations SET status = 'accepted', accepted_at = NOW() WHERE id = $1`, [inv.rows[0].id]);
+
+  const { language, ...session } = account;
+  const sessionToken = signSession(session);
+
+  recordActivity({
+    accountId: account.id,
+    accountEmail: account.email,
+    accountName: account.name,
+    action: 'Creó su cuenta',
+    entity: 'Sesión',
+    summary: 'Creó su cuenta con correo y contraseña',
+    method: 'POST',
+    path: '/api/auth/register',
+    statusCode: 201,
+  });
+
+  res.status(201).json({ token: sessionToken, account });
+});
+
+// Iniciar sesión con correo + contraseña.
+router.post('/login', async (req: Request, res: Response) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  const password: string = req.body.password || '';
+  if (!email || !password) return res.status(400).json({ error: 'Faltan datos.' });
+
+  const r = await pool.query(
+    'SELECT id, email, name, role, language, password_hash FROM accounts WHERE email = $1',
+    [email]
+  );
+  const row = r.rows[0];
+  // Mismo mensaje para "no existe" y "contraseña mala" (no revela qué correos existen)
+  if (!row || !row.password_hash) return res.status(401).json({ error: 'Correo o contraseña incorrectos.' });
+  const ok = await bcrypt.compare(password, row.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Correo o contraseña incorrectos.' });
+
+  await pool.query('UPDATE accounts SET last_login = NOW() WHERE id = $1', [row.id]);
+
+  const account = { id: row.id, email: row.email, name: row.name, role: row.role, language: row.language };
+  const { language, ...session } = account;
+  const token = signSession(session);
+
+  recordActivity({
+    accountId: account.id,
+    accountEmail: account.email,
+    accountName: account.name,
+    action: 'Inició sesión',
+    entity: 'Sesión',
+    summary: 'Inició sesión con correo y contraseña',
+    method: 'POST',
+    path: '/api/auth/login',
     statusCode: 200,
   });
 

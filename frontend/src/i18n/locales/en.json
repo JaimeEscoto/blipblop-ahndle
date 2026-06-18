@@ -38,7 +38,31 @@
     "accessNote": "Access is by invitation only. If your email isn't invited, contact the administrator.",
     "missingClientId": "VITE_GOOGLE_CLIENT_ID is not configured.",
     "failed": "Could not sign in",
-    "language": "Language"
+    "language": "Language",
+    "or": "or",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "emailSignIn": "Sign in with email",
+    "emailPlaceholder": "you@example.com",
+    "submit": "Sign in"
+  },
+  "createAccount": {
+    "title": "Create your account",
+    "subtitle": "Fill in your details to access the system",
+    "emailLabel": "Email",
+    "nameLabel": "Name",
+    "namePlaceholder": "Your name",
+    "passwordLabel": "Password",
+    "passwordHint": "At least 8 characters",
+    "confirmLabel": "Confirm password",
+    "submit": "Create account",
+    "creating": "Creating...",
+    "verifying": "Verifying invitation...",
+    "invalidLink": "This invitation link is invalid or has already been used. Ask the administrator to invite you again.",
+    "missingToken": "The invitation link is missing.",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "goToLogin": "Go to sign in"
   },
   "settings": {
     "title": "Settings",
@@ -327,13 +351,15 @@
     "copied": "Copied!",
     "copyMessage": "Copy message",
     "createTitle": "Invite someone",
-    "googleEmail": "Google email",
-    "googleEmailPlaceholder": "person@gmail.com",
-    "googleEmailHint": "The person will be able to register by signing in with this Google email.",
+    "googleEmail": "Email",
+    "googleEmailPlaceholder": "person@example.com",
+    "googleEmailHint": "If it's a Gmail address, they can sign in with Google. Otherwise they'll get a link to create their account with a password.",
     "sending": "Sending...",
     "createAction": "Create invitation",
+    "copyLink": "Copy sign-up link",
     "deleteConfirm": "Delete this invitation? If the person hasn't registered yet, they'll lose access.",
-    "inviteMessage": "Hi! I invited you to use the odontiacloud clinic system. To get in, go to {{origin}} and sign in with the Google account for {{email}}. Access is by invitation only, so use exactly that email. See you inside!"
+    "inviteMessage": "Hi! I invited you to use the odontiacloud clinic system. To get in, go to {{origin}} and sign in with the Google account for {{email}}. Access is by invitation only, so use exactly that email. See you inside!",
+    "inviteMessagePassword": "Hi! I invited you to use the odontiacloud clinic system. To create your account, open this link and set your password: {{link}} . Access is by invitation only. See you inside!"
   },
   "activity": {
     "title": "Activity",

@@ -1,6 +1,7 @@
 import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 import { Pool } from 'pg';
+import { randomBytes } from 'crypto';
 import { generateAppointmentCode } from './utils/code';
 
 const pool = new Pool({
@@ -142,6 +143,21 @@ export async function initDB() {
 
   // --- Migración: idioma preferido por usuario (ES/EN) ---
   await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'es'`);
+
+  // --- Migración: contraseña para cuentas que no usan Google ---
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT`);
+
+  // --- Migración: token único de invitación (enlace para crear cuenta) ---
+  await pool.query(`ALTER TABLE invitations ADD COLUMN IF NOT EXISTS token TEXT`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS invitations_token_idx ON invitations(token)`);
+  // Rellena las invitaciones existentes que aún no tienen token
+  {
+    const { rows: noToken } = await pool.query(`SELECT id FROM invitations WHERE token IS NULL`);
+    for (const r of noToken) {
+      await pool.query(`UPDATE invitations SET token = $1 WHERE id = $2`,
+        [randomBytes(24).toString('hex'), r.id]);
+    }
+  }
 
   // --- Superusuario: siempre tiene acceso, sin invitación ---
   const superEmail = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();

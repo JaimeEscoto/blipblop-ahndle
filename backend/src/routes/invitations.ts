@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { randomBytes } from 'crypto';
 import pool from '../database';
 import { requireAuth, requireSuperuser } from '../auth';
 
@@ -21,11 +22,13 @@ router.post('/', async (req: Request, res: Response) => {
   const acc = await pool.query('SELECT id FROM accounts WHERE email = $1', [email]);
   if (acc.rows[0]) return res.status(409).json({ error: 'Ese correo ya tiene una cuenta' });
 
+  const token = randomBytes(24).toString('hex');
   const { rows } = await pool.query(
-    `INSERT INTO invitations (email, invited_by) VALUES ($1, $2)
-     ON CONFLICT (email) DO UPDATE SET status = 'pending', created_at = NOW(), invited_by = $2
+    `INSERT INTO invitations (email, invited_by, token) VALUES ($1, $2, $3)
+     ON CONFLICT (email) DO UPDATE SET status = 'pending', created_at = NOW(), invited_by = $2,
+       token = COALESCE(invitations.token, EXCLUDED.token)
      RETURNING *`,
-    [email, req.account?.email || null]
+    [email, req.account?.email || null, token]
   );
   res.status(201).json(rows[0]);
 });

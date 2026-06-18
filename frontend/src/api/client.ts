@@ -30,6 +30,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return data as T;
 }
 
+// Petición sin sesión (login/registro): NO dispara el cierre de sesión global
+// en un 401, porque ahí un 401 significa "credenciales incorrectas".
+async function publicRequest<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error en la solicitud');
+  return data as T;
+}
+
 export interface User {
   id: number; name: string; email: string | null;
   phone: string | null; document_id: string | null;
@@ -89,6 +102,7 @@ export interface Account {
 export interface Invitation {
   id: number; email: string; status: 'pending' | 'accepted';
   invited_by: string | null; created_at: string; accepted_at: string | null;
+  token: string | null;
 }
 
 export interface ActivityLog {
@@ -106,6 +120,9 @@ export interface ActivityAccount {
 export const api = {
   auth: {
     google: (credential: string, language?: 'es' | 'en') => request<{ token: string; account: Account }>('/auth/google', { method:'POST', body:JSON.stringify({ credential, language }) }),
+    login: (email: string, password: string) => publicRequest<{ token: string; account: Account }>('/auth/login', { email, password }),
+    register: (token: string, name: string, password: string, language?: 'es' | 'en') => publicRequest<{ token: string; account: Account }>('/auth/register', { token, name, password, language }),
+    getInvitation: (token: string) => request<{ email: string }>(`/auth/invitation/${token}`),
     me: () => request<{ account: Account }>('/auth/me'),
     setLanguage: (language: 'es' | 'en') => request<{ account: Account }>('/auth/language', { method:'PUT', body:JSON.stringify({ language }) }),
   },

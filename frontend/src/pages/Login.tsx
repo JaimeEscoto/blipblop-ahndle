@@ -16,6 +16,22 @@ export default function Login() {
   const btnRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(''); setEmailLoading(true);
+    try {
+      const { token, account } = await api.auth.login(email.trim(), password);
+      login(token, account);
+    } catch (err: any) {
+      setError(err.message || t('login.failed'));
+    } finally {
+      setEmailLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!CLIENT_ID) { setError(t('login.missingClientId')); return; }
@@ -80,6 +96,31 @@ export default function Login() {
           {!loading && <div ref={btnRef} />}
           {loading && <p className="text-sm text-gray-400">{t('login.signingIn')}</p>}
         </div>
+
+        {/* Separador */}
+        <div className="flex items-center gap-3 my-5">
+          <span className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">{t('login.or')}</span>
+          <span className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* Inicio de sesión con correo + contraseña */}
+        <form onSubmit={handleEmailLogin} className="space-y-3 text-left">
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">{t('login.emailLabel')}</label>
+            <input required type="email" className="input" value={email}
+              onChange={e => setEmail(e.target.value)} placeholder={t('login.emailPlaceholder')} autoComplete="username" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">{t('login.passwordLabel')}</label>
+            <input required type="password" className="input" value={password}
+              onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+          </div>
+          <button type="submit" disabled={emailLoading}
+            className="w-full py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+            {emailLoading ? t('login.signingIn') : t('login.submit')}
+          </button>
+        </form>
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mt-4">{error}</p>}
 
