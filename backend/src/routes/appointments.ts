@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import pool from '../database';
 import { generateAppointmentCode } from '../utils/code';
-import { requireAuth } from '../auth';
+import { requireAuth, requireClinicMember } from '../auth';
+import { requireClinic } from '../tenant';
 
 const router = Router();
 
@@ -36,24 +37,24 @@ const SELECT_WITH_RELATIONS = `
   JOIN doctors d ON a.doctor_id = d.id
 `;
 
-// Endpoint público: el paciente accede al escanear el QR (sin autenticación).
-// Se declara ANTES del guard para que no requiera sesión.
+// Endpoint público (QR del paciente): SIN autenticación, busca por código global.
+// El código es único en todo el sistema (UNIQUE INDEX) así que no necesita clínica.
 router.get('/public/:code', async (req: Request, res: Response) => {
   const { rows } = await pool.query(`${SELECT_PUBLIC} WHERE a.public_code = $1`, [req.params.code]);
   if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
   res.json(rows[0]);
 });
 
-// A partir de aquí, todo requiere sesión válida
-router.use(requireAuth);
+// A partir de aquí, todo requiere clínica + sesión válida en esa clínica
+router.use(requireClinic, requireAuth, requireClinicMember);
 
-router.get('/', async (_req: Request, res: Response) => {
-  const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} ORDER BY a.date DESC, a.time DESC`);
+router.get('/', async (req: Request, res: Response) => {
+  const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.clinic_id = $1 ORDER BY a.date DESC, a.time DESC`, [req.clinic!.id]);
   res.json(rows);
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
-  const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [req.params.id]);
+  const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1 AND a.clinic_id = $2`, [req.params.id, req.clinic!.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
   res.json(rows[0]);
 });
@@ -67,14 +68,14 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'No se pueden agendar citas en una fecha pasada' });
   }
   const conflict = await pool.query(
-    `SELECT id FROM appointments WHERE doctor_id=$1 AND date=$2 AND time=$3 AND status != 'cancelled'`,
-    [doctor_id, date, time]
+    `SELECT id FROM appointments WHERE doctor_id=$1 AND date=$2 AND time=$3 AND status != 'cancelled' AND clinic_id=$4`,
+    [doctor_id, date, time, req.clinic!.id]
   );
   if (conflict.rows[0]) return res.status(409).json({ error: 'El médico ya tiene una cita en ese horario' });
 
   const { rows } = await pool.query(
-    'INSERT INTO appointments (user_id, doctor_id, date, time, reason, notes, public_code) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
-    [user_id, doctor_id, date, time, reason || null, notes || null, generateAppointmentCode()]
+    'INSERT INTO appointments (user_id, doctor_id, date, time, reason, notes, public_code, clinic_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
+    [user_id, doctor_id, date, time, reason || null, notes || null, generateAppointmentCode(), req.clinic!.id]
   );
   const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
   res.status(201).json(result[0]);
@@ -82,23 +83,23 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   const { user_id, doctor_id, date, time, reason, status, notes } = req.body;
-  // Solo bloquea reprogramar a una fecha pasada; permite editar otros campos de citas viejas
-  const current = await pool.query('SELECT TO_CHAR(date, $2) AS date FROM appointments WHERE id=$1', [req.params.id, 'YYYY-MM-DD']);
+  const current = await pool.query('SELECT TO_CHAR(date, $2) AS date FROM appointments WHERE id=$1 AND clinic_id=$3',
+    [req.params.id, 'YYYY-MM-DD', req.clinic!.id]);
   if (current.rows[0] && date !== current.rows[0].date && isPastDate(date)) {
     return res.status(400).json({ error: 'No se pueden reprogramar citas a una fecha pasada' });
   }
   const conflict = await pool.query(
-    `SELECT id FROM appointments WHERE doctor_id=$1 AND date=$2 AND time=$3 AND status != 'cancelled' AND id != $4`,
-    [doctor_id, date, time, req.params.id]
+    `SELECT id FROM appointments WHERE doctor_id=$1 AND date=$2 AND time=$3 AND status != 'cancelled' AND id != $4 AND clinic_id=$5`,
+    [doctor_id, date, time, req.params.id, req.clinic!.id]
   );
   if (conflict.rows[0]) return res.status(409).json({ error: 'El médico ya tiene una cita en ese horario' });
 
-  const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [req.params.id]);
+  const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1 AND a.clinic_id = $2`, [req.params.id, req.clinic!.id]);
   req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
     `UPDATE appointments SET user_id=$1, doctor_id=$2, date=$3, time=$4, reason=$5, status=$6, notes=$7
-     WHERE id=$8 RETURNING id`,
-    [user_id, doctor_id, date, time, reason || null, status || 'scheduled', notes || null, req.params.id]
+     WHERE id=$8 AND clinic_id=$9 RETURNING id`,
+    [user_id, doctor_id, date, time, reason || null, status || 'scheduled', notes || null, req.params.id, req.clinic!.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
   const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
@@ -110,11 +111,11 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
   if (!['scheduled', 'completed', 'cancelled'].includes(status)) {
     return res.status(400).json({ error: 'Estado inválido' });
   }
-  const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [req.params.id]);
+  const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1 AND a.clinic_id = $2`, [req.params.id, req.clinic!.id]);
   req.auditBefore = before.rows[0] || null;
   const { rows } = await pool.query(
-    'UPDATE appointments SET status=$1 WHERE id=$2 RETURNING id',
-    [status, req.params.id]
+    'UPDATE appointments SET status=$1 WHERE id=$2 AND clinic_id=$3 RETURNING id',
+    [status, req.params.id, req.clinic!.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
   const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
@@ -123,7 +124,7 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
 
 router.delete('/:id', async (req: Request, res: Response) => {
   const { rows } = await pool.query(
-    `WITH deleted AS (DELETE FROM appointments WHERE id=$1 RETURNING *)
+    `WITH deleted AS (DELETE FROM appointments WHERE id=$1 AND clinic_id=$2 RETURNING *)
      SELECT deleted.*,
        TO_CHAR(deleted.date, 'YYYY-MM-DD') AS date,
        TO_CHAR(deleted.time, 'HH24:MI') AS time,
@@ -131,7 +132,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
      FROM deleted
      JOIN users u ON deleted.user_id = u.id
      JOIN doctors d ON deleted.doctor_id = d.id`,
-    [req.params.id]
+    [req.params.id, req.clinic!.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
   res.json(rows[0]);

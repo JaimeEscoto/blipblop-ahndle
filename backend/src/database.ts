@@ -159,13 +159,87 @@ export async function initDB() {
     }
   }
 
-  // --- Superusuario: siempre tiene acceso, sin invitación ---
   const superEmail = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();
-  await pool.query(
-    `INSERT INTO accounts (email, name, role) VALUES ($1, $2, 'superuser')
-     ON CONFLICT (email) DO UPDATE SET role = 'superuser'`,
-    [superEmail, 'Superusuario']
+
+  // ════════════════════════════════════════════════════════════
+  // Migración multi-tenant: tabla clinics + clinic_id en todo
+  // ════════════════════════════════════════════════════════════
+
+  // 1) Tabla de clínicas
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS clinics (
+      id SERIAL PRIMARY KEY,
+      slug TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      owner_email TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // 2) Garantiza la clínica "demo" (donde se reasignan los datos previos a multi-tenant)
+  const demoRes = await pool.query(
+    `INSERT INTO clinics (slug, name, owner_email) VALUES ('demo', 'Clínica Demo', $1)
+     ON CONFLICT (slug) DO UPDATE SET slug = EXCLUDED.slug RETURNING id`,
+    [superEmail]
   );
+  const demoClinicId: number = demoRes.rows[0].id;
+
+  // 3) Agregar clinic_id a todas las tablas que pertenecen a una clínica
+  const tenantTables = ['users','doctors','appointments','medical_info','clinical_records',
+                        'inventory','reminders','invitations','accounts','activity_log'];
+  for (const t of tenantTables) {
+    await pool.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS clinic_id INTEGER REFERENCES clinics(id) ON DELETE CASCADE`);
+  }
+
+  // 4) Reasignar las filas existentes a la clínica "demo"
+  //    (excepto al superuser de accounts, que vive fuera de toda clínica)
+  for (const t of ['users','doctors','appointments','medical_info','clinical_records',
+                   'inventory','reminders','invitations','activity_log']) {
+    await pool.query(`UPDATE ${t} SET clinic_id = $1 WHERE clinic_id IS NULL`, [demoClinicId]);
+  }
+  await pool.query(`UPDATE accounts SET clinic_id = $1 WHERE clinic_id IS NULL AND email <> $2`,
+    [demoClinicId, superEmail]);
+
+  // 5) Hacer clinic_id NOT NULL donde aplica (en accounts es nullable solo para el superuser)
+  for (const t of ['users','doctors','appointments','medical_info','clinical_records',
+                   'inventory','reminders','invitations']) {
+    await pool.query(`ALTER TABLE ${t} ALTER COLUMN clinic_id SET NOT NULL`);
+  }
+
+  // 6) Convertir constraints únicos globales en compuestos por clínica
+  //    (el mismo correo puede existir como cuenta/invitación/médico/paciente en clínicas distintas)
+  await pool.query(`ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_email_key`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS accounts_clinic_email_idx ON accounts(clinic_id, email)`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS accounts_super_email_idx ON accounts(email) WHERE clinic_id IS NULL`);
+
+  await pool.query(`ALTER TABLE invitations DROP CONSTRAINT IF EXISTS invitations_email_key`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS invitations_clinic_email_idx ON invitations(clinic_id, email)`);
+
+  await pool.query(`ALTER TABLE doctors DROP CONSTRAINT IF EXISTS doctors_email_key`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS doctors_clinic_email_idx ON doctors(clinic_id, email)`);
+
+  await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_clinic_email_idx ON users(clinic_id, email) WHERE email IS NOT NULL`);
+
+  // 7) Nuevo rol "clinic_admin" (dueño/admin de una clínica)
+  await pool.query(`ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_role_check`);
+  await pool.query(`ALTER TABLE accounts ADD CONSTRAINT accounts_role_check CHECK(role IN ('superuser','clinic_admin','staff'))`);
+
+  // 8) activity_log: flag "internal" para acciones ocultas del super admin
+  //    + índice para consultas por clínica
+  await pool.query(`ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS internal BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS activity_log_clinic_idx ON activity_log(clinic_id, created_at DESC)`);
+
+  // --- Superusuario: cuenta global (clinic_id NULL), siempre tiene acceso ---
+  const sup = await pool.query(`SELECT id FROM accounts WHERE email = $1 AND clinic_id IS NULL`, [superEmail]);
+  if (!sup.rows[0]) {
+    await pool.query(
+      `INSERT INTO accounts (email, name, role, clinic_id) VALUES ($1, $2, 'superuser', NULL)`,
+      [superEmail, 'Superusuario']
+    );
+  } else {
+    await pool.query(`UPDATE accounts SET role = 'superuser' WHERE id = $1`, [sup.rows[0].id]);
+  }
 
   // --- Migración: código público para las citas (QR de invitación) ---
   await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS public_code TEXT`);

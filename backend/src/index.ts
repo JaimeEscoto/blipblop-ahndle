@@ -3,9 +3,10 @@ dns.setDefaultResultOrder('ipv4first');
 import express from 'express';
 import cors from 'cors';
 import { initDB } from './database';
-import { requireAuth } from './auth';
 import { auditLog } from './audit';
 import authRouter from './routes/auth';
+import clinicsRouter from './routes/clinics';
+import superRouter from './routes/super';
 import invitationsRouter from './routes/invitations';
 import usersRouter from './routes/users';
 import doctorsRouter from './routes/doctors';
@@ -19,41 +20,44 @@ import adminRouter from './routes/admin';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Orígenes de la app móvil (Capacitor): Android usa https://localhost,
-// iOS usa capacitor://localhost. Siempre permitidos para que la app nativa
-// pueda consumir la API.
 const capacitorOrigins = ['https://localhost', 'capacitor://localhost'];
 
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL, ...capacitorOrigins]
-  : ['http://localhost:5173', 'http://localhost:4173', ...capacitorOrigins];
+// En multi-tenant aceptamos cualquier subdominio de odontiacloud.com
+function corsOrigin(origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) {
+  if (!origin) return cb(null, true); // peticiones sin Origin (curl, app móvil sin webview)
+  if (capacitorOrigins.includes(origin)) return cb(null, true);
+  // Dev: cualquier *.localhost o el FRONTEND_URL definido
+  if (/^https?:\/\/([a-z0-9-]+\.)?localhost(:\d+)?$/i.test(origin)) return cb(null, true);
+  if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) return cb(null, true);
+  // Prod: cualquier *.odontiacloud.com (y el ápice)
+  if (/^https?:\/\/(?:[a-z0-9-]+\.)?odontiacloud\.com$/i.test(origin)) return cb(null, true);
+  return cb(null, false);
+}
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 
 // Bitácora: registra automáticamente toda operación que modifica datos.
-// Va antes de los routers para poder envolver la respuesta; lee req.account,
-// que cada router rellena con requireAuth antes de ejecutar el handler.
 app.use(auditLog);
 
-// Públicas
-app.use('/api/auth', authRouter);
+// Públicas (sin contexto de clínica)
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/clinics', clinicsRouter);
+app.use('/api/super', superRouter);
+app.use('/api/admin', adminRouter); // ahora solo desde superadmin host
 
-// Solo superusuario (el router aplica su propio guard)
+// Auth (cada ruta interna decide si necesita clínica)
+app.use('/api/auth', authRouter);
+
+// Rutas de clínica (todas requieren subdominio válido)
 app.use('/api/invitations', invitationsRouter);
 app.use('/api/activity', activityRouter);
-app.use('/api/admin', adminRouter);
-
-// El router de citas protege todo internamente salvo /public/:code
 app.use('/api/appointments', appointmentsRouter);
-
-// Protegidas: requieren sesión válida
-app.use('/api/users', requireAuth, usersRouter);
-app.use('/api/doctors', requireAuth, doctorsRouter);
-app.use('/api/medical', requireAuth, medicalRouter);
-app.use('/api/inventory', requireAuth, inventoryRouter);
-app.use('/api/reminders', requireAuth, remindersRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/doctors', doctorsRouter);
+app.use('/api/medical', medicalRouter);
+app.use('/api/inventory', inventoryRouter);
+app.use('/api/reminders', remindersRouter);
 
 initDB()
   .then(() => app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`)))

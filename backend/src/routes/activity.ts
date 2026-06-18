@@ -1,22 +1,30 @@
 import { Router, Request, Response } from 'express';
 import pool from '../database';
-import { requireAuth, requireSuperuser } from '../auth';
+import { requireAuth, requireClinicMember, SUPERUSER_EMAIL } from '../auth';
+import { requireClinic } from '../tenant';
 
 const router = Router();
 
-// La bitácora es información sensible: solo el superusuario la consulta.
-router.use(requireAuth, requireSuperuser);
+// La bitácora de cada clínica: solo el admin de la clínica la consulta.
+// El super admin queda OCULTO (filas internal=true o cuyo correo sea el suyo
+// se filtran). Para ver TODO, el super admin usa el portal en /api/super.
+router.use(requireClinic, requireAuth, requireClinicMember);
 
-// Lista de eventos con filtros opcionales:
-//   ?account=correo@x.com   filtra por usuario
-//   ?entity=Cita            filtra por módulo
-//   ?limit=100              cantidad máxima (por defecto 200)
+function requireAdmin(req: Request, res: Response, next: any) {
+  if (req.account?.role !== 'clinic_admin' && req.account?.role !== 'superuser') {
+    return res.status(403).json({ error: 'Solo el administrador puede ver la bitácora' });
+  }
+  next();
+}
+router.use(requireAdmin);
+
+// Filtros opcionales: ?account=correo  ?entity=Cita  ?limit=100
 router.get('/', async (req: Request, res: Response) => {
   const { account, entity } = req.query;
   const limit = Math.min(Number(req.query.limit) || 200, 500);
 
-  const conditions: string[] = [];
-  const params: any[] = [];
+  const conditions: string[] = ['clinic_id = $1', 'internal = false', 'account_email IS DISTINCT FROM $2'];
+  const params: any[] = [req.clinic!.id, SUPERUSER_EMAIL];
 
   if (account) {
     params.push(account);
@@ -27,24 +35,24 @@ router.get('/', async (req: Request, res: Response) => {
     conditions.push(`entity = $${params.length}`);
   }
 
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   params.push(limit);
 
   const { rows } = await pool.query(
-    `SELECT * FROM activity_log ${where} ORDER BY created_at DESC LIMIT $${params.length}`,
+    `SELECT * FROM activity_log WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT $${params.length}`,
     params
   );
   res.json(rows);
 });
 
-// Lista de usuarios que han generado actividad (para el selector de filtros).
-router.get('/accounts', async (_req: Request, res: Response) => {
+// Lista de usuarios que han generado actividad EN ESTA clínica (selector de filtros).
+router.get('/accounts', async (req: Request, res: Response) => {
   const { rows } = await pool.query(
     `SELECT account_email, MAX(account_name) AS account_name, COUNT(*)::int AS events
      FROM activity_log
-     WHERE account_email IS NOT NULL
+     WHERE clinic_id = $1 AND internal = false AND account_email IS NOT NULL AND account_email <> $2
      GROUP BY account_email
-     ORDER BY MAX(created_at) DESC`
+     ORDER BY MAX(created_at) DESC`,
+    [req.clinic!.id, SUPERUSER_EMAIL]
   );
   res.json(rows);
 });

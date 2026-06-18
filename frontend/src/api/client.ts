@@ -1,6 +1,16 @@
+import { currentSlug, currentMode } from '../tenant';
+
 const BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
+
+// Encabezado que indica al backend en qué clínica estamos.
+// El backend también lee el Host, pero en dev (vite proxy) lo reescribe,
+// así que enviamos el slug explícitamente desde el frontend.
+function tenantHeaders(): Record<string, string> {
+  const slug = currentMode() === 'superadmin' ? 'superadmin' : currentSlug();
+  return slug ? { 'X-Clinic-Slug': slug } : {};
+}
 
 const TOKEN_KEY = 'clinic_token';
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
@@ -16,6 +26,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...tenantHeaders(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...options,
@@ -35,9 +46,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 async function publicRequest<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...tenantHeaders() },
     body: JSON.stringify(body),
   });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error en la solicitud');
+  return data as T;
+}
+
+// GET sin sesión (verificación de slug, etc.)
+async function publicGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { headers: tenantHeaders() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error en la solicitud');
   return data as T;
@@ -96,8 +115,21 @@ export interface Reminder {
 }
 
 export interface Account {
-  id: number; email: string; name: string | null; role: 'superuser' | 'staff';
+  id: number; email: string; name: string | null;
+  role: 'superuser' | 'clinic_admin' | 'staff';
+  clinic_id: number | null;
   language: 'es' | 'en';
+  is_shadow?: boolean;
+}
+export interface Clinic {
+  id: number; slug: string; name: string;
+  owner_email: string | null; created_at: string;
+}
+export interface ClinicSummary extends Clinic {
+  account_count: number;
+  patient_count: number;
+  appointment_count: number;
+  last_activity_at: string | null;
 }
 export interface Invitation {
   id: number; email: string; status: 'pending' | 'accepted';
@@ -106,12 +138,12 @@ export interface Invitation {
 }
 
 export interface ActivityLog {
-  id: number; account_id: number | null;
+  id: number; clinic_id: number | null; account_id: number | null;
   account_email: string | null; account_name: string | null;
   action: string; entity: string | null; entity_id: string | null;
   summary: string; method: string | null; path: string | null;
   status_code: number | null; details: Record<string, any> | null;
-  created_at: string;
+  created_at: string; internal: boolean;
 }
 export interface ActivityAccount {
   account_email: string; account_name: string | null; events: number;
@@ -119,12 +151,30 @@ export interface ActivityAccount {
 
 export const api = {
   auth: {
-    google: (credential: string, language?: 'es' | 'en') => request<{ token: string; account: Account }>('/auth/google', { method:'POST', body:JSON.stringify({ credential, language }) }),
+    google: (credential: string, language?: 'es' | 'en') => publicRequest<{ token: string; account: Account }>('/auth/google', { credential, language }),
+    superGoogle: (credential: string) => publicRequest<{ token: string; account: Account }>('/auth/super/google', { credential }),
     login: (email: string, password: string) => publicRequest<{ token: string; account: Account }>('/auth/login', { email, password }),
     register: (token: string, name: string, password: string, language?: 'es' | 'en') => publicRequest<{ token: string; account: Account }>('/auth/register', { token, name, password, language }),
     getInvitation: (token: string) => request<{ email: string }>(`/auth/invitation/${token}`),
     me: () => request<{ account: Account }>('/auth/me'),
     setLanguage: (language: 'es' | 'en') => request<{ account: Account }>('/auth/language', { method:'PUT', body:JSON.stringify({ language }) }),
+  },
+  clinics: {
+    checkSlug: (slug: string) => publicGet<{ available: boolean; reason: 'taken' | 'invalid' | null }>(`/clinics/check-slug/${encodeURIComponent(slug)}`),
+    create: (credential: string, slug: string, name: string) =>
+      publicRequest<{ token: string; account: Account; clinic: Clinic }>('/clinics', { credential, slug, name }),
+  },
+  super: {
+    clinics: () => request<ClinicSummary[]>('/super/clinics'),
+    activity: (params?: { clinic_id?: number; account?: string; entity?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.clinic_id) q.set('clinic_id', String(params.clinic_id));
+      if (params?.account) q.set('account', params.account);
+      if (params?.entity) q.set('entity', params.entity);
+      if (params?.limit) q.set('limit', String(params.limit));
+      const qs = q.toString();
+      return request<(ActivityLog & { clinic_slug: string | null; clinic_name: string | null })[]>(`/super/activity${qs ? `?${qs}` : ''}`);
+    },
   },
   invitations: {
     list: () => request<Invitation[]>('/invitations'),

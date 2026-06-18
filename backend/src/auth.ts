@@ -12,8 +12,15 @@ export interface SessionAccount {
   id: number;
   email: string;
   name: string | null;
-  role: 'superuser' | 'staff';
+  role: 'superuser' | 'clinic_admin' | 'staff';
+  clinic_id: number | null; // null solo para el superuser global
+  // Sesión "sombra": super admin accediendo a una clínica ajena.
+  // Sus acciones quedan en activity_log con internal=true y no se le ve
+  // en las listas de usuarios/invitaciones de la clínica.
+  is_shadow?: boolean;
 }
+
+export const SUPERUSER_EMAIL = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();
 
 // Verifica el ID token de Google y devuelve los datos del perfil
 export async function verifyGoogleToken(credential: string) {
@@ -64,6 +71,27 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 export function requireSuperuser(req: Request, res: Response, next: NextFunction) {
   if (req.account?.role !== 'superuser') {
     return res.status(403).json({ error: 'Solo el superusuario puede acceder a esta sección' });
+  }
+  next();
+}
+
+// Guard para el portal de super admin: además del rol, exige que la sesión
+// haya sido emitida para uso de super admin (no una sesión sombra de clínica).
+export function requireSuperAdminPortal(req: Request, res: Response, next: NextFunction) {
+  if (req.account?.role !== 'superuser' || req.account.clinic_id !== null) {
+    return res.status(403).json({ error: 'Solo el super admin puede acceder a esta sección' });
+  }
+  next();
+}
+
+// Garantiza que la sesión actual pertenece a la clínica del subdominio (req.clinic).
+// El super admin global (clinic_id NULL, role superuser) NUNCA pasa por aquí: si
+// quiere actuar dentro de una clínica usa una sesión sombra con clinic_id=<esa>.
+export function requireClinicMember(req: Request, res: Response, next: NextFunction) {
+  if (!req.clinic) return res.status(404).json({ error: 'Clínica no encontrada' });
+  if (!req.account) return res.status(401).json({ error: 'No autenticado' });
+  if (req.account.clinic_id !== req.clinic.id) {
+    return res.status(403).json({ error: 'Sesión no válida para esta clínica' });
   }
   next();
 }

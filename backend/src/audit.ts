@@ -174,6 +174,7 @@ function buildEntry(
 }
 
 interface ActivityInput {
+  clinicId?: number | null;
   accountId?: number | null;
   accountEmail?: string | null;
   accountName?: string | null;
@@ -185,6 +186,7 @@ interface ActivityInput {
   path?: string | null;
   statusCode?: number | null;
   details?: any;
+  internal?: boolean; // true → acción del super admin oculta para la clínica
 }
 
 // Inserta un evento en la bitácora. Nunca lanza: la auditoría no debe
@@ -193,9 +195,10 @@ export async function recordActivity(data: ActivityInput) {
   try {
     await pool.query(
       `INSERT INTO activity_log
-        (account_id, account_email, account_name, action, entity, entity_id, summary, method, path, status_code, details)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        (clinic_id, account_id, account_email, account_name, action, entity, entity_id, summary, method, path, status_code, details, internal)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [
+        data.clinicId ?? null,
         data.accountId ?? null,
         data.accountEmail ?? null,
         data.accountName ?? null,
@@ -207,6 +210,7 @@ export async function recordActivity(data: ActivityInput) {
         data.path ?? null,
         data.statusCode ?? null,
         data.details ? JSON.stringify(data.details) : null,
+        data.internal === true,
       ]
     );
   } catch (err) {
@@ -237,6 +241,7 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
     if (!entry) return;                        // listados/sondeos: no se registran
 
     recordActivity({
+      clinicId: req.account.clinic_id,
       accountId: req.account.id,
       accountEmail: req.account.email,
       accountName: req.account.name,
@@ -248,6 +253,7 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
       path: req.originalUrl,
       statusCode: res.statusCode,
       details: buildDetails(req, responseBody),
+      internal: req.account.is_shadow === true,
     });
   });
 

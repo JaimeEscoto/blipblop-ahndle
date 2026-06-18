@@ -1,12 +1,17 @@
 import { Router, Request, Response } from 'express';
 import pool from '../database';
-import { requireAuth, requireSuperuser } from '../auth';
+import { requireAuth, requireSuperAdminPortal } from '../auth';
+import { isSuperAdminHost } from '../tenant';
 import { recordActivity } from '../audit';
 
 const router = Router();
 
-// Herramientas reservadas al superusuario.
-router.use(requireAuth, requireSuperuser);
+// Herramientas globales: SOLO el super admin desde el portal superadmin.*
+router.use((req, res, next) => {
+  if (!isSuperAdminHost(req)) return res.status(404).json({ error: 'No encontrado' });
+  next();
+});
+router.use(requireAuth, requireSuperAdminPortal);
 
 // Convierte un valor de JS al literal SQL equivalente.
 function sqlValue(v: any): string {
