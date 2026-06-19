@@ -54,12 +54,20 @@ export async function putObject(key: string, body: Buffer, contentType: string):
 }
 
 // URL firmada para descargar/ver el archivo. Expira en 10 minutos.
-export async function getSignedDownloadUrl(key: string, fileName?: string): Promise<string> {
+// disposition='inline' → el navegador lo muestra (preview)
+// disposition='attachment' → el navegador lo descarga directamente
+export async function getSignedDownloadUrl(
+  key: string,
+  fileName?: string,
+  disposition: 'inline' | 'attachment' = 'inline',
+): Promise<string> {
+  const safeName = fileName ? fileName.replace(/"/g, '') : '';
   const cmd = new GetObjectCommand({
     Bucket: BUCKET,
     Key: key,
-    // Forzar el nombre del archivo en la descarga (no la key interna)
-    ResponseContentDisposition: fileName ? `inline; filename="${fileName.replace(/"/g, '')}"` : undefined,
+    ResponseContentDisposition: fileName
+      ? `${disposition}; filename="${safeName}"`
+      : undefined,
   });
   return getSignedUrl(getClient(), cmd, { expiresIn: 600 });
 }

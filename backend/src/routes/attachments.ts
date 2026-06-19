@@ -103,7 +103,9 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
   res.status(201).json(rows[0]);
 });
 
-// Devuelve una URL firmada (válida 10 min) para ver/descargar el archivo.
+// Devuelve dos URLs firmadas (válidas 10 min):
+//   previewUrl  → para mostrar en pantalla (inline)
+//   downloadUrl → fuerza descarga (attachment)
 router.get('/:id/url', async (req: Request, res: Response) => {
   const { rows } = await pool.query(
     'SELECT storage_key, file_name FROM attachments WHERE id = $1 AND clinic_id = $2',
@@ -111,12 +113,31 @@ router.get('/:id/url', async (req: Request, res: Response) => {
   );
   if (!rows[0]) return res.status(404).json({ error: 'Adjunto no encontrado' });
   try {
-    const url = await getSignedDownloadUrl(rows[0].storage_key, rows[0].file_name);
-    res.json({ url });
+    const [previewUrl, downloadUrl] = await Promise.all([
+      getSignedDownloadUrl(rows[0].storage_key, rows[0].file_name, 'inline'),
+      getSignedDownloadUrl(rows[0].storage_key, rows[0].file_name, 'attachment'),
+    ]);
+    res.json({ previewUrl, downloadUrl });
   } catch (e) {
     console.error('Error firmando URL R2:', e);
     res.status(502).json({ error: 'No se pudo generar el enlace de descarga.' });
   }
+});
+
+// Renombrar (cambiar etiqueta visible del adjunto). Solo modifica file_name,
+// el archivo en R2 sigue con su storage_key original.
+router.patch('/:id', async (req: Request, res: Response) => {
+  const fileName = (req.body.file_name || '').trim();
+  if (!fileName) return res.status(400).json({ error: 'El nombre no puede estar vacío' });
+  if (fileName.length > 200) return res.status(400).json({ error: 'El nombre es demasiado largo (máx 200)' });
+
+  const { rows } = await pool.query(
+    `UPDATE attachments SET file_name = $1 WHERE id = $2 AND clinic_id = $3
+     RETURNING id, user_id, record_id, file_name, mime_type, size_bytes, uploaded_by_email, uploaded_by_name, uploaded_at`,
+    [fileName, req.params.id, req.clinic!.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Adjunto no encontrado' });
+  res.json(rows[0]);
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {

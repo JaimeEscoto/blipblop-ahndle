@@ -292,7 +292,8 @@ export const api = {
       if (!res.ok) throw new Error(data.error || 'Error al subir el archivo');
       return data as Attachment;
     },
-    getUrl: (id: number) => request<{ url: string }>(`/attachments/${id}/url`),
+    getUrl: (id: number) => request<{ previewUrl: string; downloadUrl: string }>(`/attachments/${id}/url`),
+    rename: (id: number, file_name: string) => request<Attachment>(`/attachments/${id}`, { method: 'PATCH', body: JSON.stringify({ file_name }) }),
     delete: (id: number) => request<{ id: number }>(`/attachments/${id}`, { method: 'DELETE' }),
   },
   reminders: {
