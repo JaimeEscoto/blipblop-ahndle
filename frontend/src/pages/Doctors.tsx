@@ -6,9 +6,9 @@ import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const SPECIALTIES = [
-  'Medicina General', 'Pediatría', 'Cardiología', 'Dermatología',
-  'Ginecología', 'Neurología', 'Oftalmología', 'Ortopedia',
-  'Psiquiatría', 'Radiología', 'Urología', 'Otra',
+  'Odontología General', 'Ortodoncia', 'Endodoncia', 'Periodoncia',
+  'Cirugía Maxilofacial', 'Odontopediatría', 'Prostodoncia', 'Implantología',
+  'Estética Dental', 'Patología Oral', 'Radiología Oral', 'Otra',
 ];
 
 const EMPTY: Omit<Doctor, 'id' | 'created_at'> = { name: '', specialty: '', email: '', phone: '', license_number: '' };
@@ -63,14 +63,17 @@ export default function Doctors() {
   );
 
   const specialtyColors: Record<string, string> = {
-    'Medicina General': 'bg-green-100 text-green-700',
-    'Pediatría': 'bg-yellow-100 text-yellow-700',
-    'Cardiología': 'bg-red-100 text-red-700',
-    'Dermatología': 'bg-pink-100 text-pink-700',
-    'Ginecología': 'bg-purple-100 text-purple-700',
-    'Neurología': 'bg-indigo-100 text-indigo-700',
-    'Oftalmología': 'bg-cyan-100 text-cyan-700',
-    'Ortopedia': 'bg-orange-100 text-orange-700',
+    'Odontología General': 'bg-green-100 text-green-700',
+    'Ortodoncia': 'bg-blue-100 text-blue-700',
+    'Endodoncia': 'bg-red-100 text-red-700',
+    'Periodoncia': 'bg-pink-100 text-pink-700',
+    'Cirugía Maxilofacial': 'bg-orange-100 text-orange-700',
+    'Odontopediatría': 'bg-yellow-100 text-yellow-700',
+    'Prostodoncia': 'bg-purple-100 text-purple-700',
+    'Implantología': 'bg-indigo-100 text-indigo-700',
+    'Estética Dental': 'bg-cyan-100 text-cyan-700',
+    'Patología Oral': 'bg-amber-100 text-amber-700',
+    'Radiología Oral': 'bg-slate-100 text-slate-700',
   };
 
   return (
