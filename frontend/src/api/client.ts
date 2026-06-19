@@ -125,6 +125,15 @@ export interface Clinic {
   id: number; slug: string; name: string;
   owner_email: string | null; created_at: string;
 }
+export interface DiscoverClinic {
+  clinic_id: number; clinic_slug: string; clinic_name: string;
+  role: 'superuser' | 'clinic_admin' | 'staff';
+  token: string;
+  account: Account;
+}
+export type DiscoverResponse =
+  | { super: { token: string; account: Account } }
+  | { clinics: DiscoverClinic[] };
 export interface ClinicSummary extends Clinic {
   account_count: number;
   patient_count: number;
@@ -153,6 +162,7 @@ export const api = {
   auth: {
     google: (credential: string, language?: 'es' | 'en') => publicRequest<{ token: string; account: Account }>('/auth/google', { credential, language }),
     superGoogle: (credential: string) => publicRequest<{ token: string; account: Account }>('/auth/super/google', { credential }),
+    discover: (credential: string) => publicRequest<DiscoverResponse>('/auth/discover', { credential }),
     login: (email: string, password: string) => publicRequest<{ token: string; account: Account }>('/auth/login', { email, password }),
     register: (token: string, name: string, password: string, language?: 'es' | 'en') => publicRequest<{ token: string; account: Account }>('/auth/register', { token, name, password, language }),
     getInvitation: (token: string) => request<{ email: string }>(`/auth/invitation/${token}`),

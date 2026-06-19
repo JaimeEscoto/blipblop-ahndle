@@ -10,7 +10,7 @@
 
 const RESERVED = new Set([
   // Rutas top-level del sistema (no pueden ser slugs de clínica)
-  'crear-clinica', 'superadmin', 'cita', 'crear-cuenta',
+  'crear-clinica', 'superadmin', 'cita', 'crear-cuenta', 'login',
   // Nombres reservados por convención (futuras rutas/servicios)
   'www', 'api', 'app', 'admin', 'mail', 'ftp', 'staging', 'dev',
 ]);

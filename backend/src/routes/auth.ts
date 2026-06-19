@@ -236,6 +236,72 @@ router.post('/login', requireClinic, async (req: Request, res: Response) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// LOGIN GLOBAL (dominio raíz: odontiacloud.com/login)
+// Descubre las clínicas a las que tiene acceso un correo y devuelve
+// tokens listos para usar. Si solo tiene una, el frontend entra directo;
+// si tiene varias, muestra un selector.
+// ════════════════════════════════════════════════════════════════════════════
+
+router.post('/discover', async (req: Request, res: Response) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'Falta el token de Google' });
+
+  let profile;
+  try { profile = await verifyGoogleToken(credential); }
+  catch (e: any) { return res.status(401).json({ error: e.message || 'No se pudo verificar Google' }); }
+
+  // Caso especial: super admin → portal
+  if (profile.email === SUPERUSER_EMAIL) {
+    const sup = await getSuperuserAccount();
+    if (!sup) return res.status(500).json({ error: 'Configuración inválida del super admin' });
+    const session: SessionAccount = {
+      id: sup.id, email: sup.email, name: sup.name, role: 'superuser', clinic_id: null,
+    };
+    return res.json({
+      super: { token: signSession(session), account: { ...session, language: 'es' } },
+    });
+  }
+
+  // Busca todas las cuentas de este correo (una por clínica)
+  const { rows } = await pool.query(
+    `SELECT a.id, a.email, a.name, a.role, a.language, a.clinic_id,
+            c.slug AS clinic_slug, c.name AS clinic_name
+     FROM accounts a
+     JOIN clinics c ON c.id = a.clinic_id
+     WHERE a.email = $1
+     ORDER BY a.last_login DESC NULLS LAST, c.name ASC`,
+    [profile.email]
+  );
+
+  if (rows.length === 0) {
+    return res.status(403).json({ error: 'Tu correo no está registrado en ninguna clínica.' });
+  }
+
+  // Para cada cuenta, firmamos un token y actualizamos last_login
+  const clinics = rows.map(r => {
+    const session: SessionAccount = {
+      id: r.id, email: r.email, name: r.name, role: r.role, clinic_id: r.clinic_id,
+    };
+    return {
+      clinic_id: r.clinic_id,
+      clinic_slug: r.clinic_slug,
+      clinic_name: r.clinic_name,
+      role: r.role,
+      token: signSession(session),
+      account: { ...session, language: r.language },
+    };
+  });
+
+  // Marca el inicio en la cuenta más reciente para que la próxima vez aparezca primero
+  await pool.query(
+    `UPDATE accounts SET last_login = NOW(), google_sub = $1, name = COALESCE(name, $2) WHERE email = $3`,
+    [profile.sub, profile.name, profile.email]
+  );
+
+  res.json({ clinics });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 // LOGIN PARA EL PORTAL DE SUPER ADMIN (superadmin.odontiacloud.com)
 // ════════════════════════════════════════════════════════════════════════════
 

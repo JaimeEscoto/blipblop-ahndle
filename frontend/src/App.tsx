@@ -15,6 +15,7 @@ import SuperAdmin from './pages/SuperAdmin';
 import Settings from './pages/Settings';
 import Landing from './pages/Landing';
 import CreateClinic from './pages/CreateClinic';
+import GlobalLogin from './pages/GlobalLogin';
 import SuperAdminPortal from './pages/SuperAdminPortal';
 import { useAuth } from './auth/AuthContext';
 
@@ -29,6 +30,7 @@ export default function App() {
       {/* Públicas (sin clínica) */}
       <Route path="/" element={<Landing />} />
       <Route path="/crear-clinica" element={<CreateClinic />} />
+      <Route path="/login" element={<GlobalLogin />} />
       <Route path="/cita/:code" element={<PublicAppointment />} />
 
       {/* Portal Super Admin */}

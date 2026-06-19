@@ -13,10 +13,14 @@ export default function Landing() {
           <img src="/icono.png" alt="odontiacloud" className="h-9 w-9 object-contain" />
           <span className="font-bold text-gray-800">odontiacloud</span>
         </div>
-        <Link to="/crear-clinica"
-          className="text-sm font-medium text-blue-700 hover:underline">
-          Crear mi clínica
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-blue-700">
+            Iniciar sesión
+          </Link>
+          <Link to="/crear-clinica" className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg">
+            Crear mi clínica
+          </Link>
+        </div>
       </header>
 
       <main className="relative z-10 max-w-3xl mx-auto px-6 pt-12 pb-20 text-center">

@@ -4,7 +4,7 @@ import pool from './database';
 // Subdominios reservados: NUNCA se resuelven como una clínica
 export const RESERVED_SLUGS = new Set([
   'www', 'api', 'app', 'admin', 'superadmin', 'mail', 'ftp',
-  'localhost', 'staging', 'dev',
+  'localhost', 'staging', 'dev', 'login', 'crear-clinica', 'crear-cuenta', 'cita',
 ]);
 
 export interface ClinicContext {
