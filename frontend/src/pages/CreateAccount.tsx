@@ -43,7 +43,7 @@ export default function CreateAccount() {
       const lang = i18n.language?.startsWith('en') ? 'en' : 'es';
       const { token: jwt, account } = await api.auth.register(token, name.trim(), password, lang);
       login(jwt, account);
-      navigate('/inicio', { replace: true });
+      navigate('../inicio', { replace: true });
     } catch (err: any) {
       setError(err.message || t('createAccount.invalidLink'));
     } finally {
@@ -65,7 +65,7 @@ export default function CreateAccount() {
         ) : invalid ? (
           <div className="text-center">
             <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{invalid}</p>
-            <Link to="/" className="inline-block mt-4 text-sm text-blue-600 font-medium hover:underline">
+            <Link to=".." className="inline-block mt-4 text-sm text-blue-600 font-medium hover:underline">
               {t('createAccount.goToLogin')}
             </Link>
           </div>

@@ -26,7 +26,7 @@ export default function Landing() {
         </h1>
         <p className="mt-3 text-gray-600 max-w-xl mx-auto">
           Administra pacientes, citas, expedientes e inventario desde un solo lugar.
-          Cada clínica tiene su propio subdominio y datos aislados.
+          Cada clínica tiene su propio espacio y datos aislados.
         </p>
 
         <Link to="/crear-clinica"
@@ -48,12 +48,12 @@ export default function Landing() {
           <div className="bg-white/80 backdrop-blur rounded-xl p-5 shadow-sm border border-white">
             <ShieldCheck className="w-6 h-6 text-blue-600 mb-2" />
             <h3 className="font-semibold text-gray-900">Datos aislados</h3>
-            <p className="text-sm text-gray-600 mt-1">Tu clínica vive en su subdominio propio.</p>
+            <p className="text-sm text-gray-600 mt-1">Tu clínica vive en su espacio propio.</p>
           </div>
         </div>
 
         <p className="mt-12 text-xs text-gray-400 flex items-center justify-center gap-1.5">
-          <Cloud className="w-3.5 h-3.5" /> tu-clinica.odontiacloud.com
+          <Cloud className="w-3.5 h-3.5" /> odontiacloud.com/tu-clinica
         </p>
       </main>
     </div>

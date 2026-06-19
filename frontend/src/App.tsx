@@ -17,7 +17,6 @@ import Landing from './pages/Landing';
 import CreateClinic from './pages/CreateClinic';
 import SuperAdminPortal from './pages/SuperAdminPortal';
 import { useAuth } from './auth/AuthContext';
-import { currentMode } from './tenant';
 
 function Splash() {
   const { t } = useTranslation();
@@ -25,56 +24,51 @@ function Splash() {
 }
 
 export default function App() {
-  const mode = currentMode();
+  return (
+    <Routes>
+      {/* Públicas (sin clínica) */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/crear-clinica" element={<CreateClinic />} />
+      <Route path="/cita/:code" element={<PublicAppointment />} />
 
-  // Modo "raíz" (odontiacloud.com): landing pública y creación de clínicas
-  if (mode === 'root') {
-    return (
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/crear-clinica" element={<CreateClinic />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    );
-  }
+      {/* Portal Super Admin */}
+      <Route path="/superadmin/*" element={<SuperAdminPortal />} />
 
-  // Modo "super admin" (superadmin.odontiacloud.com): solo jaimeted
-  if (mode === 'superadmin') {
-    return <SuperAdminPortal />;
-  }
+      {/* Aceptar invitación (público, requiere conocer la clínica por el slug) */}
+      <Route path="/:slug/crear-cuenta" element={<CreateAccount />} />
 
-  // Modo "clínica" (<slug>.odontiacloud.com): app de la clínica
-  return <ClinicApp />;
+      {/* App de la clínica (todo lo demás bajo /:slug/...) */}
+      <Route path="/:slug/*" element={<ClinicApp />} />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 function ClinicApp() {
   const { account, loading } = useAuth();
+
+  if (loading) return <Splash />;
+  if (!account) return <Login />;
+
   return (
     <Routes>
-      {/* Ruta pública (paciente al escanear el QR) — sin login */}
-      <Route path="/cita/:code" element={<PublicAppointment />} />
-      {/* Crear cuenta desde el enlace de invitación — sin login */}
-      <Route path="/crear-cuenta" element={<CreateAccount />} />
-
-      {!account ? (
-        <Route path="*" element={loading ? <Splash /> : <Login />} />
-      ) : (
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="/inicio"        element={<Home />} />
-          <Route path="/citas"         element={<Appointments />} />
-          <Route path="/expedientes"   element={<Records />} />
-          <Route path="/medicos"       element={<Doctors />} />
-          <Route path="/pacientes"     element={<Patients />} />
-          <Route path="/inventario"    element={<Inventory />} />
-          <Route path="/recordatorios" element={<Reminders />} />
-          <Route path="/ajustes"       element={<Settings />} />
-          <Route path="/superadmin"    element={account.role === 'superuser' || account.role === 'clinic_admin' ? <SuperAdmin /> : <Navigate to="/inicio" replace />} />
-          <Route path="/invitaciones"  element={<Navigate to="/superadmin" replace />} />
-          <Route path="/actividad"     element={<Navigate to="/superadmin" replace />} />
-          <Route path="*"              element={<Navigate to="/inicio" replace />} />
-        </Route>
-      )}
+      <Route element={<Layout />}>
+        <Route index               element={<Home />} />
+        <Route path="inicio"        element={<Home />} />
+        <Route path="citas"         element={<Appointments />} />
+        <Route path="expedientes"   element={<Records />} />
+        <Route path="medicos"       element={<Doctors />} />
+        <Route path="pacientes"     element={<Patients />} />
+        <Route path="inventario"    element={<Inventory />} />
+        <Route path="recordatorios" element={<Reminders />} />
+        <Route path="ajustes"       element={<Settings />} />
+        <Route path="superadmin"    element={(account.role === 'superuser' || account.role === 'clinic_admin') ? <SuperAdmin /> : <Navigate to="../inicio" replace />} />
+        {/* Rutas antiguas: ahora viven dentro de Super Admin */}
+        <Route path="invitaciones"  element={<Navigate to="../superadmin" replace />} />
+        <Route path="actividad"     element={<Navigate to="../superadmin" replace />} />
+        <Route path="*"             element={<Navigate to="inicio" replace />} />
+      </Route>
     </Routes>
   );
 }

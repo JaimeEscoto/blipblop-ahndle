@@ -283,7 +283,10 @@ router.get('/me', requireAuth, attachClinic, async (req: Request, res: Response)
     const r = await pool.query('SELECT language FROM accounts WHERE id = $1 AND clinic_id = $2', [acc.id, acc.clinic_id]);
     if (r.rows[0]) language = r.rows[0].language;
   }
-  res.json({ account: { ...acc, language } });
+  // Devolvemos también la clínica resuelta del request para que el frontend
+  // pueda detectar si la sesión pertenece a OTRA clínica distinta a la del
+  // path y cerrarla automáticamente.
+  res.json({ account: { ...acc, language }, clinic: req.clinic || null });
 });
 
 router.put('/language', requireAuth, async (req: Request, res: Response) => {

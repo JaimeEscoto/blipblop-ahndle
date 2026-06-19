@@ -4,15 +4,16 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { withSlug } from '../tenant';
 
 const baseNavItems = [
-  { to: '/inicio',       label: 'menu.home',        icon: Home },
-  { to: '/citas',        label: 'menu.appointments', icon: Calendar },
-  { to: '/expedientes',  label: 'menu.records',     icon: FileText },
-  { to: '/medicos',      label: 'menu.doctors',     icon: Stethoscope },
-  { to: '/pacientes',    label: 'menu.patients',    icon: Users },
-  { to: '/inventario',   label: 'menu.inventory',   icon: Package },
-  { to: '/recordatorios',label: 'menu.reminders',   icon: Bell },
+  { to: 'inicio',       label: 'menu.home',        icon: Home },
+  { to: 'citas',        label: 'menu.appointments', icon: Calendar },
+  { to: 'expedientes',  label: 'menu.records',     icon: FileText },
+  { to: 'medicos',      label: 'menu.doctors',     icon: Stethoscope },
+  { to: 'pacientes',    label: 'menu.patients',    icon: Users },
+  { to: 'inventario',   label: 'menu.inventory',   icon: Package },
+  { to: 'recordatorios',label: 'menu.reminders',   icon: Bell },
 ];
 
 export default function Layout() {
@@ -20,11 +21,11 @@ export default function Layout() {
   const { t } = useTranslation();
   const navItems = [
     ...baseNavItems,
-    ...(account?.role === 'superuser'
-      ? [{ to: '/superadmin', label: 'menu.superadmin', icon: Shield }]
+    ...(account?.role === 'superuser' || account?.role === 'clinic_admin'
+      ? [{ to: 'superadmin', label: 'menu.superadmin', icon: Shield }]
       : []),
-    { to: '/ajustes', label: 'menu.settings', icon: Settings },
-  ];
+    { to: 'ajustes', label: 'menu.settings', icon: Settings },
+  ].map(it => ({ ...it, to: withSlug(it.to) }));
   const [menuOpen, setMenuOpen] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [pendingReminders, setPendingReminders] = useState(0);
@@ -43,8 +44,8 @@ export default function Layout() {
   }, []);
 
   const getBadge = (to: string) => {
-    if (to === '/inventario' && lowStockCount > 0) return lowStockCount;
-    if (to === '/recordatorios' && pendingReminders > 0) return pendingReminders;
+    if (to.endsWith('/inventario') && lowStockCount > 0) return lowStockCount;
+    if (to.endsWith('/recordatorios') && pendingReminders > 0) return pendingReminders;
     return 0;
   };
 

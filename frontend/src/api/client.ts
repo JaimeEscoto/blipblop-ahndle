@@ -156,7 +156,7 @@ export const api = {
     login: (email: string, password: string) => publicRequest<{ token: string; account: Account }>('/auth/login', { email, password }),
     register: (token: string, name: string, password: string, language?: 'es' | 'en') => publicRequest<{ token: string; account: Account }>('/auth/register', { token, name, password, language }),
     getInvitation: (token: string) => request<{ email: string }>(`/auth/invitation/${token}`),
-    me: () => request<{ account: Account }>('/auth/me'),
+    me: () => request<{ account: Account; clinic: Clinic | null }>('/auth/me'),
     setLanguage: (language: 'es' | 'en') => request<{ account: Account }>('/auth/language', { method:'PUT', body:JSON.stringify({ language }) }),
   },
   clinics: {

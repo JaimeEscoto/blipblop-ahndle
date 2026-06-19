@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, Invitation } from '../api/client';
+import { currentSlug } from '../tenant';
 import { dateLocale } from '../i18n/format';
 import { Plus, Trash2, Mail, CheckCircle, Clock, Copy, Check, MessageCircle } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -19,13 +20,14 @@ export default function Invitations() {
   // Correos de Gmail pueden entrar con Google; los demás reciben un enlace
   // directo a la página de "Crear cuenta" (con su token de invitación).
   const isGmail = (email: string) => /@gmail\.com$/i.test(email.trim());
-  const signupLink = (inv: Invitation) => `${window.location.origin}/crear-cuenta?token=${inv.token}`;
+  const clinicHome = `${window.location.origin}/${currentSlug() || ''}`;
+  const signupLink = (inv: Invitation) => `${clinicHome}/crear-cuenta?token=${inv.token}`;
 
   // Mensaje de invitación listo para enviar
   const inviteMessage = (inv: Invitation) =>
     inv.token && !isGmail(inv.email)
       ? t('invitations.inviteMessagePassword', { link: signupLink(inv) })
-      : t('invitations.inviteMessage', { origin: window.location.origin, email: inv.email });
+      : t('invitations.inviteMessage', { origin: clinicHome, email: inv.email });
 
   const copyMessage = async (inv: Invitation) => {
     try {

@@ -30,7 +30,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Si hay token guardado, valida la sesión
     if (getToken()) {
       api.auth.me()
-        .then(r => { setAccount(r.account); applyLang(r.account); })
+        .then(r => {
+          // Si estamos navegando dentro de una clínica distinta a la de la
+          // sesión guardada, cerramos la sesión: el usuario tendrá que
+          // iniciar sesión en esta clínica.
+          if (r.clinic && r.account.clinic_id !== null && r.account.clinic_id !== r.clinic.id) {
+            clearToken();
+            return;
+          }
+          setAccount(r.account);
+          applyLang(r.account);
+        })
         .catch(() => clearToken())
         .finally(() => setLoading(false));
     } else {

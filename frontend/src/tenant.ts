@@ -1,63 +1,55 @@
-// Detecta el modo de la app según el subdominio actual.
+// Detecta la clínica a partir del PRIMER segmento del path.
 //
-//   odontiacloud.com           → 'root'      (landing + crear clínica)
-//   superadmin.odontiacloud.com → 'superadmin' (portal del super admin)
-//   <algo>.odontiacloud.com    → 'clinic'    (sistema de esa clínica)
+//   odontiacloud.com/             → 'root'       (landing + crear clínica)
+//   odontiacloud.com/crear-clinica/ → 'root'     (formulario para crear clínica)
+//   odontiacloud.com/superadmin/  → 'superadmin' (portal del super admin)
+//   odontiacloud.com/cita/:code   → 'root'       (vista pública del paciente)
+//   odontiacloud.com/<slug>/...   → 'clinic'     (sistema de esa clínica)
 //
-// En desarrollo:
-//   localhost                  → 'root'
-//   superadmin.localhost       → 'superadmin'
-//   <algo>.localhost           → 'clinic'
-//   ?clinic=<slug>             → fuerza 'clinic' con ese slug (útil para previews)
-//   ?clinic=superadmin         → fuerza 'superadmin'
+// Mantenemos también soporte de ?clinic=<slug> como atajo (testing/previews).
 
 const RESERVED = new Set([
+  // Rutas top-level del sistema (no pueden ser slugs de clínica)
+  'crear-clinica', 'superadmin', 'cita', 'crear-cuenta',
+  // Nombres reservados por convención (futuras rutas/servicios)
   'www', 'api', 'app', 'admin', 'mail', 'ftp', 'staging', 'dev',
 ]);
 
 export type TenantMode = 'root' | 'clinic' | 'superadmin';
 
+function firstPathSegment(): string | null {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const first = parts[0]?.toLowerCase();
+  return first || null;
+}
+
 function fromQuery(): string | null {
   const p = new URLSearchParams(window.location.search);
-  const v = (p.get('clinic') || '').trim().toLowerCase();
-  return v || null;
-}
-
-function fromHost(): string | null {
-  const host = window.location.hostname.toLowerCase();
-  const parts = host.split('.');
-  // 'localhost' a secas → null (modo root)
-  if (host === 'localhost') return null;
-  // 'demo.localhost' → 'demo' ; 'demo.odontiacloud.com' → 'demo'
-  if (parts.length >= 3 || (parts.length === 2 && parts[1] === 'localhost')) {
-    return parts[0];
-  }
-  return null;
-}
-
-export function currentSlug(): string | null {
-  const slug = fromQuery() || fromHost();
-  if (!slug) return null;
-  if (RESERVED.has(slug)) return null;
-  return slug;
+  return (p.get('clinic') || '').trim().toLowerCase() || null;
 }
 
 export function currentMode(): TenantMode {
-  const slug = fromQuery() || fromHost();
-  if (!slug) return 'root';
-  if (slug === 'superadmin') return 'superadmin';
-  if (RESERVED.has(slug)) return 'root';
+  const first = fromQuery() || firstPathSegment();
+  if (first === 'superadmin') return 'superadmin';
+  if (!first || RESERVED.has(first)) return 'root';
   return 'clinic';
 }
 
-// Construye la URL del subdominio de una clínica (para redirigir tras crearla).
+export function currentSlug(): string | null {
+  const first = fromQuery() || firstPathSegment();
+  if (!first || RESERVED.has(first)) return null;
+  return first;
+}
+
+// URL que se abre tras crear la clínica.
 export function clinicUrl(slug: string): string {
-  const host = window.location.hostname;
-  if (host === 'localhost' || host.endsWith('.localhost')) {
-    return `${window.location.protocol}//${slug}.localhost:${window.location.port || '5173'}`;
-  }
-  // Producción: reemplaza el primer segmento (o agrega) del host actual
-  const parts = host.split('.');
-  const apex = parts.length >= 2 ? parts.slice(-2).join('.') : host;
-  return `${window.location.protocol}//${slug}.${apex}`;
+  return `${window.location.origin}/${slug}/`;
+}
+
+// Antepone el slug a una ruta interna de la clínica (ej. '/inicio' → '/demo/inicio').
+// Se usa para los NavLinks del menú y redirecciones.
+export function withSlug(path: string): string {
+  const slug = currentSlug();
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  return slug ? `/${slug}${clean}` : clean;
 }

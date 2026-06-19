@@ -131,12 +131,12 @@ export default function CreateClinic() {
                 onChange={e => setName(e.target.value)} placeholder="Ej. Dental del Sur" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Subdominio *</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Identificador (URL) *</label>
               <div className="flex items-center gap-1">
+                <span className="text-sm text-gray-500 whitespace-nowrap">odontiacloud.com/</span>
                 <input required type="text" className="input flex-1" value={slug}
                   onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   placeholder="dental-sur" autoComplete="off" />
-                <span className="text-sm text-gray-500 whitespace-nowrap">.odontiacloud.com</span>
               </div>
               <p className={`text-xs mt-1 flex items-center gap-1 ${slugHint().color}`}>
                 {slugStatus === 'ok' && <CheckCircle className="w-3.5 h-3.5" />}
@@ -160,11 +160,11 @@ export default function CreateClinic() {
             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
             <h2 className="text-base font-semibold text-gray-900 mb-1">¡Tu clínica está lista!</h2>
             <p className="text-sm text-gray-600 mb-5">
-              <span className="font-medium">{created.name}</span> ahora vive en su propio subdominio.
+              <span className="font-medium">{created.name}</span> ahora vive en su propio espacio.
             </p>
             <a href={clinicUrl(created.slug)}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700">
-              Entrar a {created.slug}.odontiacloud.com <ArrowRight className="w-4 h-4" />
+              Entrar a /{created.slug} <ArrowRight className="w-4 h-4" />
             </a>
             <p className="text-xs text-gray-400 mt-4">Inicia sesión con tu cuenta de Google.</p>
           </div>
