@@ -7,6 +7,7 @@ import Patients from './pages/Patients';
 import Records from './pages/Records';
 import Inventory from './pages/Inventory';
 import Reminders from './pages/Reminders';
+import Finance from './pages/Finance';
 import PublicAppointment from './pages/PublicAppointment';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -64,6 +65,7 @@ function ClinicApp() {
         <Route path="pacientes"     element={<Patients />} />
         <Route path="inventario"    element={<Inventory />} />
         <Route path="recordatorios" element={<Reminders />} />
+        <Route path="finanzas"      element={<Finance />} />
         <Route path="ajustes"       element={<Settings />} />
         <Route path="superadmin"    element={(account.role === 'superuser' || account.role === 'clinic_admin') ? <SuperAdmin /> : <Navigate to="../inicio" replace />} />
         {/* Rutas antiguas: ahora viven dentro de Super Admin */}

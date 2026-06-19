@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, LogOut, Shield, Settings } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, LogOut, Shield, Settings, Wallet } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
@@ -14,6 +14,7 @@ const baseNavItems = [
   { to: 'pacientes',    label: 'menu.patients',    icon: Users },
   { to: 'inventario',   label: 'menu.inventory',   icon: Package },
   { to: 'recordatorios',label: 'menu.reminders',   icon: Bell },
+  { to: 'finanzas',     label: 'menu.finance',     icon: Wallet },
 ];
 
 export default function Layout() {

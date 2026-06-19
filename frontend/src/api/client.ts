@@ -146,6 +146,60 @@ export interface Invitation {
   token: string | null;
 }
 
+export interface Procedure {
+  id: number; clinic_id: number;
+  code: string | null; name: string; description: string | null;
+  default_price: number; duration_minutes: number | null;
+  active: boolean; created_at: string;
+}
+export interface InvoiceItem {
+  id: number; invoice_id: number;
+  procedure_id: number | null; procedure_name?: string | null;
+  description: string; quantity: number; unit_price: number; total: number;
+  position: number;
+}
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other';
+export interface Payment {
+  id: number; invoice_id: number;
+  amount: number; method: PaymentMethod; reference: string | null;
+  date: string; notes: string | null;
+  received_by_email: string | null; received_by_name: string | null;
+  created_at: string;
+}
+export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'cancelled';
+export interface Invoice {
+  id: number; clinic_id: number; number: number;
+  user_id: number; doctor_id: number | null; appointment_id: number | null;
+  date: string;
+  subtotal: number; tax_rate: number; tax: number; discount: number; total: number;
+  total_paid: number;
+  status: InvoiceStatus; notes: string | null;
+  user_name: string; user_email: string | null; user_phone: string | null; user_document_id: string | null;
+  doctor_name: string | null; doctor_specialty: string | null;
+  created_by_email: string | null; created_by_name: string | null;
+  created_at: string;
+}
+export interface InvoiceDetail extends Invoice {
+  items: InvoiceItem[];
+  payments: Payment[];
+}
+export interface PatientBalance {
+  total_invoiced: number; total_paid: number; balance: number;
+  invoices_count: number; pending_count: number;
+}
+export interface FinanceSettings {
+  currency: string; tax_rate: number; next_invoice_number: number;
+}
+export interface FinanceReport {
+  from: string; to: string;
+  summary: { total_income: number; invoices_paid: number; payments_count: number };
+  receivable: { receivable: number; pending_invoices: number };
+  by_method: { method: PaymentMethod; total: number; count: number }[];
+  by_doctor: { id: number | null; name: string | null; total: number }[];
+  by_procedure: { name: string; quantity: number; total: number }[];
+  by_day: { day: string; total: number }[];
+}
+
 export interface Attachment {
   id: number;
   user_id: number;
@@ -264,6 +318,48 @@ export const api = {
     update: (id: number, d: any) => request<InventoryItem>(`/inventory/${id}`, { method:'PUT', body:JSON.stringify(d) }),
     updateQuantity: (id: number, quantity: number) => request<InventoryItem>(`/inventory/${id}/quantity`, { method:'PATCH', body:JSON.stringify({ quantity }) }),
     delete: (id: number) => request<void>(`/inventory/${id}`, { method:'DELETE' }),
+  },
+  procedures: {
+    list: (includeInactive?: boolean) => request<Procedure[]>(`/procedures${includeInactive ? '?all=1' : ''}`),
+    create: (d: Partial<Procedure>) => request<Procedure>('/procedures', { method:'POST', body:JSON.stringify(d) }),
+    update: (id: number, d: Partial<Procedure>) => request<Procedure>(`/procedures/${id}`, { method:'PUT', body:JSON.stringify(d) }),
+    delete: (id: number) => request<Procedure>(`/procedures/${id}`, { method:'DELETE' }),
+  },
+  invoices: {
+    list: (params?: { user_id?: number; status?: InvoiceStatus; from?: string; to?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.user_id) q.set('user_id', String(params.user_id));
+      if (params?.status) q.set('status', params.status);
+      if (params?.from) q.set('from', params.from);
+      if (params?.to) q.set('to', params.to);
+      if (params?.limit) q.set('limit', String(params.limit));
+      const qs = q.toString();
+      return request<Invoice[]>(`/invoices${qs ? `?${qs}` : ''}`);
+    },
+    get: (id: number) => request<InvoiceDetail>(`/invoices/${id}`),
+    create: (d: {
+      user_id: number; doctor_id?: number | null; appointment_id?: number | null;
+      date?: string; tax_rate?: number; discount?: number; notes?: string;
+      items: { procedure_id?: number | null; description: string; quantity: number; unit_price: number }[];
+    }) => request<InvoiceDetail>('/invoices', { method:'POST', body:JSON.stringify(d) }),
+    setStatus: (id: number, status: InvoiceStatus) => request<{ id: number; status: InvoiceStatus }>(`/invoices/${id}/status`, { method:'PATCH', body:JSON.stringify({ status }) }),
+    delete: (id: number) => request<{ id: number; number: number }>(`/invoices/${id}`, { method:'DELETE' }),
+    addPayment: (id: number, d: { amount: number; method: PaymentMethod; reference?: string; date?: string; notes?: string }) =>
+      request<Payment>(`/invoices/${id}/payments`, { method:'POST', body:JSON.stringify(d) }),
+    deletePayment: (id: number, pid: number) => request<{ id: string }>(`/invoices/${id}/payments/${pid}`, { method:'DELETE' }),
+  },
+  finance: {
+    settings: () => request<FinanceSettings>('/finance/settings'),
+    updateSettings: (d: { currency: string; tax_rate: number }) => request<FinanceSettings>('/finance/settings', { method:'PUT', body:JSON.stringify(d) }),
+    balance: (userId: number) => request<PatientBalance>(`/finance/balance/${userId}`),
+    balances: () => request<(PatientBalance & { user_id: number })[]>(`/finance/balances`),
+    report: (from?: string, to?: string) => {
+      const q = new URLSearchParams();
+      if (from) q.set('from', from);
+      if (to) q.set('to', to);
+      const qs = q.toString();
+      return request<FinanceReport>(`/finance/report${qs ? `?${qs}` : ''}`);
+    },
   },
   attachments: {
     // record_id: number → archivos de esa visita; 'patient' → solo del paciente; undefined → todos

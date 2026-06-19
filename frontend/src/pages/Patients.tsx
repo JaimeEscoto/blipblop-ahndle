@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, User } from '../api/client';
-import { Plus, Pencil, Trash2, Search, Phone, Mail, CreditCard, MapPin, Cake, Upload, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { api, User, PatientBalance } from '../api/client';
+import { Plus, Pencil, Trash2, Search, Phone, Mail, CreditCard, MapPin, Cake, Upload, Download, CheckCircle, AlertCircle, Wallet } from 'lucide-react';
+import { formatMoney } from '../utils/money';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -92,8 +93,18 @@ export default function Patients() {
   const [importing, setImporting] = useState(false);
   const [importDone, setImportDone] = useState<{ ok: number; fail: { name: string; reason: string }[] } | null>(null);
 
+  const [balances, setBalances] = useState<Record<number, PatientBalance>>({});
+  const [currency, setCurrency] = useState('HNL');
+
   const load = useCallback(async () => {
-    setUsers(await api.users.list());
+    const [u, bs, s] = await Promise.all([
+      api.users.list(),
+      api.finance.balances().catch(() => [] as (PatientBalance & { user_id: number })[]),
+      api.finance.settings().catch(() => ({ currency: 'HNL', tax_rate: 0, next_invoice_number: 1 })),
+    ]);
+    setUsers(u);
+    setBalances(Object.fromEntries(bs.map(b => [b.user_id, b])));
+    setCurrency(s.currency);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -301,6 +312,14 @@ export default function Patients() {
                     {a !== null && (
                       <div className="flex items-center gap-1.5 text-xs text-gray-500">
                         <Cake className="w-3.5 h-3.5 shrink-0" /><span>{t('patients.yearsOld', { count: a })}{u.gender ? ` · ${u.gender}` : ''}</span>
+                      </div>
+                    )}
+                    {balances[u.id] && balances[u.id].balance > 0 && (
+                      <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium">
+                        <Wallet className="w-3.5 h-3.5 shrink-0" />
+                        <span>Saldo: {formatMoney(balances[u.id].balance, currency)}
+                          {balances[u.id].pending_count > 0 && <span className="text-amber-500 font-normal"> · {balances[u.id].pending_count} factura{balances[u.id].pending_count > 1 ? 's' : ''} pendiente{balances[u.id].pending_count > 1 ? 's' : ''}</span>}
+                        </span>
                       </div>
                     )}
                   </div>

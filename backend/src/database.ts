@@ -230,7 +230,84 @@ export async function initDB() {
   await pool.query(`ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS internal BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`CREATE INDEX IF NOT EXISTS activity_log_clinic_idx ON activity_log(clinic_id, created_at DESC)`);
 
-  // 9) Adjuntos a expedientes (RX, fotos intraorales, PDFs).
+  // 9) Ajustes financieros por clínica: moneda, IVA por defecto, próximo número de factura
+  await pool.query(`
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'HNL';
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS tax_rate NUMERIC NOT NULL DEFAULT 0;
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS next_invoice_number INTEGER NOT NULL DEFAULT 1;
+  `);
+
+  // 10) Finanzas: catálogo de procedimientos
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS procedures (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+      code TEXT,
+      name TEXT NOT NULL,
+      description TEXT,
+      default_price NUMERIC NOT NULL DEFAULT 0,
+      duration_minutes INTEGER,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS procedures_clinic_idx ON procedures(clinic_id);
+  `);
+
+  // 11) Facturas + items + abonos
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS invoices (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+      number INTEGER NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL,
+      appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL,
+      date DATE NOT NULL,
+      subtotal NUMERIC NOT NULL DEFAULT 0,
+      tax_rate NUMERIC NOT NULL DEFAULT 0,
+      tax NUMERIC NOT NULL DEFAULT 0,
+      discount NUMERIC NOT NULL DEFAULT 0,
+      total NUMERIC NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'issued' CHECK(status IN ('draft','issued','partial','paid','cancelled')),
+      notes TEXT,
+      created_by_email TEXT,
+      created_by_name TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS invoices_clinic_number_idx ON invoices(clinic_id, number);
+    CREATE INDEX IF NOT EXISTS invoices_user_idx ON invoices(clinic_id, user_id, date DESC);
+    CREATE INDEX IF NOT EXISTS invoices_date_idx ON invoices(clinic_id, date DESC);
+
+    CREATE TABLE IF NOT EXISTS invoice_items (
+      id SERIAL PRIMARY KEY,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      procedure_id INTEGER REFERENCES procedures(id) ON DELETE SET NULL,
+      description TEXT NOT NULL,
+      quantity NUMERIC NOT NULL DEFAULT 1,
+      unit_price NUMERIC NOT NULL DEFAULT 0,
+      total NUMERIC NOT NULL DEFAULT 0,
+      position INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS invoice_items_invoice_idx ON invoice_items(invoice_id, position);
+
+    CREATE TABLE IF NOT EXISTS payments (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      amount NUMERIC NOT NULL,
+      method TEXT NOT NULL CHECK(method IN ('cash','card','transfer','other')),
+      reference TEXT,
+      date DATE NOT NULL,
+      notes TEXT,
+      received_by_email TEXT,
+      received_by_name TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS payments_invoice_idx ON payments(invoice_id);
+    CREATE INDEX IF NOT EXISTS payments_clinic_date_idx ON payments(clinic_id, date DESC);
+  `);
+
+  // 12) Adjuntos a expedientes (RX, fotos intraorales, PDFs).
   //    Pueden estar asociados a una visita clínica (record_id) o ser del
   //    paciente en general (record_id NULL). Los bytes viven en R2.
   await pool.query(`
