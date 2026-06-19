@@ -230,6 +230,27 @@ export async function initDB() {
   await pool.query(`ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS internal BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`CREATE INDEX IF NOT EXISTS activity_log_clinic_idx ON activity_log(clinic_id, created_at DESC)`);
 
+  // 9) Adjuntos a expedientes (RX, fotos intraorales, PDFs).
+  //    Pueden estar asociados a una visita clínica (record_id) o ser del
+  //    paciente en general (record_id NULL). Los bytes viven en R2.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS attachments (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      record_id INTEGER REFERENCES clinical_records(id) ON DELETE SET NULL,
+      file_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size_bytes BIGINT NOT NULL,
+      storage_key TEXT NOT NULL,
+      uploaded_by_email TEXT,
+      uploaded_by_name TEXT,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS attachments_user_idx ON attachments(clinic_id, user_id, uploaded_at DESC);
+    CREATE INDEX IF NOT EXISTS attachments_record_idx ON attachments(record_id) WHERE record_id IS NOT NULL;
+  `);
+
   // --- Superusuario: cuenta global (clinic_id NULL), siempre tiene acceso ---
   const sup = await pool.query(`SELECT id FROM accounts WHERE email = $1 AND clinic_id IS NULL`, [superEmail]);
   if (!sup.rows[0]) {

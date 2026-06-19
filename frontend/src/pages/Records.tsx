@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, User, Doctor, ClinicalRecord, MedicalInfo } from '../api/client';
+import Attachments from '../components/Attachments';
+import { Paperclip } from 'lucide-react';
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronUp, Heart, FileText, Activity } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -18,8 +20,9 @@ export default function Records() {
   const [medicalInfos, setMedicalInfos] = useState<Record<number, MedicalInfo | null>>({});
   const [modal, setModal] = useState<{ type: 'record' | 'info'; userId: number; record?: ClinicalRecord } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'history' | 'info' | 'odontogram'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'info' | 'odontogram' | 'files'>('history');
   const [openChart, setOpenChart] = useState<number | null>(null);
+  const [openFiles, setOpenFiles] = useState<number | null>(null);
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -129,10 +132,13 @@ export default function Records() {
               <div className="border-t border-gray-100 px-4 pb-4">
                 {/* Tabs */}
                 <div className="flex gap-1 my-3 bg-gray-100 rounded-lg p-1">
-                  {(['history','info','odontogram'] as const).map(tab => (
+                  {(['history','info','odontogram','files'] as const).map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
                       className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
-                      {tab === 'history' ? t('records.tabHistory') : tab === 'info' ? t('records.tabInfo') : t('records.tabOdontogram')}
+                      {tab === 'history' ? t('records.tabHistory')
+                        : tab === 'info' ? t('records.tabInfo')
+                        : tab === 'odontogram' ? t('records.tabOdontogram')
+                        : t('records.tabFiles')}
                     </button>
                   ))}
                 </div>
@@ -172,6 +178,18 @@ export default function Records() {
                               )}
                             </div>
                           )}
+                          <div className="mt-2 pt-2 border-t border-gray-50">
+                            <button onClick={() => setOpenFiles(openFiles === r.id ? null : r.id)}
+                              className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline">
+                              <Paperclip className="w-3.5 h-3.5" />
+                              {openFiles === r.id ? t('records.hideFiles') : t('records.showFiles')}
+                            </button>
+                            {openFiles === r.id && (
+                              <div className="mt-3">
+                                <Attachments userId={u.id} recordId={r.id} compact />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))
                     }
@@ -210,6 +228,12 @@ export default function Records() {
                       ? <Odontogram value={records[u.id][0].tooth_chart || {}} onChange={() => {}} readOnly />
                       : <p className="text-sm text-gray-400 text-center py-4">{t('records.noChart')}</p>
                     }
+                  </div>
+                )}
+
+                {activeTab === 'files' && (
+                  <div className="pt-1">
+                    <Attachments userId={u.id} />
                   </div>
                 )}
               </div>

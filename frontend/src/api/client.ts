@@ -146,6 +146,18 @@ export interface Invitation {
   token: string | null;
 }
 
+export interface Attachment {
+  id: number;
+  user_id: number;
+  record_id: number | null;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  uploaded_by_email: string | null;
+  uploaded_by_name: string | null;
+  uploaded_at: string;
+}
+
 export interface ActivityLog {
   id: number; clinic_id: number | null; account_id: number | null;
   account_email: string | null; account_name: string | null;
@@ -252,6 +264,36 @@ export const api = {
     update: (id: number, d: any) => request<InventoryItem>(`/inventory/${id}`, { method:'PUT', body:JSON.stringify(d) }),
     updateQuantity: (id: number, quantity: number) => request<InventoryItem>(`/inventory/${id}/quantity`, { method:'PATCH', body:JSON.stringify({ quantity }) }),
     delete: (id: number) => request<void>(`/inventory/${id}`, { method:'DELETE' }),
+  },
+  attachments: {
+    // record_id: number → archivos de esa visita; 'patient' → solo del paciente; undefined → todos
+    list: (userId: number, recordId?: number | 'patient') => {
+      const q = new URLSearchParams({ user_id: String(userId) });
+      if (recordId === 'patient') q.set('record_id', 'null');
+      else if (typeof recordId === 'number') q.set('record_id', String(recordId));
+      return request<Attachment[]>(`/attachments?${q.toString()}`);
+    },
+    upload: async (file: File, userId: number, recordId?: number): Promise<Attachment> => {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('user_id', String(userId));
+      if (recordId) form.append('record_id', String(recordId));
+      const token = getToken();
+      const slug = (await import('../tenant')).currentSlug();
+      const res = await fetch(`${BASE}/attachments`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(slug ? { 'X-Clinic-Slug': slug } : {}),
+        },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al subir el archivo');
+      return data as Attachment;
+    },
+    getUrl: (id: number) => request<{ url: string }>(`/attachments/${id}/url`),
+    delete: (id: number) => request<{ id: number }>(`/attachments/${id}`, { method: 'DELETE' }),
   },
   reminders: {
     list: () => request<Reminder[]>('/reminders'),

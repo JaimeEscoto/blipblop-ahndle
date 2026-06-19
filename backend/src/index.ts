@@ -15,6 +15,7 @@ import medicalRouter from './routes/medical';
 import inventoryRouter from './routes/inventory';
 import remindersRouter from './routes/reminders';
 import activityRouter from './routes/activity';
+import attachmentsRouter from './routes/attachments';
 import adminRouter from './routes/admin';
 
 const app = express();
@@ -58,6 +59,7 @@ app.use('/api/doctors', doctorsRouter);
 app.use('/api/medical', medicalRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/reminders', remindersRouter);
+app.use('/api/attachments', attachmentsRouter);
 
 initDB()
   .then(() => app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`)))
