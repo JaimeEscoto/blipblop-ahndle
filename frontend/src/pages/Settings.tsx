@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Languages, Check, Wallet } from 'lucide-react';
-import { api, FinanceSettings } from '../api/client';
+import { Languages, Check, Wallet, HardDrive, AlertCircle } from 'lucide-react';
+import { api, FinanceSettings, StorageUsage } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import LanguageToggle from '../components/LanguageToggle';
+
+function fmtBytes(b: number): string {
+  if (b < 1_000_000) return `${(b / 1024).toFixed(0)} KB`;
+  if (b < 1_000_000_000) return `${(b / 1_000_000).toFixed(1)} MB`;
+  return `${(b / 1_000_000_000).toFixed(2)} GB`;
+}
 
 const CURRENCY_OPTIONS = [
   { code: 'HNL', label: 'Lempira (HNL · L)' },
@@ -31,11 +37,15 @@ export default function Settings() {
   const [financeSaved, setFinanceSaved] = useState(false);
   const isAdmin = account?.role === 'clinic_admin' || account?.role === 'superuser';
 
+  // Almacenamiento
+  const [usage, setUsage] = useState<StorageUsage | null>(null);
+
   useEffect(() => {
     api.finance.settings().then(s => {
       setFinance(s);
       setFinanceForm({ currency: s.currency, tax_rate: String(s.tax_rate) });
     }).catch(() => {});
+    api.attachments.usage().then(setUsage).catch(() => {});
   }, []);
 
   const changeLanguage = async (lang: 'es' | 'en') => {
@@ -97,6 +107,76 @@ export default function Settings() {
             )}
           </div>
         </div>
+
+        {/* Almacenamiento */}
+        {isAdmin && usage && (() => {
+          const clinicPct = (usage.clinic_used / usage.clinic_limit) * 100;
+          const globalPct = (usage.global_used / usage.global_limit) * 100;
+          const clinicFull = usage.clinic_used >= usage.clinic_limit;
+          const globalFull = usage.global_used >= usage.global_limit;
+          const barColor = (pct: number, full: boolean) =>
+            full ? 'bg-red-500' : pct > 80 ? 'bg-amber-500' : 'bg-blue-500';
+          const textColor = (full: boolean, pct: number) =>
+            full ? 'text-red-700' : pct > 80 ? 'text-amber-700' : 'text-gray-700';
+
+          return (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <HardDrive className="w-4 h-4 text-blue-600" />
+                <h2 className="text-sm font-semibold text-gray-800">Almacenamiento</h2>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Espacio utilizado por los archivos adjuntos en los expedientes.
+              </p>
+
+              {/* Uso de esta clínica */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm text-gray-600">Tu clínica</span>
+                  <span className={`text-sm font-semibold ${textColor(clinicFull, clinicPct)}`}>
+                    {fmtBytes(usage.clinic_used)} <span className="text-gray-400 font-normal">/ {fmtBytes(usage.clinic_limit)}</span>
+                    <span className="text-xs text-gray-400 ml-1">({clinicPct.toFixed(1)}%)</span>
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${barColor(clinicPct, clinicFull)}`}
+                    style={{ width: `${Math.min(100, clinicPct)}%` }} />
+                </div>
+                {clinicFull && (
+                  <p className="mt-2 text-xs text-red-700 flex items-start gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    Tu clínica alcanzó el límite. Elimina archivos antiguos para liberar espacio o solicita una ampliación al administrador.
+                  </p>
+                )}
+                {!clinicFull && clinicPct > 80 && (
+                  <p className="mt-2 text-xs text-amber-700">
+                    Ya usaste más del 80% del espacio de tu clínica.
+                  </p>
+                )}
+              </div>
+
+              {/* Uso del sistema (informativo, para que el admin sepa que hay un cap compartido) */}
+              <div className="pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-gray-500">Sistema (todas las clínicas)</span>
+                  <span className={`text-xs font-medium ${textColor(globalFull, globalPct)}`}>
+                    {fmtBytes(usage.global_used)} <span className="text-gray-400 font-normal">/ {fmtBytes(usage.global_limit)}</span>
+                  </span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${barColor(globalPct, globalFull)}`}
+                    style={{ width: `${Math.min(100, globalPct)}%` }} />
+                </div>
+                {globalFull && (
+                  <p className="mt-2 text-xs text-red-700 flex items-start gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    El sistema alcanzó el límite global. Nadie puede subir archivos hasta que se libere espacio.
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Finanzas */}
         {isAdmin && (

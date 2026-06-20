@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, Appointment, Doctor, User } from '../api/client';
 import { dateLocale } from '../i18n/format';
-import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight, Receipt } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { withSlug } from '../tenant';
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -26,6 +28,8 @@ const EMPTY_FORM = { user_id: '', doctor_id: '', date: '', time: '', reason: '',
 
 export default function Appointments() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const goInvoice = (apptId: number) => navigate(`${withSlug('/finanzas')}?new_invoice_appointment=${apptId}`);
   const statusLabel = (s: Status) => t(`status.${s}`);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -189,6 +193,9 @@ export default function Appointments() {
             {a.reason && <p className="text-xs text-gray-400 mt-1 truncate">{a.reason}</p>}
           </div>
           <div className="flex gap-1 shrink-0">
+            <button onClick={() => goInvoice(a.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Crear factura para esta cita">
+              <Receipt className="w-4 h-4" />
+            </button>
             <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title={t('common.download')}>
               <Download className="w-4 h-4" />
             </button>

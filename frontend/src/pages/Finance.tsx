@@ -1,9 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api, Procedure, Invoice, InvoiceDetail, FinanceSettings, FinanceReport, User, Doctor, PaymentMethod, InvoiceStatus } from '../api/client';
+import { api, Procedure, Invoice, InvoiceDetail, FinanceSettings, FinanceReport, Doctor, Appointment, PaymentMethod, InvoiceStatus } from '../api/client';
 import { formatMoney, currencySymbol } from '../utils/money';
+import { generateInvoicePDF } from '../utils/generateInvoicePDF';
+import { currentSlug } from '../tenant';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Plus, Trash2, Pencil, FileText, Calendar, X, Receipt, Wallet, BarChart3, Search, CreditCard, Banknote, Smartphone, MoreHorizontal } from 'lucide-react';
+import { Plus, Trash2, Pencil, FileText, Calendar, X, Receipt, Wallet, BarChart3, Search, CreditCard, Banknote, Smartphone, MoreHorizontal, Printer } from 'lucide-react';
+
+// Sube el PDF de la factura al storage (best-effort: si falla, no rompe la creación).
+async function uploadInvoicePdf(invoice: InvoiceDetail, currency: string) {
+  try {
+    const blob = await generateInvoicePDF(invoice, { name: 'Clínica', slug: currentSlug() || 'clinica', currency });
+    await api.invoices.uploadPdf(invoice.id, blob);
+  } catch (e) {
+    console.warn('No se pudo guardar el PDF de la factura en storage:', e);
+  }
+}
 
 type Tab = 'invoices' | 'procedures' | 'report';
 
@@ -25,6 +37,10 @@ const STATUS_LABEL: Record<InvoiceStatus, { label: string; cls: string }> = {
 export default function Finance() {
   const [tab, setTab] = useState<Tab>('invoices');
   const [settings, setSettings] = useState<FinanceSettings | null>(null);
+  // ?new_invoice_appointment=ID → abre el modal de crear factura precargado
+  const params = new URLSearchParams(window.location.search);
+  const prefilledAppt = params.get('new_invoice_appointment');
+  const initialPrefilledId = prefilledAppt ? Number(prefilledAppt) : undefined;
 
   useEffect(() => { api.finance.settings().then(setSettings).catch(() => {}); }, []);
   const currency = settings?.currency || 'HNL';
@@ -52,7 +68,7 @@ export default function Finance() {
         ))}
       </div>
 
-      {tab === 'invoices'   && <InvoicesTab currency={currency} settings={settings} />}
+      {tab === 'invoices'   && <InvoicesTab currency={currency} settings={settings} prefilledAppointmentId={initialPrefilledId} />}
       {tab === 'procedures' && <ProceduresTab currency={currency} />}
       {tab === 'report'     && <ReportTab currency={currency} />}
     </div>
@@ -197,12 +213,24 @@ function ProceduresTab({ currency }: { currency: string }) {
 
 interface InvoiceItemDraft { procedure_id: number | null; description: string; quantity: string; unit_price: string; }
 
-function InvoicesTab({ currency, settings }: { currency: string; settings: FinanceSettings | null }) {
+function InvoicesTab({ currency, settings, prefilledAppointmentId }: {
+  currency: string; settings: FinanceSettings | null; prefilledAppointmentId?: number;
+}) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | InvoiceStatus>('');
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(!!prefilledAppointmentId);
+  const [pendingAppt, setPendingAppt] = useState<number | undefined>(prefilledAppointmentId);
+
+  // Limpia el query param tras consumirlo para que un refresh no reabra el modal
+  useEffect(() => {
+    if (prefilledAppointmentId) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('new_invoice_appointment');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+    }
+  }, [prefilledAppointmentId]);
 
   const load = useCallback(async () => {
     setInvoices(await api.invoices.list({ status: (statusFilter || undefined) as any, limit: 200 }));
@@ -275,8 +303,9 @@ function InvoicesTab({ currency, settings }: { currency: string; settings: Finan
       {showCreate && (
         <CreateInvoiceModal
           currency={currency} settings={settings}
-          onClose={() => setShowCreate(false)}
-          onCreated={async () => { setShowCreate(false); await load(); }}
+          prefilledAppointmentId={pendingAppt}
+          onClose={() => { setShowCreate(false); setPendingAppt(undefined); }}
+          onCreated={async () => { setShowCreate(false); setPendingAppt(undefined); await load(); }}
         />
       )}
 
@@ -293,16 +322,15 @@ function InvoicesTab({ currency, settings }: { currency: string; settings: Finan
 
 // ── Modal: crear factura ────────────────────────────────────────────────
 
-function CreateInvoiceModal({ currency, settings, onClose, onCreated }: {
+function CreateInvoiceModal({ currency, settings, prefilledAppointmentId, onClose, onCreated }: {
   currency: string; settings: FinanceSettings | null;
+  prefilledAppointmentId?: number;
   onClose: () => void; onCreated: () => void;
 }) {
-  const [users, setUsers] = useState<User[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
-  const [userId, setUserId] = useState<number | ''>('');
-  const [doctorId, setDoctorId] = useState<number | ''>('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [appointmentId, setAppointmentId] = useState<number | ''>(prefilledAppointmentId || '');
   const [items, setItems] = useState<InvoiceItemDraft[]>([
     { procedure_id: null, description: '', quantity: '1', unit_price: '0' }
   ]);
@@ -312,9 +340,14 @@ function CreateInvoiceModal({ currency, settings, onClose, onCreated }: {
   const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.users.list(), api.doctors.list(), api.procedures.list()])
-      .then(([u, d, p]) => { setUsers(u); setDoctors(d); setProcedures(p); });
+    Promise.all([api.appointments.list(), api.doctors.list(), api.procedures.list()])
+      .then(([a, d, p]) => { setAppointments(a); setDoctors(d); setProcedures(p); });
   }, []);
+
+  const selectedAppt = appointments.find(a => a.id === appointmentId);
+  const date = selectedAppt?.date || new Date().toISOString().slice(0, 10);
+  const userId = selectedAppt?.user_id || null;
+  const doctorId = selectedAppt?.doctor_id || null;
 
   const setItem = (i: number, patch: Partial<InvoiceItemDraft>) =>
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it));
@@ -340,7 +373,7 @@ function CreateInvoiceModal({ currency, settings, onClose, onCreated }: {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError('');
-    if (!userId) { setError('Selecciona un paciente'); return; }
+    if (!appointmentId || !userId) { setError('Selecciona una cita'); return; }
     if (items.length === 0) { setError('Agrega al menos un ítem'); return; }
     for (const it of items) {
       if (!it.description.trim()) { setError('Cada ítem necesita una descripción'); return; }
@@ -348,15 +381,18 @@ function CreateInvoiceModal({ currency, settings, onClose, onCreated }: {
     }
     setLoading(true);
     try {
-      await api.invoices.create({
-        user_id: Number(userId),
-        doctor_id: doctorId ? Number(doctorId) : null,
+      const created = await api.invoices.create({
+        user_id: userId,
+        doctor_id: doctorId,
+        appointment_id: Number(appointmentId),
         date, tax_rate: Number(taxRate) || 0, discount: dsc, notes: notes.trim() || undefined,
         items: items.map(it => ({
           procedure_id: it.procedure_id, description: it.description.trim(),
           quantity: Number(it.quantity), unit_price: Number(it.unit_price),
         })),
       });
+      // Genera el PDF y lo sube a R2 (no bloquea la UI si falla)
+      await uploadInvoicePdf(created, currency);
       onCreated();
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -367,26 +403,25 @@ function CreateInvoiceModal({ currency, settings, onClose, onCreated }: {
       <form onSubmit={submit} className="space-y-3">
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-2">
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Paciente *</label>
-            <select required className="input" value={userId} onChange={e => setUserId(e.target.value ? Number(e.target.value) : '')}>
-              <option value="">Selecciona</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
-            <input required type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
-          </div>
-        </div>
-
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Médico</label>
-          <select className="input" value={doctorId} onChange={e => setDoctorId(e.target.value ? Number(e.target.value) : '')}>
-            <option value="">Sin asignar</option>
-            {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name}</option>)}
+          <label className="text-xs font-medium text-gray-700 mb-1 block">Cita asociada *</label>
+          <select required className="input" value={appointmentId}
+            onChange={e => setAppointmentId(e.target.value ? Number(e.target.value) : '')}
+            disabled={!!prefilledAppointmentId}>
+            <option value="">Selecciona una cita</option>
+            {appointments.map(a => (
+              <option key={a.id} value={a.id}>
+                #{a.id} · {a.date} {a.time} · {a.user_name} · Dr. {a.doctor_name}
+              </option>
+            ))}
           </select>
+          {selectedAppt && (
+            <p className="text-xs text-gray-500 mt-1">
+              <span className="font-medium">{selectedAppt.user_name}</span>
+              {' '}con Dr. {doctors.find(d => d.id === selectedAppt.doctor_id)?.name || selectedAppt.doctor_name}
+              {' '}el {selectedAppt.date} {selectedAppt.time}
+            </p>
+          )}
         </div>
 
         {/* Items */}
@@ -491,6 +526,21 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
     setConfirmDeletePayment(null); await onChange();
   };
 
+  const print = async () => {
+    try {
+      // Si el PDF aún no se generó (o se actualizó), lo regeneramos ahora con los abonos actuales
+      const blob = await generateInvoicePDF(invoice, { name: 'Clínica', slug: currentSlug() || 'clinica', currency });
+      // Sube el PDF actualizado (best-effort)
+      api.invoices.uploadPdf(invoice.id, blob).catch(() => {});
+      // Abre en nueva pestaña inmediatamente sin esperar al upload
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      console.error('Error generando PDF:', e);
+    }
+  };
+
   return (
     <Modal title={`Factura #${String(invoice.number).padStart(4, '0')}`} onClose={onClose}>
       <div className="space-y-3">
@@ -499,9 +549,17 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
             <p className="font-semibold text-gray-900 truncate">{invoice.user_name}</p>
             <p className="text-xs text-gray-500">
               {invoice.date}{invoice.doctor_name && <> · Dr. {invoice.doctor_name}</>}
+              {invoice.appointment_id && <> · Cita #{invoice.appointment_id}</>}
             </p>
           </div>
-          <span className={`text-xs font-bold px-2 py-1 rounded ${status.cls}`}>{status.label}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-xs font-bold px-2 py-1 rounded ${status.cls}`}>{status.label}</span>
+            <button onClick={print}
+              title="Imprimir / Descargar PDF"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+              <Printer className="w-3.5 h-3.5" /> Imprimir
+            </button>
+          </div>
         </div>
 
         {/* Items */}

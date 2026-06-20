@@ -307,6 +307,9 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS payments_clinic_date_idx ON payments(clinic_id, date DESC);
   `);
 
+  // 11b) Storage key del PDF generado para cada factura (se sube a R2 al crear).
+  await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pdf_storage_key TEXT`);
+
   // 12) Adjuntos a expedientes (RX, fotos intraorales, PDFs).
   //    Pueden estar asociados a una visita clínica (record_id) o ser del
   //    paciente en general (record_id NULL). Los bytes viven en R2.

@@ -174,6 +174,7 @@ export interface Invoice {
   subtotal: number; tax_rate: number; tax: number; discount: number; total: number;
   total_paid: number;
   status: InvoiceStatus; notes: string | null;
+  pdf_storage_key: string | null;
   user_name: string; user_email: string | null; user_phone: string | null; user_document_id: string | null;
   doctor_name: string | null; doctor_specialty: string | null;
   created_by_email: string | null; created_by_name: string | null;
@@ -348,10 +349,28 @@ export const api = {
     },
     get: (id: number) => request<InvoiceDetail>(`/invoices/${id}`),
     create: (d: {
-      user_id: number; doctor_id?: number | null; appointment_id?: number | null;
+      user_id: number; doctor_id?: number | null; appointment_id: number;
       date?: string; tax_rate?: number; discount?: number; notes?: string;
       items: { procedure_id?: number | null; description: string; quantity: number; unit_price: number }[];
     }) => request<InvoiceDetail>('/invoices', { method:'POST', body:JSON.stringify(d) }),
+    uploadPdf: async (id: number, blob: Blob): Promise<{ ok: true }> => {
+      const form = new FormData();
+      form.append('file', blob, `factura-${id}.pdf`);
+      const token = getToken();
+      const slug = (await import('../tenant')).currentSlug();
+      const res = await fetch(`${BASE}/invoices/${id}/pdf`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(slug ? { 'X-Clinic-Slug': slug } : {}),
+        },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo subir el PDF');
+      return data;
+    },
+    pdfUrl: (id: number) => request<{ url: string }>(`/invoices/${id}/pdf`),
     setStatus: (id: number, status: InvoiceStatus) => request<{ id: number; status: InvoiceStatus }>(`/invoices/${id}/status`, { method:'PATCH', body:JSON.stringify({ status }) }),
     delete: (id: number) => request<{ id: number; number: number }>(`/invoices/${id}`, { method:'DELETE' }),
     addPayment: (id: number, d: { amount: number; method: PaymentMethod; reference?: string; date?: string; notes?: string }) =>

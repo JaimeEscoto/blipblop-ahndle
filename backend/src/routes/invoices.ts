@@ -1,10 +1,22 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import pool from '../database';
 import { requireAuth, requireClinicMember } from '../auth';
 import { requireClinic } from '../tenant';
+import { hasStorage, putObject, getSignedDownloadUrl, deleteObject, buildStorageKey } from '../storage';
 
 const router = Router();
 router.use(requireClinic, requireAuth, requireClinicMember);
+
+// Multer en memoria para recibir el PDF generado en el cliente (máx 5 MB).
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') cb(null, true);
+    else cb(new Error('El archivo debe ser PDF'));
+  },
+});
 
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -38,7 +50,7 @@ const SELECT_INVOICE = `
   SELECT i.id, i.clinic_id, i.number, i.user_id, i.doctor_id, i.appointment_id,
     TO_CHAR(i.date,'YYYY-MM-DD') AS date,
     i.subtotal, i.tax_rate, i.tax, i.discount, i.total, i.status, i.notes,
-    i.created_by_email, i.created_by_name, i.created_at,
+    i.pdf_storage_key, i.created_by_email, i.created_by_name, i.created_at,
     u.name AS user_name, u.email AS user_email, u.phone AS user_phone, u.document_id AS user_document_id,
     d.name AS doctor_name, d.specialty AS doctor_specialty,
     COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.id), 0)::numeric AS total_paid
@@ -100,15 +112,23 @@ router.get('/:id', async (req: Request, res: Response) => {
   res.json({ ...rows[0], items, payments });
 });
 
-// Crear factura. Body: { user_id, doctor_id?, appointment_id?, date?, tax_rate?, discount?, notes?, items: [{procedure_id?, description, quantity, unit_price}] }
+// Crear factura. Body: { user_id, doctor_id?, appointment_id, date?, tax_rate?, discount?, notes?, items: [{procedure_id?, description, quantity, unit_price}] }
 router.post('/', async (req: Request, res: Response) => {
   const { user_id, doctor_id, appointment_id, date, tax_rate, discount, notes, items } = req.body;
   if (!user_id) return res.status(400).json({ error: 'Falta el paciente' });
+  if (!appointment_id) return res.status(400).json({ error: 'La factura debe estar asociada a una cita' });
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'La factura debe tener al menos un ítem' });
 
   // Verifica que el paciente exista en la clínica
   const u = await pool.query('SELECT 1 FROM users WHERE id = $1 AND clinic_id = $2', [user_id, req.clinic!.id]);
   if (!u.rows[0]) return res.status(404).json({ error: 'Paciente no encontrado' });
+
+  // Verifica que la cita pertenezca a la clínica y al paciente
+  const ap = await pool.query(
+    'SELECT 1 FROM appointments WHERE id = $1 AND clinic_id = $2 AND user_id = $3',
+    [appointment_id, req.clinic!.id, user_id]
+  );
+  if (!ap.rows[0]) return res.status(404).json({ error: 'La cita no existe o no pertenece a este paciente' });
 
   const today = new Date().toISOString().slice(0, 10);
   const useDate = date || today;
@@ -134,7 +154,7 @@ router.post('/', async (req: Request, res: Response) => {
           created_by_email, created_by_name)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'issued', $12, $13, $14)
        RETURNING id`,
-      [req.clinic!.id, number, user_id, doctor_id || null, appointment_id || null, useDate,
+      [req.clinic!.id, number, user_id, doctor_id || null, appointment_id, useDate,
        totals.subtotal, useTaxRate, totals.tax, totals.discount, totals.total, notes || null,
        req.account!.email, req.account!.name]
     );
@@ -252,6 +272,52 @@ router.delete('/:id/payments/:pid', async (req: Request, res: Response) => {
   }
 
   res.json({ id: req.params.pid });
+});
+
+// ── PDF de la factura ───────────────────────────────────────────────────
+// Sube el PDF generado en el cliente y lo guarda en R2. Reemplaza el
+// anterior si ya existía (sube el nuevo y borra el viejo del bucket).
+router.post('/:id/pdf', pdfUpload.single('file'), async (req: Request, res: Response) => {
+  if (!hasStorage()) return res.status(503).json({ error: 'Almacenamiento no configurado' });
+  const file = (req as any).file as Express.Multer.File | undefined;
+  if (!file) return res.status(400).json({ error: 'No se envió ningún PDF' });
+
+  const inv = await pool.query(
+    'SELECT user_id, pdf_storage_key FROM invoices WHERE id = $1 AND clinic_id = $2',
+    [req.params.id, req.clinic!.id]
+  );
+  if (!inv.rows[0]) return res.status(404).json({ error: 'Factura no encontrada' });
+
+  const oldKey: string | null = inv.rows[0].pdf_storage_key;
+  const key = buildStorageKey(req.clinic!.slug, inv.rows[0].user_id, `factura-${req.params.id}.pdf`);
+  try {
+    await putObject(key, file.buffer, 'application/pdf');
+  } catch (e) {
+    console.error('Error subiendo PDF de factura a R2:', e);
+    return res.status(502).json({ error: 'No se pudo subir el PDF' });
+  }
+  await pool.query('UPDATE invoices SET pdf_storage_key = $1 WHERE id = $2', [key, req.params.id]);
+  // Borrar el PDF anterior si existía (en background, sin bloquear la respuesta)
+  if (oldKey && oldKey !== key) deleteObject(oldKey).catch(err => console.error('Error borrando PDF previo:', err));
+  res.json({ ok: true });
+});
+
+// URL firmada (inline) para abrir el PDF en otra pestaña.
+router.get('/:id/pdf', async (req: Request, res: Response) => {
+  if (!hasStorage()) return res.status(503).json({ error: 'Almacenamiento no configurado' });
+  const inv = await pool.query(
+    'SELECT pdf_storage_key, number FROM invoices WHERE id = $1 AND clinic_id = $2',
+    [req.params.id, req.clinic!.id]
+  );
+  if (!inv.rows[0]) return res.status(404).json({ error: 'Factura no encontrada' });
+  if (!inv.rows[0].pdf_storage_key) return res.status(404).json({ error: 'Esta factura no tiene PDF generado' });
+  try {
+    const url = await getSignedDownloadUrl(inv.rows[0].pdf_storage_key, `factura-${String(inv.rows[0].number).padStart(4, '0')}.pdf`, 'inline');
+    res.json({ url });
+  } catch (e) {
+    console.error('Error firmando PDF de factura:', e);
+    res.status(502).json({ error: 'No se pudo generar el enlace del PDF' });
+  }
 });
 
 export default router;
