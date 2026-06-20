@@ -200,6 +200,15 @@ export interface FinanceReport {
   by_day: { day: string; total: number }[];
 }
 
+export interface StorageUsage {
+  clinic_used: number; clinic_limit: number;
+  global_used: number; global_limit: number;
+}
+export interface SuperStorageReport {
+  global_used: number; global_limit: number; global_over: boolean;
+  clinics: { clinic_id: number; slug: string; name: string; used: number; files: number; limit: number; over_limit: boolean }[];
+}
+
 export interface Attachment {
   id: number;
   user_id: number;
@@ -242,6 +251,7 @@ export const api = {
   },
   super: {
     clinics: () => request<ClinicSummary[]>('/super/clinics'),
+    storage: () => request<SuperStorageReport>('/super/storage'),
     activity: (params?: { clinic_id?: number; account?: string; entity?: string; limit?: number }) => {
       const q = new URLSearchParams();
       if (params?.clinic_id) q.set('clinic_id', String(params.clinic_id));
@@ -391,6 +401,7 @@ export const api = {
     getUrl: (id: number) => request<{ previewUrl: string; downloadUrl: string }>(`/attachments/${id}/url`),
     rename: (id: number, file_name: string) => request<Attachment>(`/attachments/${id}`, { method: 'PATCH', body: JSON.stringify({ file_name }) }),
     delete: (id: number) => request<{ id: number }>(`/attachments/${id}`, { method: 'DELETE' }),
+    usage: () => request<StorageUsage>('/attachments/usage'),
   },
   reminders: {
     list: () => request<Reminder[]>('/reminders'),

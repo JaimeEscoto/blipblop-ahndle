@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { api, Attachment } from '../api/client';
-import { Paperclip, Upload, FileText, Image as ImageIcon, Trash2, Download, AlertCircle, Pencil, X, Check, Loader2 } from 'lucide-react';
+import { api, Attachment, StorageUsage } from '../api/client';
+import { Paperclip, Upload, FileText, Image as ImageIcon, Trash2, Download, AlertCircle, Pencil, X, Check, Loader2, HardDrive } from 'lucide-react';
+
+function fmtBytes(b: number): string {
+  if (b < 1024) return `${b} B`;
+  if (b < 1_000_000) return `${(b / 1024).toFixed(0)} KB`;
+  if (b < 1_000_000_000) return `${(b / 1_000_000).toFixed(1)} MB`;
+  return `${(b / 1_000_000_000).toFixed(2)} GB`;
+}
 
 interface Props {
   userId: number;
@@ -20,19 +27,33 @@ export default function Attachments({ userId, recordId, compact }: Props) {
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [previewId, setPreviewId] = useState<number | null>(null);
+  const [usage, setUsage] = useState<StorageUsage | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.attachments.list(userId, recordId ?? 'patient');
+      const [data, u] = await Promise.all([
+        api.attachments.list(userId, recordId ?? 'patient'),
+        api.attachments.usage().catch(() => null),
+      ]);
       setItems(data);
+      if (u) setUsage(u);
     } catch (e: any) {
       setError(e.message || 'No se pudieron cargar los archivos');
     } finally { setLoading(false); }
   }, [userId, recordId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const refreshUsage = async () => {
+    try { setUsage(await api.attachments.usage()); } catch { /* noop */ }
+  };
+
+  const clinicFull = !!usage && usage.clinic_used >= usage.clinic_limit;
+  const globalFull = !!usage && usage.global_used >= usage.global_limit;
+  const clinicPct  = usage ? Math.min(100, (usage.clinic_used / usage.clinic_limit) * 100) : 0;
+  const globalPct  = usage ? Math.min(100, (usage.global_used / usage.global_limit) * 100) : 0;
 
   const handleSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -49,10 +70,16 @@ export default function Attachments({ userId, recordId, compact }: Props) {
         setItems(prev => [created, ...prev]);
       } catch (err: any) {
         setError(err.message || 'No se pudo subir el archivo');
+        // Si llegamos al cap, no intentamos los siguientes archivos
+        if (/límite|alcanz/i.test(err.message || '')) {
+          await refreshUsage();
+          break;
+        }
       } finally {
         setUploading(false);
       }
     }
+    await refreshUsage();
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -79,6 +106,7 @@ export default function Attachments({ userId, recordId, compact }: Props) {
       await api.attachments.delete(a.id);
       setItems(prev => prev.filter(x => x.id !== a.id));
       if (previewId === a.id) setPreviewId(null);
+      await refreshUsage();
     } catch (e: any) {
       setError(e.message || 'No se pudo eliminar');
     }
@@ -98,13 +126,38 @@ export default function Attachments({ userId, recordId, compact }: Props) {
           {compact ? 'Adjuntos' : 'Archivos del paciente'}
           {items.length > 0 && <span className="text-xs text-gray-400">({items.length})</span>}
         </div>
-        <button onClick={() => inputRef.current?.click()} disabled={uploading}
-          className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50">
+        <button onClick={() => inputRef.current?.click()} disabled={uploading || clinicFull || globalFull}
+          title={globalFull ? 'Sistema lleno' : clinicFull ? 'Cuota de la clínica alcanzada' : ''}
+          className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
           <Upload className="w-3.5 h-3.5" />
           {uploading ? 'Subiendo…' : 'Subir'}
         </button>
         <input ref={inputRef} type="file" accept={ACCEPT} multiple hidden onChange={handleSelect} />
       </div>
+
+      {/* Barra de uso de almacenamiento de la clínica */}
+      {usage && !compact && (
+        <div className={`mb-2 px-2.5 py-2 rounded-lg text-xs ${clinicFull || globalFull ? 'bg-red-50' : clinicPct > 80 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="flex items-center gap-1.5 text-gray-600">
+              <HardDrive className="w-3.5 h-3.5" /> Espacio de la clínica
+            </span>
+            <span className={`font-medium ${clinicFull ? 'text-red-700' : 'text-gray-700'}`}>
+              {fmtBytes(usage.clinic_used)} / {fmtBytes(usage.clinic_limit)}
+            </span>
+          </div>
+          <div className="h-1.5 bg-white rounded-full overflow-hidden">
+            <div className={`h-full rounded-full ${clinicFull ? 'bg-red-500' : clinicPct > 80 ? 'bg-amber-500' : 'bg-blue-500'}`}
+              style={{ width: `${clinicPct}%` }} />
+          </div>
+          {globalFull && (
+            <p className="mt-1.5 text-red-700 flex items-start gap-1">
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              El sistema alcanzó el límite total. Contacta al administrador.
+            </p>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="flex items-start gap-1.5 text-xs text-red-700 bg-red-50 rounded-lg px-2.5 py-1.5 mb-2">

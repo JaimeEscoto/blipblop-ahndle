@@ -13,6 +13,31 @@ const ALLOWED_MIME = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf',
 ]);
 
+// Cuotas (decimal, para alinearnos con cómo R2 reporta el bucket).
+//   - Cada clínica puede usar hasta 1 GB.
+//   - El sistema entero puede usar hasta 9 GB (queda 1 GB de margen sobre los
+//     10 GB gratis de R2 para evitar sorpresas).
+export const PER_CLINIC_LIMIT = 1_000_000_000;
+export const GLOBAL_LIMIT = 9_000_000_000;
+
+interface UsageSnapshot { clinicUsed: number; globalUsed: number; }
+
+async function getUsage(clinicId: number): Promise<UsageSnapshot> {
+  const r = await pool.query<{ clinic_used: string; global_used: string }>(
+    `SELECT
+       COALESCE(SUM(size_bytes) FILTER (WHERE clinic_id = $1), 0) AS clinic_used,
+       COALESCE(SUM(size_bytes), 0) AS global_used
+     FROM attachments`,
+    [clinicId]
+  );
+  return {
+    clinicUsed: Number(r.rows[0].clinic_used || 0),
+    globalUsed: Number(r.rows[0].global_used || 0),
+  };
+}
+
+function gb(n: number): string { return (n / 1_000_000_000).toFixed(2) + ' GB'; }
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_BYTES },
@@ -37,6 +62,17 @@ async function ensureUserInClinic(userId: string | number, clinicId: number): Pr
   const r = await pool.query('SELECT 1 FROM users WHERE id = $1 AND clinic_id = $2', [userId, clinicId]);
   return !!r.rows[0];
 }
+
+// Uso actual de almacenamiento (para mostrar en la UI).
+router.get('/usage', async (req: Request, res: Response) => {
+  const u = await getUsage(req.clinic!.id);
+  res.json({
+    clinic_used: u.clinicUsed,
+    clinic_limit: PER_CLINIC_LIMIT,
+    global_used: u.globalUsed,
+    global_limit: GLOBAL_LIMIT,
+  });
+});
 
 // Lista los adjuntos de un paciente. Si ?record_id=X, solo los de esa visita.
 // Sin parámetro, devuelve TODOS los del paciente (incluidos los a nivel paciente).
@@ -82,6 +118,26 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
     const ok = await pool.query('SELECT 1 FROM clinical_records WHERE id = $1 AND user_id = $2 AND clinic_id = $3',
       [recordId, userId, req.clinic!.id]);
     if (!ok.rows[0]) return res.status(404).json({ error: 'Registro clínico no encontrado' });
+  }
+
+  // Validación de cuota: primero el cap global del sistema, luego el de la clínica.
+  // Si el archivo nuevo haría pasar cualquiera, rechazamos antes de tocar R2.
+  const usage = await getUsage(req.clinic!.id);
+  if (usage.globalUsed + file.size > GLOBAL_LIMIT) {
+    return res.status(413).json({
+      error: `El sistema alcanzó el límite global de almacenamiento (${gb(GLOBAL_LIMIT)}). Pide al super admin que libere espacio antes de subir más archivos.`,
+      code: 'global_limit',
+      global_used: usage.globalUsed,
+      global_limit: GLOBAL_LIMIT,
+    });
+  }
+  if (usage.clinicUsed + file.size > PER_CLINIC_LIMIT) {
+    return res.status(413).json({
+      error: `Esta clínica alcanzó el límite de ${gb(PER_CLINIC_LIMIT)}. Elimina archivos antiguos para liberar espacio o solicita una ampliación.`,
+      code: 'clinic_limit',
+      clinic_used: usage.clinicUsed,
+      clinic_limit: PER_CLINIC_LIMIT,
+    });
   }
 
   const key = buildStorageKey(req.clinic!.slug, userId, file.originalname);

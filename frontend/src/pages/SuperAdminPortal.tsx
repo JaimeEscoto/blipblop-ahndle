@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { api, ClinicSummary, ActivityLog, getToken, setToken, clearToken } from '../api/client';
+import { api, ClinicSummary, ActivityLog, SuperStorageReport, getToken, setToken, clearToken } from '../api/client';
 import { clinicUrl } from '../tenant';
-import { Shield, Building2, ExternalLink, RefreshCw, LogOut, Users, Calendar, Activity } from 'lucide-react';
+import { Shield, Building2, ExternalLink, RefreshCw, LogOut, Users, Calendar, Activity, HardDrive, AlertCircle } from 'lucide-react';
+
+function fmtBytes(b: number): string {
+  if (b < 1_000_000) return `${(b / 1024).toFixed(0)} KB`;
+  if (b < 1_000_000_000) return `${(b / 1_000_000).toFixed(1)} MB`;
+  return `${(b / 1_000_000_000).toFixed(2)} GB`;
+}
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 declare global { interface Window { google?: any; } }
 
-type Tab = 'clinics' | 'activity';
+type Tab = 'clinics' | 'activity' | 'storage';
 
 interface SuperActivity extends ActivityLog {
   clinic_slug: string | null;
@@ -94,6 +100,7 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>('clinics');
   const [clinics, setClinics] = useState<ClinicSummary[]>([]);
   const [activity, setActivity] = useState<SuperActivity[]>([]);
+  const [storage, setStorage] = useState<SuperStorageReport | null>(null);
   const [filterClinic, setFilterClinic] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
 
@@ -108,8 +115,17 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
     finally { setLoading(false); }
   }, [filterClinic]);
 
-  useEffect(() => { loadClinics(); }, [loadClinics]);
+  const loadStorage = useCallback(async () => {
+    setLoading(true);
+    try { setStorage(await api.super.storage()); } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadClinics(); loadStorage(); }, [loadClinics, loadStorage]);
   useEffect(() => { if (tab === 'activity') loadActivity(); }, [tab, loadActivity]);
+  useEffect(() => { if (tab === 'storage') loadStorage(); }, [tab, loadStorage]);
+
+  // Banner global de alerta de almacenamiento (visible en cualquier pestaña)
+  const storageBanner = storage && (storage.global_used / storage.global_limit) > 0.8 ? storage : null;
 
   const fmt = (s: string | null) => s ? new Date(s).toLocaleString('es-ES') : '—';
 
@@ -131,6 +147,11 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab==='activity' ? 'bg-gray-700' : 'text-gray-300 hover:bg-gray-800'}`}>
               <Activity className="w-4 h-4 inline mr-1.5 -mt-0.5" />Actividad
             </button>
+            <button onClick={() => setTab('storage')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab==='storage' ? 'bg-gray-700' : 'text-gray-300 hover:bg-gray-800'} ${storageBanner?.global_over ? 'ring-2 ring-red-500' : ''}`}>
+              <HardDrive className="w-4 h-4 inline mr-1.5 -mt-0.5" />Almacenamiento
+              {storageBanner?.global_over && <span className="ml-1.5 inline-block w-2 h-2 bg-red-400 rounded-full" />}
+            </button>
             <button onClick={onLogout} title="Cerrar sesión"
               className="ml-2 p-2 text-gray-300 hover:bg-gray-800 rounded-lg">
               <LogOut className="w-4 h-4" />
@@ -138,6 +159,27 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
           </nav>
         </div>
       </header>
+
+      {/* Banner global de almacenamiento (visible en cualquier pestaña) */}
+      {storageBanner && (
+        <div className={`${storageBanner.global_over ? 'bg-red-50 border-b border-red-200 text-red-900' : 'bg-amber-50 border-b border-amber-200 text-amber-900'}`}>
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+            <AlertCircle className={`w-5 h-5 shrink-0 ${storageBanner.global_over ? 'text-red-600' : 'text-amber-600'}`} />
+            <div className="flex-1 text-sm">
+              <p className="font-semibold">
+                {storageBanner.global_over
+                  ? 'Sistema lleno: nadie puede subir archivos.'
+                  : 'Almacenamiento casi al límite.'}
+              </p>
+              <p className="text-xs">
+                {fmtBytes(storageBanner.global_used)} de {fmtBytes(storageBanner.global_limit)} usados
+                ({((storageBanner.global_used / storageBanner.global_limit) * 100).toFixed(1)}%).
+                {' '}<button onClick={() => setTab('storage')} className="underline">Ver desglose →</button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         {tab === 'clinics' && (
@@ -189,6 +231,86 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
                 ))}
               </div>
             }
+          </>
+        )}
+
+        {tab === 'storage' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-xl font-bold text-gray-900">Almacenamiento</h1>
+              <button onClick={loadStorage} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
+                <RefreshCw className="w-4 h-4" /> Actualizar
+              </button>
+            </div>
+            {!storage ? <p className="text-gray-400 text-sm py-10 text-center">Cargando…</p> : (
+              <>
+                {/* Tarjeta global */}
+                <div className={`rounded-xl border shadow-sm p-5 mb-4 ${storage.global_over ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Uso total del sistema</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {fmtBytes(storage.global_used)}
+                        <span className="text-sm font-normal text-gray-500"> / {fmtBytes(storage.global_limit)}</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-gray-900">
+                        {((storage.global_used / storage.global_limit) * 100).toFixed(1)}<span className="text-base font-normal text-gray-500">%</span>
+                      </p>
+                      {storage.global_over && <p className="text-xs font-semibold text-red-600 mt-1">LÍMITE ALCANZADO</p>}
+                    </div>
+                  </div>
+                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${
+                      storage.global_over ? 'bg-red-500'
+                      : (storage.global_used / storage.global_limit) > 0.8 ? 'bg-amber-500'
+                      : 'bg-blue-500'
+                    }`} style={{ width: `${Math.min(100, (storage.global_used / storage.global_limit) * 100)}%` }} />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Cuando se alcanza este límite, ninguna clínica puede subir archivos hasta que se libere espacio.
+                  </p>
+                </div>
+
+                {/* Por clínica */}
+                <h2 className="text-sm font-semibold text-gray-700 mb-2">Por clínica · 1 GB por clínica</h2>
+                {storage.clinics.length === 0 ? (
+                  <p className="text-gray-400 text-sm py-6 text-center">Sin clínicas todavía.</p>
+                ) : (
+                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
+                    {storage.clinics.map(c => {
+                      const pct = (c.used / c.limit) * 100;
+                      return (
+                        <div key={c.clinic_id} className="px-4 py-3">
+                          <div className="flex items-center justify-between gap-3 mb-1.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
+                              <p className="text-xs text-gray-400">
+                                {c.slug} · {c.files} archivo{c.files !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className={`text-sm font-medium ${c.over_limit ? 'text-red-700' : 'text-gray-900'}`}>
+                                {fmtBytes(c.used)} <span className="text-gray-400 font-normal">/ {fmtBytes(c.limit)}</span>
+                              </p>
+                              <p className="text-[10px] text-gray-400">{pct.toFixed(1)}%</p>
+                            </div>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${
+                              c.over_limit ? 'bg-red-500'
+                              : pct > 80 ? 'bg-amber-500'
+                              : 'bg-blue-500'
+                            }`} style={{ width: `${Math.min(100, pct)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
 

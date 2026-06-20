@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import pool from '../database';
 import { requireAuth, requireSuperAdminPortal } from '../auth';
 import { isSuperAdminHost } from '../tenant';
+import { PER_CLINIC_LIMIT, GLOBAL_LIMIT } from './attachments';
 
 const router = Router();
 
@@ -59,6 +60,36 @@ router.get('/activity', async (req: Request, res: Response) => {
     params
   );
   res.json(rows);
+});
+
+// Uso de almacenamiento: total + por clínica. Para mostrar la barra de cuota
+// y alertar cuando se alcance el límite global.
+router.get('/storage', async (_req: Request, res: Response) => {
+  const { rows: per } = await pool.query(`
+    SELECT c.id AS clinic_id, c.slug, c.name,
+      COALESCE(SUM(a.size_bytes), 0)::bigint AS used,
+      COUNT(a.id)::int AS files
+    FROM clinics c
+    LEFT JOIN attachments a ON a.clinic_id = c.id
+    GROUP BY c.id, c.slug, c.name
+    ORDER BY used DESC, c.name ASC
+  `);
+  const clinics = per.map(r => ({
+    clinic_id: Number(r.clinic_id),
+    slug: r.slug,
+    name: r.name,
+    used: Number(r.used),
+    files: r.files,
+    limit: PER_CLINIC_LIMIT,
+    over_limit: Number(r.used) > PER_CLINIC_LIMIT,
+  }));
+  const totalUsed = clinics.reduce((acc, c) => acc + c.used, 0);
+  res.json({
+    global_used: totalUsed,
+    global_limit: GLOBAL_LIMIT,
+    global_over: totalUsed > GLOBAL_LIMIT,
+    clinics,
+  });
 });
 
 export default router;
