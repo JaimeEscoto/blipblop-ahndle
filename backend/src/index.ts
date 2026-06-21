@@ -20,6 +20,7 @@ import proceduresRouter from './routes/procedures';
 import invoicesRouter from './routes/invoices';
 import financeRouter from './routes/finance';
 import adminRouter from './routes/admin';
+import termsRouter from './routes/terms';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +48,7 @@ app.use(auditLog);
 // Públicas (sin contexto de clínica)
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/clinics', clinicsRouter);
+app.use('/api/terms', termsRouter);
 app.use('/api/super', superRouter);
 app.use('/api/admin', adminRouter); // ahora solo desde superadmin host
 

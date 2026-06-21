@@ -28,7 +28,7 @@ router.get('/check-slug/:slug', async (req: Request, res: Response) => {
 // Crear una clínica: cualquier persona con cuenta de Google puede hacerlo.
 // El creador queda como clinic_admin de la clínica recién creada.
 router.post('/', async (req: Request, res: Response) => {
-  const { credential, slug: rawSlug, name } = req.body;
+  const { credential, slug: rawSlug, name, accepted_terms_version_id } = req.body;
   const slug = (rawSlug || '').trim().toLowerCase();
   const clinicName = (name || '').trim();
 
@@ -37,6 +37,15 @@ router.post('/', async (req: Request, res: Response) => {
   if (!isValidSlug(slug)) {
     return res.status(400).json({ error: 'El subdominio debe tener entre 3 y 40 letras minúsculas, números o guiones, y no usar nombres reservados.' });
   }
+  if (!accepted_terms_version_id) {
+    return res.status(400).json({ error: 'Debes aceptar los Términos de Servicio para crear la clínica.' });
+  }
+  // Valida que la versión enviada sea la vigente (evita aceptaciones a versiones obsoletas)
+  const curTerms = await pool.query(`SELECT id FROM terms_versions WHERE is_current = TRUE LIMIT 1`);
+  if (!curTerms.rows[0] || curTerms.rows[0].id !== Number(accepted_terms_version_id)) {
+    return res.status(409).json({ error: 'Los Términos de Servicio han sido actualizados. Vuelve a cargarlos y acepta la versión vigente.' });
+  }
+  const termsVersionId: number = curTerms.rows[0].id;
 
   // Verifica Google
   let profile;
@@ -69,6 +78,16 @@ router.post('/', async (req: Request, res: Response) => {
        RETURNING id, email, name, role, language`,
       [email, ownerName, sub, clinic.id]
     );
+
+    // Registra la aceptación de términos en la misma transacción
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.ip || null;
+    const ua = req.headers['user-agent'] || null;
+    await client.query(
+      `INSERT INTO terms_acceptances (clinic_id, user_email, terms_version_id, ip_address, user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [clinic.id, email, termsVersionId, ip, ua]
+    );
+
     await client.query('COMMIT');
 
     const session: SessionAccount = {

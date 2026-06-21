@@ -247,8 +247,13 @@ export const api = {
   },
   clinics: {
     checkSlug: (slug: string) => publicGet<{ available: boolean; reason: 'taken' | 'invalid' | null }>(`/clinics/check-slug/${encodeURIComponent(slug)}`),
-    create: (credential: string, slug: string, name: string) =>
-      publicRequest<{ token: string; account: Account; clinic: Clinic }>('/clinics', { credential, slug, name }),
+    create: (credential: string, slug: string, name: string, accepted_terms_version_id: number) =>
+      publicRequest<{ token: string; account: Account; clinic: Clinic }>('/clinics', { credential, slug, name, accepted_terms_version_id }),
+  },
+  terms: {
+    current: () => publicGet<{ id: number; version: string; content: string; effective_from: string }>('/terms/current'),
+    status: () => request<{ accepted: boolean; current: { id: number; version: string } | null; accepted_at: string | null }>('/terms/status'),
+    accept: () => request<{ accepted: true; terms_version_id: number }>('/terms/accept', { method: 'POST' }),
   },
   super: {
     clinics: () => request<ClinicSummary[]>('/super/clinics'),

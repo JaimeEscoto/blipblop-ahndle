@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { withSlug } from '../tenant';
+import TermsGate from './TermsGate';
 
 const baseNavItems = [
   { to: 'inicio',       label: 'menu.home',        icon: Home },
@@ -129,6 +130,9 @@ export default function Layout() {
       <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         <Outlet />
       </main>
+
+      {/* Modal bloqueante de Términos de Servicio si la versión vigente no ha sido aceptada */}
+      <TermsGate />
 
       {/* Bottom nav mobile — solo primeras 5 */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-30">

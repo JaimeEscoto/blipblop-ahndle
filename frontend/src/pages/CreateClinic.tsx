@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { clinicUrl } from '../tenant';
-import { CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowRight, X } from 'lucide-react';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -22,6 +22,17 @@ export default function CreateClinic() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<{ slug: string; name: string } | null>(null);
+  const [terms, setTerms] = useState<{ id: number; version: string; content: string } | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+
+  // Carga la versión vigente de los términos al entrar al paso de formulario.
+  useEffect(() => {
+    if (step !== 'form' || terms) return;
+    api.terms.current()
+      .then(t => setTerms({ id: t.id, version: t.version, content: t.content }))
+      .catch(() => setError('No se pudieron cargar los Términos de Servicio. Recarga la página.'));
+  }, [step, terms]);
 
   // Init Google Identity Services en el paso de auth
   useEffect(() => {
@@ -75,9 +86,11 @@ export default function CreateClinic() {
     if (!credential) { setError('Vuelve a iniciar sesión con Google.'); setStep('auth'); return; }
     if (!name.trim()) { setError('Falta el nombre de la clínica.'); return; }
     if (slugStatus !== 'ok') { setError('Elige un subdominio válido y disponible.'); return; }
+    if (!terms) { setError('Aún cargando los Términos de Servicio…'); return; }
+    if (!acceptedTerms) { setError('Debes aceptar los Términos de Servicio para crear la clínica.'); return; }
     setSubmitting(true);
     try {
-      const r = await api.clinics.create(credential, slug.trim().toLowerCase(), name.trim());
+      const r = await api.clinics.create(credential, slug.trim().toLowerCase(), name.trim(), terms.id);
       // Guardamos el token y la cuenta para que el dueño quede ya con sesión iniciada
       // cuando llegue a su subdominio (se almacena bajo el mismo localStorage, que NO
       // se comparte entre subdominios, pero al menos queda el feedback de éxito).
@@ -145,13 +158,48 @@ export default function CreateClinic() {
               </p>
             </div>
 
+            <label className="flex items-start gap-2 text-xs text-gray-700 bg-gray-50 rounded-lg px-3 py-2 cursor-pointer">
+              <input type="checkbox" className="mt-0.5 accent-blue-600" checked={acceptedTerms}
+                onChange={e => setAcceptedTerms(e.target.checked)} />
+              <span>
+                He leído y acepto los{' '}
+                <button type="button" onClick={() => setShowTerms(true)}
+                  className="text-blue-600 underline hover:text-blue-700">
+                  Términos de Servicio{terms ? ` (${terms.version})` : ''}
+                </button>.
+              </span>
+            </label>
+
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-            <button type="submit" disabled={submitting || slugStatus !== 'ok'}
+            <button type="submit" disabled={submitting || slugStatus !== 'ok' || !acceptedTerms || !terms}
               className="w-full py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
               {submitting ? 'Creando…' : 'Crear clínica'}
             </button>
           </form>
+        )}
+
+        {/* Modal con el texto completo de los Términos */}
+        {showTerms && terms && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowTerms(false)}>
+            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-3 border-b">
+                <h3 className="text-sm font-semibold text-gray-900">Términos de Servicio · {terms.version}</h3>
+                <button onClick={() => setShowTerms(false)} className="p-1 rounded hover:bg-gray-100">
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+              <div className="px-5 py-4 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700 leading-relaxed font-mono">
+                {terms.content}
+              </div>
+              <div className="px-5 py-3 border-t flex justify-end gap-2">
+                <button onClick={() => setShowTerms(false)}
+                  className="px-4 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Cerrar</button>
+                <button onClick={() => { setAcceptedTerms(true); setShowTerms(false); }}
+                  className="px-4 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Aceptar</button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Paso 3: éxito */}

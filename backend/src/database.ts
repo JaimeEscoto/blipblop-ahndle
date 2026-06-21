@@ -1,7 +1,9 @@
 import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 import { Pool } from 'pg';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
+import { readFileSync, readdirSync } from 'fs';
+import path from 'path';
 import { generateAppointmentCode } from './utils/code';
 
 const pool = new Pool({
@@ -340,6 +342,58 @@ export async function initDB() {
     );
   } else {
     await pool.query(`UPDATE accounts SET role = 'superuser' WHERE id = $1`, [sup.rows[0].id]);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Términos de Servicio: catálogo de versiones + aceptaciones
+  // ════════════════════════════════════════════════════════════
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS terms_versions (
+      id SERIAL PRIMARY KEY,
+      version TEXT UNIQUE NOT NULL,
+      content TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      is_current BOOLEAN NOT NULL DEFAULT FALSE
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS terms_acceptances (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER REFERENCES clinics(id) ON DELETE CASCADE,
+      user_email TEXT NOT NULL,
+      terms_version_id INTEGER NOT NULL REFERENCES terms_versions(id),
+      accepted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      ip_address TEXT,
+      user_agent TEXT
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS terms_acceptances_lookup_idx ON terms_acceptances(user_email, terms_version_id)`);
+
+  // Carga todos los terms/*.md del repo. Insert if missing, marca como vigente
+  // al de mayor effective_from (orden alfabético del nombre del archivo).
+  try {
+    const termsDir = path.resolve(__dirname, '..', 'terms');
+    const files = readdirSync(termsDir).filter(f => f.endsWith('.md')).sort();
+    for (const file of files) {
+      const version = file.replace(/\.md$/, ''); // ej "v1"
+      const content = readFileSync(path.join(termsDir, file), 'utf8');
+      const hash = createHash('sha256').update(content).digest('hex');
+      // Si la versión ya existe pero su contenido cambió, NO se sobreescribe.
+      // Hay que crear un archivo nuevo (v1_1.md) — los términos son append-only.
+      await pool.query(
+        `INSERT INTO terms_versions (version, content, content_hash) VALUES ($1, $2, $3)
+         ON CONFLICT (version) DO NOTHING`,
+        [version, content, hash]
+      );
+    }
+    // Marca la versión más nueva como current
+    if (files.length > 0) {
+      const latestVersion = files[files.length - 1].replace(/\.md$/, '');
+      await pool.query(`UPDATE terms_versions SET is_current = (version = $1)`, [latestVersion]);
+    }
+  } catch (e) {
+    console.warn('No se pudieron cargar los términos desde backend/terms/:', e);
   }
 
   // --- Migración: código público para las citas (QR de invitación) ---
