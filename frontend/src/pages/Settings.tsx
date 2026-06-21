@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Languages, Check, Wallet, HardDrive, AlertCircle } from 'lucide-react';
-import { api, FinanceSettings, StorageUsage } from '../api/client';
+import { Languages, Check, Wallet, HardDrive, AlertCircle, FileSignature, Plus, Pencil, Trash2 } from 'lucide-react';
+import { api, FinanceSettings, StorageUsage, ConsentTemplate } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import LanguageToggle from '../components/LanguageToggle';
+import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 function fmtBytes(b: number): string {
   if (b < 1_000_000) return `${(b / 1024).toFixed(0)} KB`;
@@ -221,8 +223,102 @@ export default function Settings() {
           </div>
         )}
 
+        {/* Plantillas de consentimientos */}
+        {isAdmin && <ConsentTemplatesCard />}
+
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
       </div>
+    </div>
+  );
+}
+
+// ── Plantillas de consentimientos (Ajustes) ─────────────────────────────
+
+function ConsentTemplatesCard() {
+  const [items, setItems] = useState<ConsentTemplate[]>([]);
+  const [modal, setModal] = useState<{ tpl?: ConsentTemplate } | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [form, setForm] = useState({ title: '', body: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => setItems(await api.consents.templates(true)), []);
+  useEffect(() => { load(); }, [load]);
+
+  const open = (tpl?: ConsentTemplate) => {
+    setForm({ title: tpl?.title || '', body: tpl?.body || '' });
+    setError(''); setModal({ tpl });
+  };
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try {
+      if (modal?.tpl) await api.consents.updateTemplate(modal.tpl.id, { title: form.title.trim(), body: form.body.trim(), active: modal.tpl.active });
+      else await api.consents.createTemplate({ title: form.title.trim(), body: form.body.trim() });
+      await load(); setModal(null);
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+  const remove = async () => {
+    if (!deleteId) return;
+    await api.consents.deleteTemplate(deleteId);
+    await load(); setDeleteId(null);
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <FileSignature className="w-4 h-4 text-blue-600" />
+          <h2 className="text-sm font-semibold text-gray-800">Plantillas de consentimientos</h2>
+        </div>
+        <button onClick={() => open()} className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700">
+          <Plus className="w-3.5 h-3.5" /> Nueva
+        </button>
+      </div>
+      <p className="text-xs text-gray-500 mb-3">
+        Documentos reutilizables que el paciente firma desde su expediente (informados, autorizaciones, etc.).
+      </p>
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-400 text-center py-3">Sin plantillas todavía.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {items.map(t => (
+            <div key={t.id} className="flex items-center gap-2 border border-gray-100 rounded-lg p-2">
+              <FileSignature className="w-4 h-4 text-gray-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{t.title}</p>
+                <p className="text-[10px] text-gray-400 truncate">{t.body.slice(0, 100)}</p>
+              </div>
+              <button onClick={() => open(t)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setDeleteId(t.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {modal && (
+        <Modal title={modal.tpl ? 'Editar plantilla' : 'Nueva plantilla'} onClose={() => setModal(null)}>
+          <form onSubmit={submit} className="space-y-3">
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Título *</label>
+              <input required className="input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ej. Consentimiento para endodoncia" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Contenido *</label>
+              <textarea required className="input resize-none font-mono text-xs" rows={10} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} placeholder="Yo, _______, autorizo al Dr. ___ a realizar el siguiente procedimiento..." />
+              <p className="text-[10px] text-gray-400 mt-1">El cuerpo se puede personalizar al firmar con cada paciente.</p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+              <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+                {loading ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {deleteId && <ConfirmDialog message="¿Eliminar esta plantilla? Los consentimientos ya firmados con ella se conservan." onConfirm={remove} onCancel={() => setDeleteId(null)} />}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, User, Doctor, ClinicalRecord, MedicalInfo } from '../api/client';
 import Attachments from '../components/Attachments';
+import Consents from '../components/Consents';
 import { Paperclip } from 'lucide-react';
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronUp, Heart, FileText, Activity } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -20,7 +21,7 @@ export default function Records() {
   const [medicalInfos, setMedicalInfos] = useState<Record<number, MedicalInfo | null>>({});
   const [modal, setModal] = useState<{ type: 'record' | 'info'; userId: number; record?: ClinicalRecord } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'history' | 'info' | 'odontogram' | 'files'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'info' | 'odontogram' | 'files' | 'consents'>('history');
   const [openChart, setOpenChart] = useState<number | null>(null);
   const [openFiles, setOpenFiles] = useState<number | null>(null);
   const [form, setForm] = useState<any>({});
@@ -131,14 +132,15 @@ export default function Records() {
             {expandedUser === u.id && (
               <div className="border-t border-gray-100 px-4 pb-4">
                 {/* Tabs */}
-                <div className="flex gap-1 my-3 bg-gray-100 rounded-lg p-1">
-                  {(['history','info','odontogram','files'] as const).map(tab => (
+                <div className="flex gap-1 my-3 bg-gray-100 rounded-lg p-1 overflow-x-auto">
+                  {(['history','info','odontogram','files','consents'] as const).map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
                       {tab === 'history' ? t('records.tabHistory')
                         : tab === 'info' ? t('records.tabInfo')
                         : tab === 'odontogram' ? t('records.tabOdontogram')
-                        : t('records.tabFiles')}
+                        : tab === 'files' ? t('records.tabFiles')
+                        : 'Consentimientos'}
                     </button>
                   ))}
                 </div>
@@ -234,6 +236,12 @@ export default function Records() {
                 {activeTab === 'files' && (
                   <div className="pt-1">
                     <Attachments userId={u.id} />
+                  </div>
+                )}
+
+                {activeTab === 'consents' && (
+                  <div className="pt-1">
+                    <Consents user={u} />
                   </div>
                 )}
               </div>

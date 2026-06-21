@@ -18,6 +18,7 @@ import Landing from './pages/Landing';
 import CreateClinic from './pages/CreateClinic';
 import GlobalLogin from './pages/GlobalLogin';
 import SuperAdminPortal from './pages/SuperAdminPortal';
+import InstallPrompt from './components/InstallPrompt';
 import { useAuth } from './auth/AuthContext';
 
 function Splash() {
@@ -27,24 +28,27 @@ function Splash() {
 
 export default function App() {
   return (
-    <Routes>
-      {/* Públicas (sin clínica) */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/crear-clinica" element={<CreateClinic />} />
-      <Route path="/login" element={<GlobalLogin />} />
-      <Route path="/cita/:code" element={<PublicAppointment />} />
+    <>
+      <InstallPrompt />
+      <Routes>
+        {/* Públicas (sin clínica) */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/crear-clinica" element={<CreateClinic />} />
+        <Route path="/login" element={<GlobalLogin />} />
+        <Route path="/cita/:code" element={<PublicAppointment />} />
 
-      {/* Portal Super Admin */}
-      <Route path="/superadmin/*" element={<SuperAdminPortal />} />
+        {/* Portal Super Admin */}
+        <Route path="/superadmin/*" element={<SuperAdminPortal />} />
 
-      {/* Aceptar invitación (público, requiere conocer la clínica por el slug) */}
-      <Route path="/:slug/crear-cuenta" element={<CreateAccount />} />
+        {/* Aceptar invitación (público, requiere conocer la clínica por el slug) */}
+        <Route path="/:slug/crear-cuenta" element={<CreateAccount />} />
 
-      {/* App de la clínica (todo lo demás bajo /:slug/...) */}
-      <Route path="/:slug/*" element={<ClinicApp />} />
+        {/* App de la clínica (todo lo demás bajo /:slug/...) */}
+        <Route path="/:slug/*" element={<ClinicApp />} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
 

@@ -201,6 +201,25 @@ export interface FinanceReport {
   by_day: { day: string; total: number }[];
 }
 
+export interface ConsentTemplate {
+  id: number; clinic_id: number;
+  title: string; body: string; active: boolean;
+  created_at: string; updated_at: string;
+}
+export interface Consent {
+  id: number; clinic_id: number; user_id: number;
+  template_id: number | null; appointment_id: number | null;
+  title: string; body: string;
+  signer_name: string; signer_document: string | null;
+  pdf_storage_key: string | null;
+  signed_at: string;
+  witnessed_by_email: string | null; witnessed_by_name: string | null;
+}
+export interface ConsentFull extends Consent {
+  signature_data_url: string;
+  signed_ip: string | null; signed_user_agent: string | null;
+}
+
 export interface StorageUsage {
   clinic_used: number; clinic_limit: number;
   global_used: number; global_limit: number;
@@ -394,6 +413,38 @@ export const api = {
       const qs = q.toString();
       return request<FinanceReport>(`/finance/report${qs ? `?${qs}` : ''}`);
     },
+  },
+  consents: {
+    templates: (all?: boolean) => request<ConsentTemplate[]>(`/consents/templates${all ? '?all=1' : ''}`),
+    createTemplate: (d: { title: string; body: string }) => request<ConsentTemplate>('/consents/templates', { method:'POST', body:JSON.stringify(d) }),
+    updateTemplate: (id: number, d: { title: string; body: string; active?: boolean }) => request<ConsentTemplate>(`/consents/templates/${id}`, { method:'PUT', body:JSON.stringify(d) }),
+    deleteTemplate: (id: number) => request<{ id: number }>(`/consents/templates/${id}`, { method:'DELETE' }),
+    list: (userId: number) => request<Consent[]>(`/consents?user_id=${userId}`),
+    get: (id: number) => request<ConsentFull>(`/consents/${id}`),
+    create: (d: {
+      user_id: number; template_id?: number | null; appointment_id?: number | null;
+      title: string; body: string; signer_name: string; signer_document?: string;
+      signature_data_url: string;
+    }) => request<Consent>('/consents', { method:'POST', body:JSON.stringify(d) }),
+    delete: (id: number) => request<{ id: number }>(`/consents/${id}`, { method:'DELETE' }),
+    uploadPdf: async (id: number, blob: Blob): Promise<{ ok: true }> => {
+      const form = new FormData();
+      form.append('file', blob, `consentimiento-${id}.pdf`);
+      const token = getToken();
+      const slug = (await import('../tenant')).currentSlug();
+      const res = await fetch(`${BASE}/consents/${id}/pdf`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(slug ? { 'X-Clinic-Slug': slug } : {}),
+        },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo subir el PDF');
+      return data;
+    },
+    pdfUrl: (id: number) => request<{ url: string }>(`/consents/${id}/pdf`),
   },
   attachments: {
     // record_id: number → archivos de esa visita; 'patient' → solo del paciente; undefined → todos

@@ -312,6 +312,42 @@ export async function initDB() {
   // 11b) Storage key del PDF generado para cada factura (se sube a R2 al crear).
   await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pdf_storage_key TEXT`);
 
+  // 11c) Consentimientos informados firmados por el paciente.
+  //   - consent_templates: plantillas reutilizables por clínica (cuerpo del documento).
+  //   - consents: instancias firmadas (snapshot del cuerpo + firma + PDF).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS consent_templates (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS consent_templates_clinic_idx ON consent_templates(clinic_id);
+
+    CREATE TABLE IF NOT EXISTS consents (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      template_id INTEGER REFERENCES consent_templates(id) ON DELETE SET NULL,
+      appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      signer_name TEXT NOT NULL,
+      signer_document TEXT,
+      signature_data_url TEXT NOT NULL,
+      pdf_storage_key TEXT,
+      signed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      signed_ip TEXT,
+      signed_user_agent TEXT,
+      witnessed_by_email TEXT,
+      witnessed_by_name TEXT
+    );
+    CREATE INDEX IF NOT EXISTS consents_user_idx ON consents(clinic_id, user_id, signed_at DESC);
+  `);
+
   // 12) Adjuntos a expedientes (RX, fotos intraorales, PDFs).
   //    Pueden estar asociados a una visita clínica (record_id) o ser del
   //    paciente en general (record_id NULL). Los bytes viven en R2.
