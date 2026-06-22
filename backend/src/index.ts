@@ -22,6 +22,7 @@ import invoicesRouter from './routes/invoices';
 import financeRouter from './routes/finance';
 import adminRouter from './routes/admin';
 import termsRouter from './routes/terms';
+import trackingRouter from './routes/tracking';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -48,6 +49,7 @@ app.use(auditLog);
 
 // Públicas (sin contexto de clínica)
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/track', trackingRouter);
 app.use('/api/clinics', clinicsRouter);
 app.use('/api/terms', termsRouter);
 app.use('/api/super', superRouter);

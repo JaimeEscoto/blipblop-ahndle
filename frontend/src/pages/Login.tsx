@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import LanguageToggle from '../components/LanguageToggle';
+import { trackVisit } from '../utils/track';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -19,6 +20,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
+
+  useEffect(() => { trackVisit('/login'); }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();

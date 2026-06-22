@@ -381,6 +381,7 @@
     "subtitle": "Herramientas de administración avanzada",
     "activity": "Actividad",
     "invitations": "Invitaciones",
+    "traffic": "Tráfico",
     "backup": "Respaldo",
     "backupTitle": "Respaldo de la base de datos",
     "backupDesc": "Descarga un archivo .sql con el esquema completo y todos los datos. Puedes restaurarlo con psql sobre una base de datos vacía.",

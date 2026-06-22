@@ -432,6 +432,36 @@ export async function initDB() {
     console.warn('No se pudieron cargar los términos desde backend/terms/:', e);
   }
 
+  // ════════════════════════════════════════════════════════════
+  // Tracking de visitas al sitio público (landing, login, registro)
+  // ════════════════════════════════════════════════════════════
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS visits (
+      id BIGSERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      session_id TEXT,
+      path TEXT,
+      host TEXT,
+      referrer TEXT,
+      referrer_source TEXT,
+      utm_source TEXT,
+      utm_medium TEXT,
+      utm_campaign TEXT,
+      ip TEXT,
+      country TEXT,
+      country_code TEXT,
+      region TEXT,
+      city TEXT,
+      browser TEXT,
+      os TEXT,
+      device TEXT,
+      user_agent TEXT,
+      language TEXT
+    );
+    CREATE INDEX IF NOT EXISTS visits_created_idx ON visits(created_at DESC);
+    CREATE INDEX IF NOT EXISTS visits_source_idx ON visits(referrer_source);
+  `);
+
   // --- Migración: código público para las citas (QR de invitación) ---
   await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS public_code TEXT`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS appointments_public_code_idx ON appointments(public_code)`);

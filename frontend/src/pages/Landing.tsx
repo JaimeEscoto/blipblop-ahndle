@@ -1,11 +1,14 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Calendar, Users, Stethoscope, FileText, Package, Bell, Wallet,
   Smartphone, ShieldCheck, QrCode, MessageCircle, Image as ImageIcon,
   Activity, ArrowRight, CheckCircle2, Sparkles, Cloud,
 } from 'lucide-react';
+import { trackVisit } from '../utils/track';
 
 export default function Landing() {
+  useEffect(() => { trackVisit('/'); }, []);
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#eaf6fb] via-blue-50 to-[#e6fbfd] text-gray-800">
       {/* Marca de agua sutil */}
@@ -13,22 +16,26 @@ export default function Landing() {
         className="pointer-events-none select-none fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(80vw,640px)] max-w-none opacity-[0.04]" />
 
       {/* ── Header ───────────────────────────────────────────── */}
-      <header className="relative z-20 max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src="/icono.png" alt="odontiacloud" className="h-9 w-9 object-contain" />
-          <span className="font-bold text-gray-900">odontiacloud</span>
-        </div>
+      <header className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-2">
+        <Link to="/" className="flex items-center gap-2 shrink-0">
+          <img src="/icono.png" alt="odontiacloud" className="h-8 w-8 sm:h-9 sm:w-9 object-contain" />
+          <span className="font-bold text-gray-900 hidden min-[420px]:inline">odontiacloud</span>
+        </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
           <a href="#modulos" className="hover:text-blue-700">Módulos</a>
           <a href="#como-funciona" className="hover:text-blue-700">Cómo funciona</a>
           <a href="#faq" className="hover:text-blue-700">Preguntas</a>
         </nav>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-blue-700">
-            Iniciar sesión
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Link to="/login"
+            className="text-xs sm:text-sm font-medium text-gray-700 hover:text-blue-700 whitespace-nowrap">
+            <span className="sm:hidden">Entrar</span>
+            <span className="hidden sm:inline">Iniciar sesión</span>
           </Link>
-          <Link to="/crear-clinica" className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 rounded-lg shadow-sm">
-            Crear mi clínica
+          <Link to="/crear-clinica"
+            className="text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-2.5 sm:px-3.5 py-1.5 rounded-lg shadow-sm whitespace-nowrap">
+            <span className="sm:hidden">Crear clínica</span>
+            <span className="hidden sm:inline">Crear mi clínica</span>
           </Link>
         </div>
       </header>

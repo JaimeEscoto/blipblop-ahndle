@@ -381,6 +381,7 @@
     "subtitle": "Advanced administration tools",
     "activity": "Activity",
     "invitations": "Invitations",
+    "traffic": "Traffic",
     "backup": "Backup",
     "backupTitle": "Database backup",
     "backupDesc": "Download a .sql file with the full schema and all data. You can restore it with psql onto an empty database.",

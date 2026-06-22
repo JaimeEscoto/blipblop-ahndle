@@ -92,4 +92,55 @@ router.get('/storage', async (_req: Request, res: Response) => {
   });
 });
 
+// Tráfico del sitio público: resumen por fuente/país/navegador + visitas recientes.
+router.get('/visits', async (req: Request, res: Response) => {
+  const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 365);
+  const limit = Math.min(Number(req.query.limit) || 200, 1000);
+  const since = `NOW() - INTERVAL '${days} days'`;
+
+  const [totals, bySource, byCountry, byBrowser, byOs, byDevice, recent, daily] = await Promise.all([
+    pool.query(`SELECT COUNT(*)::int AS visits, COUNT(DISTINCT session_id)::int AS sessions
+                FROM visits WHERE created_at >= ${since}`),
+    pool.query(`SELECT COALESCE(referrer_source,'Directo') AS source, COUNT(*)::int AS visits
+                FROM visits WHERE created_at >= ${since}
+                GROUP BY source ORDER BY visits DESC LIMIT 20`),
+    pool.query(`SELECT COALESCE(country,'Desconocido') AS country, country_code, COUNT(*)::int AS visits
+                FROM visits WHERE created_at >= ${since}
+                GROUP BY country, country_code ORDER BY visits DESC LIMIT 20`),
+    pool.query(`SELECT COALESCE(browser,'Desconocido') AS browser, COUNT(*)::int AS visits
+                FROM visits WHERE created_at >= ${since}
+                GROUP BY browser ORDER BY visits DESC LIMIT 20`),
+    pool.query(`SELECT COALESCE(os,'Desconocido') AS os, COUNT(*)::int AS visits
+                FROM visits WHERE created_at >= ${since}
+                GROUP BY os ORDER BY visits DESC LIMIT 20`),
+    pool.query(`SELECT COALESCE(device,'Desconocido') AS device, COUNT(*)::int AS visits
+                FROM visits WHERE created_at >= ${since}
+                GROUP BY device ORDER BY visits DESC`),
+    pool.query(
+      `SELECT id, created_at, path, referrer, referrer_source,
+              utm_source, utm_medium, utm_campaign,
+              country, country_code, region, city,
+              browser, os, device
+       FROM visits ORDER BY created_at DESC LIMIT $1`,
+      [limit]
+    ),
+    pool.query(`SELECT DATE_TRUNC('day', created_at) AS day, COUNT(*)::int AS visits
+                FROM visits WHERE created_at >= ${since}
+                GROUP BY day ORDER BY day ASC`),
+  ]);
+
+  res.json({
+    days,
+    total_visits: totals.rows[0]?.visits ?? 0,
+    total_sessions: totals.rows[0]?.sessions ?? 0,
+    by_source: bySource.rows,
+    by_country: byCountry.rows,
+    by_browser: byBrowser.rows,
+    by_os: byOs.rows,
+    by_device: byDevice.rows,
+    daily: daily.rows,
+    recent: recent.rows,
+  });
+});
+
 export default router;

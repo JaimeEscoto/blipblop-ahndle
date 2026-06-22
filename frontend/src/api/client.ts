@@ -249,6 +249,27 @@ export interface ActivityLog {
   status_code: number | null; details: Record<string, any> | null;
   created_at: string; internal: boolean;
 }
+export interface VisitRow {
+  id: number; created_at: string; path: string | null;
+  referrer: string | null; referrer_source: string | null;
+  utm_source: string | null; utm_medium: string | null; utm_campaign: string | null;
+  country: string | null; country_code: string | null;
+  region: string | null; city: string | null;
+  browser: string | null; os: string | null; device: string | null;
+}
+export interface VisitsReport {
+  days: number;
+  total_visits: number;
+  total_sessions: number;
+  by_source: { source: string; visits: number }[];
+  by_country: { country: string; country_code: string | null; visits: number }[];
+  by_browser: { browser: string; visits: number }[];
+  by_os: { os: string; visits: number }[];
+  by_device: { device: string; visits: number }[];
+  daily: { day: string; visits: number }[];
+  recent: VisitRow[];
+}
+
 export interface ActivityAccount {
   account_email: string; account_name: string | null; events: number;
 }
@@ -285,6 +306,13 @@ export const api = {
       if (params?.limit) q.set('limit', String(params.limit));
       const qs = q.toString();
       return request<(ActivityLog & { clinic_slug: string | null; clinic_name: string | null })[]>(`/super/activity${qs ? `?${qs}` : ''}`);
+    },
+    visits: (params?: { days?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.days) q.set('days', String(params.days));
+      if (params?.limit) q.set('limit', String(params.limit));
+      const qs = q.toString();
+      return request<VisitsReport>(`/super/visits${qs ? `?${qs}` : ''}`);
     },
   },
   invitations: {

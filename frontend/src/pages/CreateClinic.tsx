@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { clinicUrl } from '../tenant';
 import { CheckCircle, AlertCircle, ArrowRight, X } from 'lucide-react';
+import { trackVisit } from '../utils/track';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -25,6 +26,8 @@ export default function CreateClinic() {
   const [terms, setTerms] = useState<{ id: number; version: string; content: string } | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+
+  useEffect(() => { trackVisit('/crear-clinica'); }, []);
 
   // Carga la versión vigente de los términos al entrar al paso de formulario.
   useEffect(() => {
