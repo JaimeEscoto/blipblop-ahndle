@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { api, ClinicSummary, ActivityLog, SuperStorageReport, getToken, setToken, clearToken } from '../api/client';
+import { api, ClinicSummary, ActivityLog, SuperStorageReport, VisitsReport, getToken, setToken, clearToken } from '../api/client';
 import { clinicUrl } from '../tenant';
-import { Shield, Building2, ExternalLink, RefreshCw, LogOut, Users, Calendar, Activity, HardDrive, AlertCircle } from 'lucide-react';
+import { Shield, Building2, ExternalLink, RefreshCw, LogOut, Users, Calendar, Activity, HardDrive, AlertCircle, Globe2 } from 'lucide-react';
 
 function fmtBytes(b: number): string {
   if (b < 1_000_000) return `${(b / 1024).toFixed(0)} KB`;
@@ -13,7 +13,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 declare global { interface Window { google?: any; } }
 
-type Tab = 'clinics' | 'activity' | 'storage';
+type Tab = 'clinics' | 'activity' | 'storage' | 'traffic';
 
 interface SuperActivity extends ActivityLog {
   clinic_slug: string | null;
@@ -101,6 +101,8 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
   const [clinics, setClinics] = useState<ClinicSummary[]>([]);
   const [activity, setActivity] = useState<SuperActivity[]>([]);
   const [storage, setStorage] = useState<SuperStorageReport | null>(null);
+  const [traffic, setTraffic] = useState<VisitsReport | null>(null);
+  const [trafficDays, setTrafficDays] = useState<number>(30);
   const [filterClinic, setFilterClinic] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
 
@@ -120,9 +122,16 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
     try { setStorage(await api.super.storage()); } finally { setLoading(false); }
   }, []);
 
+  const loadTraffic = useCallback(async () => {
+    setLoading(true);
+    try { setTraffic(await api.super.visits({ days: trafficDays, limit: 200 })); }
+    finally { setLoading(false); }
+  }, [trafficDays]);
+
   useEffect(() => { loadClinics(); loadStorage(); }, [loadClinics, loadStorage]);
   useEffect(() => { if (tab === 'activity') loadActivity(); }, [tab, loadActivity]);
   useEffect(() => { if (tab === 'storage') loadStorage(); }, [tab, loadStorage]);
+  useEffect(() => { if (tab === 'traffic') loadTraffic(); }, [tab, loadTraffic]);
 
   // Banner global de alerta de almacenamiento (visible en cualquier pestaña)
   const storageBanner = storage && (storage.global_used / storage.global_limit) > 0.8 ? storage : null;
@@ -146,6 +155,10 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
             <button onClick={() => setTab('activity')}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab==='activity' ? 'bg-gray-700' : 'text-gray-300 hover:bg-gray-800'}`}>
               <Activity className="w-4 h-4 inline mr-1.5 -mt-0.5" />Actividad
+            </button>
+            <button onClick={() => setTab('traffic')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab==='traffic' ? 'bg-gray-700' : 'text-gray-300 hover:bg-gray-800'}`}>
+              <Globe2 className="w-4 h-4 inline mr-1.5 -mt-0.5" />Tráfico
             </button>
             <button onClick={() => setTab('storage')}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab==='storage' ? 'bg-gray-700' : 'text-gray-300 hover:bg-gray-800'} ${storageBanner?.global_over ? 'ring-2 ring-red-500' : ''}`}>
@@ -314,6 +327,89 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
           </>
         )}
 
+        {tab === 'traffic' && (
+          <>
+            <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+              <h1 className="text-xl font-bold text-gray-900">Tráfico del sitio público</h1>
+              <div className="flex items-center gap-2">
+                <select value={trafficDays} onChange={e => setTrafficDays(Number(e.target.value))}
+                        className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white">
+                  <option value={1}>Últimas 24 h</option>
+                  <option value={7}>Últimos 7 días</option>
+                  <option value={30}>Últimos 30 días</option>
+                  <option value={90}>Últimos 90 días</option>
+                  <option value={365}>Último año</option>
+                </select>
+                <button onClick={loadTraffic} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
+                  <RefreshCw className="w-4 h-4" /> Actualizar
+                </button>
+              </div>
+            </div>
+
+            {!traffic ? <p className="text-gray-400 text-sm py-10 text-center">Cargando…</p> : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <TrafficStat label="Visitas" value={traffic.total_visits} />
+                  <TrafficStat label="Sesiones únicas" value={traffic.total_sessions} />
+                  <TrafficStat label="Países" value={traffic.by_country.filter(c => c.country !== 'Desconocido').length} />
+                  <TrafficStat label="Navegadores" value={traffic.by_browser.length} />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <Breakdown title="Fuente de tráfico" rows={traffic.by_source.map(r => ({ label: r.source, value: r.visits }))} total={traffic.total_visits} />
+                  <Breakdown title="País" rows={traffic.by_country.map(r => ({
+                    label: r.country_code ? `${flagEmoji(r.country_code)} ${r.country}` : r.country, value: r.visits,
+                  }))} total={traffic.total_visits} />
+                  <Breakdown title="Navegador" rows={traffic.by_browser.map(r => ({ label: r.browser, value: r.visits }))} total={traffic.total_visits} />
+                  <Breakdown title="Sistema operativo" rows={traffic.by_os.map(r => ({ label: r.os, value: r.visits }))} total={traffic.total_visits} />
+                  <Breakdown title="Dispositivo" rows={traffic.by_device.map(r => ({ label: r.device, value: r.visits }))} total={traffic.total_visits} />
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="p-4 border-b border-gray-100">
+                    <h3 className="font-semibold text-gray-900 text-sm">Visitas recientes</h3>
+                    <p className="text-xs text-gray-500">Últimas {traffic.recent.length}</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-gray-50 text-gray-500">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Fecha</th>
+                          <th className="text-left px-3 py-2 font-medium">Fuente</th>
+                          <th className="text-left px-3 py-2 font-medium">Ruta</th>
+                          <th className="text-left px-3 py-2 font-medium">País / Ciudad</th>
+                          <th className="text-left px-3 py-2 font-medium">Navegador</th>
+                          <th className="text-left px-3 py-2 font-medium">SO</th>
+                          <th className="text-left px-3 py-2 font-medium">Disp.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {traffic.recent.map(v => (
+                          <tr key={v.id} className="border-t border-gray-100">
+                            <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{fmt(v.created_at)}</td>
+                            <td className="px-3 py-2 text-gray-900">{v.referrer_source || 'Directo'}</td>
+                            <td className="px-3 py-2 text-gray-600 font-mono truncate max-w-[160px]" title={v.path || ''}>{v.path}</td>
+                            <td className="px-3 py-2 text-gray-600">
+                              {v.country_code ? `${flagEmoji(v.country_code)} ` : ''}{v.country || '—'}
+                              {v.city ? <span className="text-gray-400"> · {v.city}</span> : null}
+                            </td>
+                            <td className="px-3 py-2 text-gray-600">{v.browser || '—'}</td>
+                            <td className="px-3 py-2 text-gray-600">{v.os || '—'}</td>
+                            <td className="px-3 py-2 text-gray-600">{v.device || '—'}</td>
+                          </tr>
+                        ))}
+                        {traffic.recent.length === 0 && (
+                          <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-400">Sin visitas en este período.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {tab === 'activity' && (
           <>
             <div className="flex items-center justify-between mb-4 gap-3">
@@ -355,4 +451,49 @@ function SuperDashboard({ onLogout }: { onLogout: () => void }) {
       </main>
     </div>
   );
+}
+
+function TrafficStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-2xl font-bold text-gray-900 mt-1">{value.toLocaleString('es-ES')}</div>
+    </div>
+  );
+}
+
+function Breakdown({ title, rows, total }: { title: string; rows: { label: string; value: number }[]; total: number }) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <h3 className="font-semibold text-gray-900 text-sm mb-3">{title}</h3>
+      {rows.length === 0 ? (
+        <p className="text-xs text-gray-400">Sin datos.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.slice(0, 8).map((r, i) => {
+            const pct = total ? Math.round((r.value / total) * 100) : 0;
+            return (
+              <li key={i}>
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="text-gray-700 truncate pr-2">{r.label}</span>
+                  <span className="text-gray-500 whitespace-nowrap">{r.value.toLocaleString('es-ES')} · {pct}%</span>
+                </div>
+                <div className="mt-1 h-1.5 bg-gray-100 rounded">
+                  <div className="h-1.5 bg-blue-500 rounded" style={{ width: `${(r.value / max) * 100}%` }} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Emoji bandera a partir del código ISO de país (regional indicators).
+function flagEmoji(code: string): string {
+  if (!code || code.length !== 2) return '';
+  const cc = code.toUpperCase();
+  return String.fromCodePoint(...cc.split('').map(c => 0x1f1e6 - 65 + c.charCodeAt(0)));
 }
