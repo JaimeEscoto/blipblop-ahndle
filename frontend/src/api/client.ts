@@ -100,6 +100,9 @@ export interface ClinicalRecord {
   treatment: string | null; observations: string | null;
   tooth_chart: Record<string, string>; created_at: string;
   doctor_name: string;
+  invoice_id: number | null;
+  invoice_number: number | null;
+  invoice_status: 'draft' | 'issued' | 'partial' | 'paid' | 'cancelled' | null;
 }
 export interface InventoryItem {
   id: number; name: string;

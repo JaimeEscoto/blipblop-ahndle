@@ -38,9 +38,12 @@ export default function Finance() {
   const [tab, setTab] = useState<Tab>('invoices');
   const [settings, setSettings] = useState<FinanceSettings | null>(null);
   // ?new_invoice_appointment=ID → abre el modal de crear factura precargado
+  // ?invoice=ID → abre directamente el detalle de una factura existente
   const params = new URLSearchParams(window.location.search);
   const prefilledAppt = params.get('new_invoice_appointment');
   const initialPrefilledId = prefilledAppt ? Number(prefilledAppt) : undefined;
+  const openInvoiceParam = params.get('invoice');
+  const initialOpenInvoiceId = openInvoiceParam ? Number(openInvoiceParam) : undefined;
 
   useEffect(() => { api.finance.settings().then(setSettings).catch(() => {}); }, []);
   const currency = settings?.currency || 'HNL';
@@ -68,7 +71,7 @@ export default function Finance() {
         ))}
       </div>
 
-      {tab === 'invoices'   && <InvoicesTab currency={currency} settings={settings} prefilledAppointmentId={initialPrefilledId} />}
+      {tab === 'invoices'   && <InvoicesTab currency={currency} settings={settings} prefilledAppointmentId={initialPrefilledId} openInvoiceId={initialOpenInvoiceId} />}
       {tab === 'procedures' && <ProceduresTab currency={currency} />}
       {tab === 'report'     && <ReportTab currency={currency} />}
     </div>
@@ -213,8 +216,9 @@ function ProceduresTab({ currency }: { currency: string }) {
 
 interface InvoiceItemDraft { procedure_id: number | null; description: string; quantity: string; unit_price: string; }
 
-function InvoicesTab({ currency, settings, prefilledAppointmentId }: {
-  currency: string; settings: FinanceSettings | null; prefilledAppointmentId?: number;
+function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId }: {
+  currency: string; settings: FinanceSettings | null;
+  prefilledAppointmentId?: number; openInvoiceId?: number;
 }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState('');
@@ -231,6 +235,15 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId }: {
       window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
     }
   }, [prefilledAppointmentId]);
+
+  // ?invoice=ID → abrir directamente el detalle de la factura (desde Expediente)
+  useEffect(() => {
+    if (!openInvoiceId) return;
+    api.invoices.get(openInvoiceId).then(setDetail).catch(() => {});
+    const url = new URL(window.location.href);
+    url.searchParams.delete('invoice');
+    window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+  }, [openInvoiceId]);
 
   const load = useCallback(async () => {
     setInvoices(await api.invoices.list({ status: (statusFilter || undefined) as any, limit: 200 }));

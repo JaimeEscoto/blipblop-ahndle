@@ -362,7 +362,7 @@ function AppMockup() {
     <div className="relative">
       <div className="absolute -top-6 -right-4 w-32 h-32 bg-blue-200 rounded-full blur-3xl opacity-50" />
       <div className="absolute -bottom-8 -left-6 w-40 h-40 bg-cyan-200 rounded-full blur-3xl opacity-60" />
-      <BrowserChrome url="dental-sur.odontiacloud.com/citas">
+      <BrowserChrome url="odontiacloud.com/dental-sur/citas">
         <div className="flex items-center justify-between mb-3">
           <div className="relative flex-1 mr-2">
             <div className="w-full pl-7 pr-3 py-1.5 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-400">Buscar paciente…</div>
@@ -379,7 +379,7 @@ function AppMockup() {
 /* Pantalla pública de la cita (PublicAppointment.tsx) — gradiente del header de la app */
 function MockAgenda() {
   return (
-    <BrowserChrome url="dental-sur.odontiacloud.com/cita/p/a8x2k">
+    <BrowserChrome url="odontiacloud.com/cita/a8x2k">
       <div className="rounded-xl overflow-hidden border border-gray-100 bg-white">
         <div className="bg-gradient-to-r from-[#0f2f4f] via-[#1e6f9f] to-[#36c1d6] text-white px-4 py-4">
           <p className="text-blue-100 text-[9px] uppercase tracking-wide">Invitación a tu cita</p>
@@ -434,7 +434,7 @@ function MockOdontogram() {
   const upper: (keyof typeof TOOTH_COLORS)[] = ['healthy','healthy','filled','healthy','cavity','healthy','healthy','crown','healthy','healthy','healthy','filled','healthy','healthy','healthy','healthy'];
   const lower: (keyof typeof TOOTH_COLORS)[] = ['healthy','healthy','healthy','healthy','filled','healthy','extracted','healthy','healthy','cavity','healthy','healthy','healthy','healthy','healthy','healthy'];
   return (
-    <BrowserChrome url="dental-sur.odontiacloud.com/expedientes/12">
+    <BrowserChrome url="odontiacloud.com/dental-sur/expedientes">
       <div className="text-[10px] uppercase tracking-wider text-blue-600 font-semibold">Expediente</div>
       <div className="text-base font-bold text-gray-900 mt-0.5 mb-3">Luis Pérez · 34 años</div>
 
@@ -487,7 +487,7 @@ const INVOICES = [
 
 function MockFinance() {
   return (
-    <BrowserChrome url="dental-sur.odontiacloud.com/finanzas">
+    <BrowserChrome url="odontiacloud.com/dental-sur/finanzas">
       <div className="flex items-center gap-2 mb-3">
         <div className="relative flex-1">
           <div className="w-full pl-7 pr-3 py-1.5 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-400">Buscar # o paciente…</div>

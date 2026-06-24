@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { api, User, Doctor, ClinicalRecord, MedicalInfo } from '../api/client';
 import Attachments from '../components/Attachments';
 import Consents from '../components/Consents';
-import { Paperclip } from 'lucide-react';
+import { Paperclip, Receipt } from 'lucide-react';
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronUp, Heart, FileText, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { withSlug } from '../tenant';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Odontogram from '../components/Odontogram';
@@ -13,6 +15,7 @@ const BLOOD_TYPES = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
 
 export default function Records() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [search, setSearch] = useState('');
@@ -166,6 +169,19 @@ export default function Records() {
                               <button onClick={() => setDeleteId(r.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
                           </div>
+                          {r.invoice_id && (
+                            <div className="mt-2 pt-2 border-t border-gray-50">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`${withSlug('/finanzas')}?invoice=${r.invoice_id}`)}
+                                className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline"
+                                title="Ver factura asociada a esta cita"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                Ver factura #{String(r.invoice_number).padStart(4, '0')}
+                              </button>
+                            </div>
+                          )}
                           {r.tooth_chart && Object.keys(r.tooth_chart).length > 0 && (
                             <div className="mt-2 pt-2 border-t border-gray-50">
                               <button onClick={() => setOpenChart(openChart === r.id ? null : r.id)}

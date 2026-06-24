@@ -43,9 +43,17 @@ router.post('/info/:userId', async (req: Request, res: Response) => {
 router.get('/records/:userId', async (req: Request, res: Response) => {
   if (!(await ensureUserInClinic(req.params.userId, req.clinic!.id))) return res.status(404).json({ error: 'Paciente no encontrado' });
   const { rows } = await pool.query(
-    `SELECT cr.*, d.name as doctor_name, TO_CHAR(cr.date,'YYYY-MM-DD') as date
+    `SELECT cr.*, d.name as doctor_name, TO_CHAR(cr.date,'YYYY-MM-DD') as date,
+            inv.id AS invoice_id, inv.number AS invoice_number, inv.status AS invoice_status
      FROM clinical_records cr
      JOIN doctors d ON cr.doctor_id = d.id
+     LEFT JOIN LATERAL (
+       SELECT id, number, status FROM invoices
+       WHERE clinic_id = cr.clinic_id
+         AND appointment_id = cr.appointment_id
+         AND status <> 'cancelled'
+       ORDER BY created_at DESC LIMIT 1
+     ) inv ON cr.appointment_id IS NOT NULL
      WHERE cr.user_id = $1 AND cr.clinic_id = $2
      ORDER BY cr.created_at DESC`,
     [req.params.userId, req.clinic!.id]
