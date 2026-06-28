@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api, Procedure, Invoice, InvoiceDetail, FinanceSettings, FinanceReport, Doctor, Appointment, PaymentMethod, InvoiceStatus } from '../api/client';
+import { api, Procedure, Invoice, InvoiceDetail, FinanceSettings, FinanceReport, Doctor, Appointment, User, PaymentMethod, InvoiceStatus, InvoiceType } from '../api/client';
 import { formatMoney, currencySymbol } from '../utils/money';
 import { generateInvoicePDF } from '../utils/generateInvoicePDF';
 import { currentSlug } from '../tenant';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Plus, Trash2, Pencil, FileText, Calendar, X, Receipt, Wallet, BarChart3, Search, CreditCard, Banknote, Smartphone, MoreHorizontal, Printer } from 'lucide-react';
+import { Plus, Trash2, Pencil, FileText, Calendar, X, Receipt, Wallet, BarChart3, Search, CreditCard, Banknote, Smartphone, MoreHorizontal, Printer, Package } from 'lucide-react';
 
 // Sube el PDF de la factura al storage (best-effort: si falla, no rompe la creación).
 async function uploadInvoicePdf(invoice: InvoiceDetail, currency: string) {
@@ -224,7 +224,10 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | InvoiceStatus>('');
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
-  const [showCreate, setShowCreate] = useState(!!prefilledAppointmentId);
+  // Modo del modal: 'appointment' factura ligada a cita; 'supply' venta de insumos.
+  const [createMode, setCreateMode] = useState<InvoiceType | null>(
+    prefilledAppointmentId ? 'appointment' : null
+  );
   const [pendingAppt, setPendingAppt] = useState<number | undefined>(prefilledAppointmentId);
 
   // Limpia el query param tras consumirlo para que un refresh no reabra el modal
@@ -275,9 +278,14 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
             <option value="cancelled">Anuladas</option>
           </select>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Nueva factura
-        </button>
+        <div className="flex gap-1.5 shrink-0">
+          <button onClick={() => setCreateMode('appointment')} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Nueva factura
+          </button>
+          <button onClick={() => setCreateMode('supply')} className="flex items-center gap-1.5 bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-amber-600" title="Factura sin cita (insumos / productos)">
+            <Package className="w-4 h-4" /> Insumos
+          </button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
@@ -294,6 +302,9 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_LABEL[inv.status].cls}`}>
                       {STATUS_LABEL[inv.status].label}
                     </span>
+                    {inv.type === 'supply' && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Insumos</span>
+                    )}
                   </div>
                   <p className="font-semibold text-gray-900 truncate mt-0.5">{inv.user_name}</p>
                   <p className="text-xs text-gray-400">
@@ -313,12 +324,13 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
         </div>
       )}
 
-      {showCreate && (
+      {createMode && (
         <CreateInvoiceModal
           currency={currency} settings={settings}
+          mode={createMode}
           prefilledAppointmentId={pendingAppt}
-          onClose={() => { setShowCreate(false); setPendingAppt(undefined); }}
-          onCreated={async () => { setShowCreate(false); setPendingAppt(undefined); await load(); }}
+          onClose={() => { setCreateMode(null); setPendingAppt(undefined); }}
+          onCreated={async () => { setCreateMode(null); setPendingAppt(undefined); await load(); }}
         />
       )}
 
@@ -335,15 +347,24 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
 
 // ── Modal: crear factura ────────────────────────────────────────────────
 
-function CreateInvoiceModal({ currency, settings, prefilledAppointmentId, onClose, onCreated }: {
+function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, onClose, onCreated }: {
   currency: string; settings: FinanceSettings | null;
+  mode: InvoiceType;
   prefilledAppointmentId?: number;
   onClose: () => void; onCreated: () => void;
 }) {
+  const isSupply = mode === 'supply';
+  const today = new Date().toISOString().slice(0, 10);
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [appointmentId, setAppointmentId] = useState<number | ''>(prefilledAppointmentId || '');
+  // Solo para modo supply: paciente + doctor + fecha se eligen a mano.
+  const [supplyUserId, setSupplyUserId] = useState<number | ''>('');
+  const [supplyDoctorId, setSupplyDoctorId] = useState<number | ''>('');
+  const [supplyDate, setSupplyDate] = useState<string>(today);
   const [items, setItems] = useState<InvoiceItemDraft[]>([
     { procedure_id: null, description: '', quantity: '1', unit_price: '0' }
   ]);
@@ -353,14 +374,19 @@ function CreateInvoiceModal({ currency, settings, prefilledAppointmentId, onClos
   const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.appointments.list(), api.doctors.list(), api.procedures.list()])
-      .then(([a, d, p]) => { setAppointments(a); setDoctors(d); setProcedures(p); });
-  }, []);
+    // En modo supply no necesitamos la lista de citas, pero el resto sí.
+    Promise.all([
+      isSupply ? Promise.resolve([] as Appointment[]) : api.appointments.list(),
+      api.doctors.list(),
+      api.procedures.list(),
+      api.users.list(),
+    ]).then(([a, d, p, u]) => { setAppointments(a); setDoctors(d); setProcedures(p); setUsers(u); });
+  }, [isSupply]);
 
   const selectedAppt = appointments.find(a => a.id === appointmentId);
-  const date = selectedAppt?.date || new Date().toISOString().slice(0, 10);
-  const userId = selectedAppt?.user_id || null;
-  const doctorId = selectedAppt?.doctor_id || null;
+  const date = isSupply ? supplyDate : (selectedAppt?.date || today);
+  const userId = isSupply ? (supplyUserId || null) : (selectedAppt?.user_id || null);
+  const doctorId = isSupply ? (supplyDoctorId || null) : (selectedAppt?.doctor_id || null);
 
   const setItem = (i: number, patch: Partial<InvoiceItemDraft>) =>
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it));
@@ -386,7 +412,11 @@ function CreateInvoiceModal({ currency, settings, prefilledAppointmentId, onClos
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError('');
-    if (!appointmentId || !userId) { setError('Selecciona una cita'); return; }
+    if (isSupply) {
+      if (!userId) { setError('Selecciona el paciente'); return; }
+    } else {
+      if (!appointmentId || !userId) { setError('Selecciona una cita'); return; }
+    }
     if (items.length === 0) { setError('Agrega al menos un ítem'); return; }
     for (const it of items) {
       if (!it.description.trim()) { setError('Cada ítem necesita una descripción'); return; }
@@ -395,9 +425,10 @@ function CreateInvoiceModal({ currency, settings, prefilledAppointmentId, onClos
     setLoading(true);
     try {
       const created = await api.invoices.create({
-        user_id: userId,
+        user_id: userId as number,
         doctor_id: doctorId,
-        appointment_id: Number(appointmentId),
+        type: mode,
+        appointment_id: isSupply ? null : Number(appointmentId),
         date, tax_rate: Number(taxRate) || 0, discount: dsc, notes: notes.trim() || undefined,
         items: items.map(it => ({
           procedure_id: it.procedure_id, description: it.description.trim(),
@@ -412,34 +443,65 @@ function CreateInvoiceModal({ currency, settings, prefilledAppointmentId, onClos
   };
 
   return (
-    <Modal title="Nueva factura" onClose={onClose}>
+    <Modal title={isSupply ? 'Venta de insumos' : 'Nueva factura'} onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-        <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Cita asociada *</label>
-          <select required className="input" value={appointmentId}
-            onChange={e => setAppointmentId(e.target.value ? Number(e.target.value) : '')}
-            disabled={!!prefilledAppointmentId}>
-            <option value="">Selecciona una cita</option>
-            {appointments.map(a => (
-              <option key={a.id} value={a.id}>
-                #{a.id} · {a.date} {a.time} · {a.user_name} · Dr. {a.doctor_name}
-              </option>
-            ))}
-          </select>
-          {selectedAppt && (
-            <p className="text-xs text-gray-500 mt-1">
-              <span className="font-medium">{selectedAppt.user_name}</span>
-              {' '}con Dr. {doctors.find(d => d.id === selectedAppt.doctor_id)?.name || selectedAppt.doctor_name}
-              {' '}el {selectedAppt.date} {selectedAppt.time}
+        {isSupply ? (
+          <>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Paciente *</label>
+              <select required className="input" value={supplyUserId}
+                onChange={e => setSupplyUserId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">Selecciona un paciente</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
+                <input type="date" required className="input" value={supplyDate}
+                  onChange={e => setSupplyDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Doctor (opcional)</label>
+                <select className="input" value={supplyDoctorId}
+                  onChange={e => setSupplyDoctorId(e.target.value ? Number(e.target.value) : '')}>
+                  <option value="">—</option>
+                  {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+              Esta factura no estará ligada a una cita. Úsala solo para vender insumos o productos.
             </p>
-          )}
-        </div>
+          </>
+        ) : (
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">Cita asociada *</label>
+            <select required className="input" value={appointmentId}
+              onChange={e => setAppointmentId(e.target.value ? Number(e.target.value) : '')}
+              disabled={!!prefilledAppointmentId}>
+              <option value="">Selecciona una cita</option>
+              {appointments.map(a => (
+                <option key={a.id} value={a.id}>
+                  #{a.id} · {a.date} {a.time} · {a.user_name} · Dr. {a.doctor_name}
+                </option>
+              ))}
+            </select>
+            {selectedAppt && (
+              <p className="text-xs text-gray-500 mt-1">
+                <span className="font-medium">{selectedAppt.user_name}</span>
+                {' '}con Dr. {doctors.find(d => d.id === selectedAppt.doctor_id)?.name || selectedAppt.doctor_name}
+                {' '}el {selectedAppt.date} {selectedAppt.time}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Items */}
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Procedimientos *</label>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{isSupply ? 'Insumos / productos *' : 'Procedimientos *'}</label>
           <div className="space-y-2">
             {items.map((it, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-start">
@@ -504,8 +566,8 @@ function CreateInvoiceModal({ currency, settings, prefilledAppointmentId, onClos
 
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
-          <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
-            {loading ? 'Creando…' : 'Crear factura'}
+          <button type="submit" disabled={loading} className={`flex-1 py-2.5 text-sm font-medium text-white rounded-lg disabled:opacity-60 ${isSupply ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
+            {loading ? 'Creando…' : (isSupply ? 'Crear venta' : 'Crear factura')}
           </button>
         </div>
       </form>

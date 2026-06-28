@@ -47,7 +47,7 @@ function statusFor(total: number, paid: number, currentStatus: string): string {
 
 // SELECT de factura con datos relacionados.
 const SELECT_INVOICE = `
-  SELECT i.id, i.clinic_id, i.number, i.user_id, i.doctor_id, i.appointment_id,
+  SELECT i.id, i.clinic_id, i.number, i.user_id, i.doctor_id, i.appointment_id, i.type,
     TO_CHAR(i.date,'YYYY-MM-DD') AS date,
     i.subtotal, i.tax_rate, i.tax, i.discount, i.total, i.status, i.notes,
     i.pdf_storage_key, i.created_by_email, i.created_by_name, i.created_at,
@@ -88,6 +88,7 @@ router.get('/', async (req: Request, res: Response) => {
 
   if (req.query.user_id) { params.push(req.query.user_id); conditions.push(`i.user_id = $${params.length}`); }
   if (req.query.status)  { params.push(req.query.status);  conditions.push(`i.status = $${params.length}`); }
+  if (req.query.type)    { params.push(req.query.type);    conditions.push(`i.type = $${params.length}`); }
   if (req.query.from)    { params.push(req.query.from);    conditions.push(`i.date >= $${params.length}`); }
   if (req.query.to)      { params.push(req.query.to);      conditions.push(`i.date <= $${params.length}`); }
 
@@ -112,23 +113,36 @@ router.get('/:id', async (req: Request, res: Response) => {
   res.json({ ...rows[0], items, payments });
 });
 
-// Crear factura. Body: { user_id, doctor_id?, appointment_id, date?, tax_rate?, discount?, notes?, items: [{procedure_id?, description, quantity, unit_price}] }
+// Crear factura.
+// Body: { user_id, doctor_id?, appointment_id?, type?, date?, tax_rate?, discount?, notes?,
+//         items: [{procedure_id?, description, quantity, unit_price}] }
+// type:
+//   - 'appointment' (default): debe llegar appointment_id válido para el paciente.
+//   - 'supply': venta de insumos / productos sin cita; appointment_id se ignora.
 router.post('/', async (req: Request, res: Response) => {
   const { user_id, doctor_id, appointment_id, date, tax_rate, discount, notes, items } = req.body;
+  const type: 'appointment' | 'supply' = req.body.type === 'supply' ? 'supply' : 'appointment';
   if (!user_id) return res.status(400).json({ error: 'Falta el paciente' });
-  if (!appointment_id) return res.status(400).json({ error: 'La factura debe estar asociada a una cita' });
+  if (type === 'appointment' && !appointment_id) {
+    return res.status(400).json({ error: 'La factura debe estar asociada a una cita' });
+  }
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'La factura debe tener al menos un ítem' });
 
   // Verifica que el paciente exista en la clínica
   const u = await pool.query('SELECT 1 FROM users WHERE id = $1 AND clinic_id = $2', [user_id, req.clinic!.id]);
   if (!u.rows[0]) return res.status(404).json({ error: 'Paciente no encontrado' });
 
-  // Verifica que la cita pertenezca a la clínica y al paciente
-  const ap = await pool.query(
-    'SELECT 1 FROM appointments WHERE id = $1 AND clinic_id = $2 AND user_id = $3',
-    [appointment_id, req.clinic!.id, user_id]
-  );
-  if (!ap.rows[0]) return res.status(404).json({ error: 'La cita no existe o no pertenece a este paciente' });
+  // Para facturas de cita: verifica que pertenezca a la clínica y al paciente.
+  // Para venta de insumos: no se vincula a una cita (constraint del DB lo exige).
+  let appointmentRef: number | null = null;
+  if (type === 'appointment') {
+    const ap = await pool.query(
+      'SELECT 1 FROM appointments WHERE id = $1 AND clinic_id = $2 AND user_id = $3',
+      [appointment_id, req.clinic!.id, user_id]
+    );
+    if (!ap.rows[0]) return res.status(404).json({ error: 'La cita no existe o no pertenece a este paciente' });
+    appointmentRef = appointment_id;
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const useDate = date || today;
@@ -149,12 +163,12 @@ router.post('/', async (req: Request, res: Response) => {
 
     const inv = await client.query(
       `INSERT INTO invoices
-         (clinic_id, number, user_id, doctor_id, appointment_id, date,
+         (clinic_id, number, user_id, doctor_id, appointment_id, type, date,
           subtotal, tax_rate, tax, discount, total, status, notes,
           created_by_email, created_by_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'issued', $12, $13, $14)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'issued', $13, $14, $15)
        RETURNING id`,
-      [req.clinic!.id, number, user_id, doctor_id || null, appointment_id, useDate,
+      [req.clinic!.id, number, user_id, doctor_id || null, appointmentRef, type, useDate,
        totals.subtotal, useTaxRate, totals.tax, totals.discount, totals.total, notes || null,
        req.account!.email, req.account!.name]
     );

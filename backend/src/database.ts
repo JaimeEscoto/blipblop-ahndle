@@ -478,6 +478,49 @@ export async function initDB() {
       }
     }
   }
+
+  // --- Migración: procedimientos planificados por cita ---
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS appointment_procedures (
+      id SERIAL PRIMARY KEY,
+      appointment_id INTEGER NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+      procedure_id INTEGER NOT NULL REFERENCES procedures(id) ON DELETE RESTRICT,
+      quantity NUMERIC NOT NULL DEFAULT 1,
+      unit_price NUMERIC NOT NULL DEFAULT 0,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS appointment_procedures_appt_idx
+      ON appointment_procedures(appointment_id, position);
+  `);
+
+  // --- Migración: tipo de factura (cita vs venta de insumos) ---
+  await pool.query(`
+    ALTER TABLE invoices
+      ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'appointment'
+      CHECK(type IN ('appointment','supply'));
+  `);
+  // Backfill: las facturas existentes con appointment_id quedan 'appointment'
+  // y las que no tengan cita (caso raro previo a este cambio) quedan 'supply'.
+  await pool.query(`
+    UPDATE invoices SET type='supply'
+    WHERE appointment_id IS NULL AND type='appointment';
+  `);
+  // Constraint coherencia: appointment ⇒ cita obligatoria; supply ⇒ sin cita.
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'invoices_type_appointment_chk'
+      ) THEN
+        ALTER TABLE invoices ADD CONSTRAINT invoices_type_appointment_chk
+          CHECK (
+            (type = 'appointment' AND appointment_id IS NOT NULL)
+            OR (type = 'supply' AND appointment_id IS NULL)
+          );
+      END IF;
+    END$$;
+  `);
 }
 
 export default pool;

@@ -74,6 +74,12 @@ export interface Doctor {
   id: number; name: string; specialty: string; email: string;
   phone: string | null; license_number: string | null; created_at: string;
 }
+export interface AppointmentProcedure {
+  id: number; procedure_id: number;
+  quantity: number; unit_price: number; position: number;
+  procedure_code: string | null; procedure_name: string;
+  default_price: number;
+}
 export interface Appointment {
   id: number; user_id: number; doctor_id: number;
   date: string; time: string; reason: string | null;
@@ -81,6 +87,10 @@ export interface Appointment {
   notes: string | null; created_at: string; public_code: string | null;
   user_name: string; user_email: string; user_phone: string | null;
   doctor_name: string; doctor_specialty: string;
+  procedures?: AppointmentProcedure[];
+}
+export interface AppointmentStatusResponse extends Appointment {
+  draft_invoice_id: number | null;
 }
 export interface PublicAppointment {
   id: number; public_code: string; reason: string | null;
@@ -170,9 +180,11 @@ export interface Payment {
   created_at: string;
 }
 export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'cancelled';
+export type InvoiceType = 'appointment' | 'supply';
 export interface Invoice {
   id: number; clinic_id: number; number: number;
   user_id: number; doctor_id: number | null; appointment_id: number | null;
+  type: InvoiceType;
   date: string;
   subtotal: number; tax_rate: number; tax: number; discount: number; total: number;
   total_paid: number;
@@ -365,7 +377,8 @@ export const api = {
     list: () => request<Appointment[]>('/appointments'),
     create: (d: any) => request<Appointment>('/appointments', { method:'POST', body:JSON.stringify(d) }),
     update: (id: number, d: any) => request<Appointment>(`/appointments/${id}`, { method:'PUT', body:JSON.stringify(d) }),
-    updateStatus: (id: number, status: string) => request<Appointment>(`/appointments/${id}/status`, { method:'PATCH', body:JSON.stringify({ status }) }),
+    updateStatus: (id: number, status: string) =>
+      request<AppointmentStatusResponse>(`/appointments/${id}/status`, { method:'PATCH', body:JSON.stringify({ status }) }),
     getPublic: (code: string) => request<PublicAppointment>(`/appointments/public/${code}`),
     delete: (id: number) => request<void>(`/appointments/${id}`, { method:'DELETE' }),
   },
@@ -392,10 +405,11 @@ export const api = {
     delete: (id: number) => request<Procedure>(`/procedures/${id}`, { method:'DELETE' }),
   },
   invoices: {
-    list: (params?: { user_id?: number; status?: InvoiceStatus; from?: string; to?: string; limit?: number }) => {
+    list: (params?: { user_id?: number; status?: InvoiceStatus; type?: InvoiceType; from?: string; to?: string; limit?: number }) => {
       const q = new URLSearchParams();
       if (params?.user_id) q.set('user_id', String(params.user_id));
       if (params?.status) q.set('status', params.status);
+      if (params?.type) q.set('type', params.type);
       if (params?.from) q.set('from', params.from);
       if (params?.to) q.set('to', params.to);
       if (params?.limit) q.set('limit', String(params.limit));
@@ -404,7 +418,9 @@ export const api = {
     },
     get: (id: number) => request<InvoiceDetail>(`/invoices/${id}`),
     create: (d: {
-      user_id: number; doctor_id?: number | null; appointment_id: number;
+      user_id: number; doctor_id?: number | null;
+      appointment_id?: number | null;
+      type?: InvoiceType;
       date?: string; tax_rate?: number; discount?: number; notes?: string;
       items: { procedure_id?: number | null; description: string; quantity: number; unit_price: number }[];
     }) => request<InvoiceDetail>('/invoices', { method:'POST', body:JSON.stringify(d) }),

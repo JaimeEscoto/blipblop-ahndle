@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, Appointment, Doctor, User } from '../api/client';
+import { api, Appointment, Doctor, User, Procedure } from '../api/client';
 import { dateLocale } from '../i18n/format';
-import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight, Receipt } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight, Receipt, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { withSlug } from '../tenant';
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
@@ -11,6 +11,10 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import Odontogram from '../components/Odontogram';
 
 type Status = 'scheduled' | 'completed' | 'cancelled';
+
+// Una línea del editor de procedimientos dentro del modal de cita.
+interface ProcRow { procedure_id: string; quantity: string; unit_price: string; }
+const EMPTY_PROC_ROW: ProcRow = { procedure_id: '', quantity: '1', unit_price: '' };
 
 const STATUS_CONFIG: Record<Status, { icon: typeof CheckCircle; className: string }> = {
   scheduled: { icon: AlertCircle, className: 'bg-blue-100 text-blue-700' },
@@ -34,6 +38,7 @@ export default function Appointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<Status | 'all'>('all');
   const [view, setView] = useState<'list' | 'calendar'>('list');
@@ -42,8 +47,12 @@ export default function Appointments() {
   const [modal, setModal] = useState<{ type: 'create' | 'edit'; appt?: Appointment } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [formProcedures, setFormProcedures] = useState<ProcRow[]>([{ ...EMPTY_PROC_ROW }]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Aviso flotante con link a la factura preliminar generada al cerrar la cita.
+  const [draftInvoiceToast, setDraftInvoiceToast] = useState<number | null>(null);
 
   // Modal de completar cita → entrada clínica con odontograma
   const [completeAppt, setCompleteAppt] = useState<Appointment | null>(null);
@@ -53,25 +62,64 @@ export default function Appointments() {
   const [completeError, setCompleteError] = useState('');
 
   const load = useCallback(async () => {
-    const [appts, docs, usrs] = await Promise.all([api.appointments.list(), api.doctors.list(), api.users.list()]);
+    const [appts, docs, usrs, procs] = await Promise.all([
+      api.appointments.list(), api.doctors.list(), api.users.list(), api.procedures.list(),
+    ]);
     setAppointments(appts);
     setDoctors(docs);
     setUsers(usrs);
+    setProcedures(procs);
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-cierre del toast después de 8s.
+  useEffect(() => {
+    if (draftInvoiceToast == null) return;
+    const id = setTimeout(() => setDraftInvoiceToast(null), 8000);
+    return () => clearTimeout(id);
+  }, [draftInvoiceToast]);
 
   const openCreate = () => {
     const d = new Date();
     const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     setForm({ ...EMPTY_FORM, date: local });
+    setFormProcedures([{ ...EMPTY_PROC_ROW }]);
     setError(''); setModal({ type: 'create' });
   };
 
   const openEdit = (a: Appointment) => {
     setForm({ user_id: String(a.user_id), doctor_id: String(a.doctor_id), date: a.date, time: a.time, reason: a.reason || '', notes: a.notes || '', status: a.status });
+    const rows: ProcRow[] = (a.procedures || []).map(p => ({
+      procedure_id: String(p.procedure_id),
+      quantity: String(p.quantity),
+      unit_price: String(p.unit_price),
+    }));
+    setFormProcedures(rows.length > 0 ? rows : [{ ...EMPTY_PROC_ROW }]);
     setError(''); setModal({ type: 'edit', appt: a });
   };
+
+  // Helpers para el editor de procedimientos
+  const addProcRow = () => setFormProcedures(rows => [...rows, { ...EMPTY_PROC_ROW }]);
+  const removeProcRow = (idx: number) =>
+    setFormProcedures(rows => rows.length <= 1 ? [{ ...EMPTY_PROC_ROW }] : rows.filter((_, i) => i !== idx));
+  const updateProcRow = (idx: number, patch: Partial<ProcRow>) =>
+    setFormProcedures(rows => rows.map((r, i) => i === idx ? { ...r, ...patch } : r));
+  // Al elegir un procedimiento, prellenar el precio con el default_price del catálogo.
+  const pickProcedure = (idx: number, procId: string) => {
+    const p = procedures.find(x => x.id === Number(procId));
+    updateProcRow(idx, { procedure_id: procId, unit_price: p ? String(p.default_price) : '' });
+  };
+
+  // Filtra filas vacías y arma payload limpio para el backend.
+  const buildProceduresPayload = () =>
+    formProcedures
+      .filter(r => r.procedure_id)
+      .map(r => ({
+        procedure_id: Number(r.procedure_id),
+        quantity: Math.max(1, Number(r.quantity) || 1),
+        unit_price: Number(r.unit_price) || 0,
+      }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +142,11 @@ export default function Appointments() {
     }
     setError(''); setLoading(true);
     try {
-      const payload = { user_id: Number(form.user_id), doctor_id: Number(form.doctor_id), date: form.date, time: form.time, reason: form.reason, notes: form.notes, status: form.status };
+      const payload = {
+        user_id: Number(form.user_id), doctor_id: Number(form.doctor_id),
+        date: form.date, time: form.time, reason: form.reason, notes: form.notes, status: form.status,
+        procedures: buildProceduresPayload(),
+      };
       if (modal?.type === 'create') await api.appointments.create(payload);
       else await api.appointments.update(modal!.appt!.id, payload);
       await load(); setModal(null);
@@ -109,7 +161,8 @@ export default function Appointments() {
   };
 
   const handleStatusChange = async (id: number, status: Status) => {
-    await api.appointments.updateStatus(id, status);
+    const res = await api.appointments.updateStatus(id, status);
+    if (res.draft_invoice_id) setDraftInvoiceToast(res.draft_invoice_id);
     await load();
   };
 
@@ -147,7 +200,8 @@ export default function Appointments() {
         observations: completeForm.observations,
         tooth_chart: completeForm.tooth_chart,
       });
-      await api.appointments.updateStatus(completeAppt.id, 'completed');
+      const res = await api.appointments.updateStatus(completeAppt.id, 'completed');
+      if (res.draft_invoice_id) setDraftInvoiceToast(res.draft_invoice_id);
       await load();
       setCompleteAppt(null);
     } catch (err: any) {
@@ -191,6 +245,15 @@ export default function Appointments() {
               </span>
             </div>
             {a.reason && <p className="text-xs text-gray-400 mt-1 truncate">{a.reason}</p>}
+            {a.procedures && a.procedures.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {a.procedures.map(p => (
+                  <span key={p.id} className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                    {p.procedure_name}{Number(p.quantity) > 1 ? ` ×${p.quantity}` : ''}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex gap-1 shrink-0">
             <button onClick={() => goInvoice(a.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Crear factura para esta cita">
@@ -445,6 +508,56 @@ export default function Appointments() {
               </div>
             )}
             <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-gray-700">Procedimientos planeados</label>
+                <button type="button" onClick={addProcRow} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  <Plus className="w-3 h-3" /> Agregar
+                </button>
+              </div>
+              <div className="space-y-2">
+                {formProcedures.map((row, idx) => (
+                  <div key={idx} className="flex gap-2 items-start">
+                    <select
+                      className="input flex-1 min-w-0"
+                      value={row.procedure_id}
+                      onChange={e => pickProcedure(idx, e.target.value)}
+                    >
+                      <option value="">— Procedimiento —</option>
+                      {procedures.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      className="input w-14 text-center"
+                      type="number" min="1" step="1"
+                      value={row.quantity}
+                      onChange={e => updateProcRow(idx, { quantity: e.target.value })}
+                      title="Cantidad"
+                    />
+                    <input
+                      className="input w-24"
+                      type="number" min="0" step="any"
+                      value={row.unit_price}
+                      onChange={e => updateProcRow(idx, { unit_price: e.target.value })}
+                      placeholder="Precio"
+                      title="Precio unitario"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeProcRow(idx)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0"
+                      title="Quitar"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Al cerrar la cita se generará una factura preliminar con estos procedimientos.
+              </p>
+            </div>
+            <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.reason')}</label>
               <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder={t('appointments.reasonPlaceholder')} />
             </div>
@@ -520,6 +633,29 @@ export default function Appointments() {
           onConfirm={handleDelete}
           onCancel={() => setDeleteId(null)}
         />
+      )}
+
+      {draftInvoiceToast != null && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-sm">
+          <Receipt className="w-5 h-5 shrink-0" />
+          <div className="flex-1 text-sm">
+            <p className="font-medium leading-tight">Factura preliminar generada</p>
+            <p className="text-xs text-green-100 leading-tight">Lista para revisar antes de cobrar.</p>
+          </div>
+          <button
+            onClick={() => navigate(`${withSlug('/finanzas')}?invoice=${draftInvoiceToast}`)}
+            className="bg-white/15 hover:bg-white/25 text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap"
+          >
+            Ver factura
+          </button>
+          <button
+            onClick={() => setDraftInvoiceToast(null)}
+            className="text-white/70 hover:text-white shrink-0"
+            aria-label="Cerrar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );

@@ -37,6 +37,58 @@ const SELECT_WITH_RELATIONS = `
   JOIN doctors d ON a.doctor_id = d.id
 `;
 
+// Procedimientos planificados de una cita, con nombre y precio del catálogo.
+async function loadAppointmentProcedures(appointmentId: number) {
+  const { rows } = await pool.query(
+    `SELECT ap.id, ap.procedure_id, ap.quantity, ap.unit_price, ap.position,
+       p.code AS procedure_code, p.name AS procedure_name, p.default_price
+     FROM appointment_procedures ap
+     JOIN procedures p ON p.id = ap.procedure_id
+     WHERE ap.appointment_id = $1
+     ORDER BY ap.position ASC, ap.id ASC`,
+    [appointmentId]
+  );
+  return rows;
+}
+
+// Reemplaza el set de procedimientos de una cita dentro de la transacción.
+// Valida que cada procedimiento pertenezca a la misma clínica.
+async function replaceAppointmentProcedures(
+  client: any,
+  appointmentId: number,
+  clinicId: number,
+  procedures: Array<{ procedure_id: number; quantity?: number; unit_price?: number | null }>
+) {
+  await client.query('DELETE FROM appointment_procedures WHERE appointment_id = $1', [appointmentId]);
+  if (!procedures || procedures.length === 0) return;
+  const ids = procedures.map(p => Number(p.procedure_id)).filter(n => Number.isFinite(n));
+  if (ids.length !== procedures.length) {
+    throw new Error('Procedimiento inválido');
+  }
+  const check = await client.query(
+    `SELECT id, default_price FROM procedures WHERE id = ANY($1::int[]) AND clinic_id = $2`,
+    [ids, clinicId]
+  );
+  if (check.rows.length !== new Set(ids).size) {
+    throw new Error('Algún procedimiento no pertenece a la clínica');
+  }
+  const defaultPriceById = new Map<number, number>(
+    check.rows.map((r: any) => [Number(r.id), Number(r.default_price) || 0])
+  );
+  for (let i = 0; i < procedures.length; i++) {
+    const p = procedures[i];
+    const qty = Number(p.quantity) > 0 ? Number(p.quantity) : 1;
+    const price = p.unit_price !== undefined && p.unit_price !== null
+      ? Number(p.unit_price)
+      : (defaultPriceById.get(Number(p.procedure_id)) ?? 0);
+    await client.query(
+      `INSERT INTO appointment_procedures (appointment_id, procedure_id, quantity, unit_price, position)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [appointmentId, p.procedure_id, qty, price, i]
+    );
+  }
+}
+
 // Endpoint público (QR del paciente): SIN autenticación, busca por código global.
 // El código es único en todo el sistema (UNIQUE INDEX) así que no necesita clínica.
 router.get('/public/:code', async (req: Request, res: Response) => {
@@ -49,18 +101,40 @@ router.get('/public/:code', async (req: Request, res: Response) => {
 router.use(requireClinic, requireAuth, requireClinicMember);
 
 router.get('/', async (req: Request, res: Response) => {
-  const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.clinic_id = $1 ORDER BY a.date DESC, a.time DESC`, [req.clinic!.id]);
-  res.json(rows);
+  const { rows } = await pool.query(
+    `${SELECT_WITH_RELATIONS} WHERE a.clinic_id = $1 ORDER BY a.date DESC, a.time DESC`,
+    [req.clinic!.id]
+  );
+  // Cargar procedimientos planificados de todas las citas de un golpe
+  const ids = rows.map(r => r.id);
+  if (ids.length === 0) return res.json(rows);
+  const { rows: procs } = await pool.query(
+    `SELECT ap.appointment_id, ap.id, ap.procedure_id, ap.quantity, ap.unit_price, ap.position,
+       p.code AS procedure_code, p.name AS procedure_name, p.default_price
+     FROM appointment_procedures ap
+     JOIN procedures p ON p.id = ap.procedure_id
+     WHERE ap.appointment_id = ANY($1::int[])
+     ORDER BY ap.position ASC, ap.id ASC`,
+    [ids]
+  );
+  const byAppt = new Map<number, any[]>();
+  for (const p of procs) {
+    const arr = byAppt.get(p.appointment_id) || [];
+    arr.push(p);
+    byAppt.set(p.appointment_id, arr);
+  }
+  res.json(rows.map(r => ({ ...r, procedures: byAppt.get(r.id) || [] })));
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
   const { rows } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1 AND a.clinic_id = $2`, [req.params.id, req.clinic!.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
-  res.json(rows[0]);
+  const procedures = await loadAppointmentProcedures(rows[0].id);
+  res.json({ ...rows[0], procedures });
 });
 
 router.post('/', async (req: Request, res: Response) => {
-  const { user_id, doctor_id, date, time, reason, notes } = req.body;
+  const { user_id, doctor_id, date, time, reason, notes, procedures } = req.body;
   if (!user_id || !doctor_id || !date || !time) {
     return res.status(400).json({ error: 'Paciente, médico, fecha y hora son requeridos' });
   }
@@ -73,16 +147,28 @@ router.post('/', async (req: Request, res: Response) => {
   );
   if (conflict.rows[0]) return res.status(409).json({ error: 'El médico ya tiene una cita en ese horario' });
 
-  const { rows } = await pool.query(
-    'INSERT INTO appointments (user_id, doctor_id, date, time, reason, notes, public_code, clinic_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-    [user_id, doctor_id, date, time, reason || null, notes || null, generateAppointmentCode(), req.clinic!.id]
-  );
-  const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
-  res.status(201).json(result[0]);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'INSERT INTO appointments (user_id, doctor_id, date, time, reason, notes, public_code, clinic_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
+      [user_id, doctor_id, date, time, reason || null, notes || null, generateAppointmentCode(), req.clinic!.id]
+    );
+    await replaceAppointmentProcedures(client, rows[0].id, req.clinic!.id, Array.isArray(procedures) ? procedures : []);
+    await client.query('COMMIT');
+    const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
+    const procs = await loadAppointmentProcedures(rows[0].id);
+    res.status(201).json({ ...result[0], procedures: procs });
+  } catch (e: any) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: e.message || 'No se pudo crear la cita' });
+  } finally {
+    client.release();
+  }
 });
 
 router.put('/:id', async (req: Request, res: Response) => {
-  const { user_id, doctor_id, date, time, reason, status, notes } = req.body;
+  const { user_id, doctor_id, date, time, reason, status, notes, procedures } = req.body;
   const current = await pool.query('SELECT TO_CHAR(date, $2) AS date FROM appointments WHERE id=$1 AND clinic_id=$3',
     [req.params.id, 'YYYY-MM-DD', req.clinic!.id]);
   if (current.rows[0] && date !== current.rows[0].date && isPastDate(date)) {
@@ -96,14 +182,33 @@ router.put('/:id', async (req: Request, res: Response) => {
 
   const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1 AND a.clinic_id = $2`, [req.params.id, req.clinic!.id]);
   req.auditBefore = before.rows[0] || null;
-  const { rows } = await pool.query(
-    `UPDATE appointments SET user_id=$1, doctor_id=$2, date=$3, time=$4, reason=$5, status=$6, notes=$7
-     WHERE id=$8 AND clinic_id=$9 RETURNING id`,
-    [user_id, doctor_id, date, time, reason || null, status || 'scheduled', notes || null, req.params.id, req.clinic!.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
-  const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
-  res.json(result[0]);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `UPDATE appointments SET user_id=$1, doctor_id=$2, date=$3, time=$4, reason=$5, status=$6, notes=$7
+       WHERE id=$8 AND clinic_id=$9 RETURNING id`,
+      [user_id, doctor_id, date, time, reason || null, status || 'scheduled', notes || null, req.params.id, req.clinic!.id]
+    );
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Cita no encontrada' });
+    }
+    // Solo reemplazar procedimientos si vienen en el body (omitir = no tocar)
+    if (Array.isArray(procedures)) {
+      await replaceAppointmentProcedures(client, rows[0].id, req.clinic!.id, procedures);
+    }
+    await client.query('COMMIT');
+    const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
+    const procs = await loadAppointmentProcedures(rows[0].id);
+    res.json({ ...result[0], procedures: procs });
+  } catch (e: any) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: e.message || 'No se pudo actualizar la cita' });
+  } finally {
+    client.release();
+  }
 });
 
 router.patch('/:id/status', async (req: Request, res: Response) => {
@@ -113,13 +218,92 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
   }
   const before = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1 AND a.clinic_id = $2`, [req.params.id, req.clinic!.id]);
   req.auditBefore = before.rows[0] || null;
-  const { rows } = await pool.query(
-    'UPDATE appointments SET status=$1 WHERE id=$2 AND clinic_id=$3 RETURNING id',
-    [status, req.params.id, req.clinic!.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Cita no encontrada' });
-  const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [rows[0].id]);
-  res.json(result[0]);
+
+  const client = await pool.connect();
+  let draftInvoiceId: number | null = null;
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'UPDATE appointments SET status=$1 WHERE id=$2 AND clinic_id=$3 RETURNING id, user_id, doctor_id',
+      [status, req.params.id, req.clinic!.id]
+    );
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Cita no encontrada' });
+    }
+
+    // Al cerrar la cita: si tiene procedimientos planeados y aún no hay
+    // factura ligada, crear una factura preliminar (draft) lista para revisar.
+    if (status === 'completed') {
+      const existing = await client.query(
+        'SELECT id FROM invoices WHERE appointment_id = $1 AND clinic_id = $2 LIMIT 1',
+        [rows[0].id, req.clinic!.id]
+      );
+      if (!existing.rows[0]) {
+        const { rows: planned } = await client.query(
+          `SELECT ap.procedure_id, ap.quantity, ap.unit_price, ap.position,
+             p.name AS procedure_name
+           FROM appointment_procedures ap
+           JOIN procedures p ON p.id = ap.procedure_id
+           WHERE ap.appointment_id = $1
+           ORDER BY ap.position ASC, ap.id ASC`,
+          [rows[0].id]
+        );
+        if (planned.length > 0) {
+          const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+          let subtotal = 0;
+          for (const it of planned) subtotal += (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+          subtotal = round2(subtotal);
+          const taxRate = Number(
+            (await client.query('SELECT tax_rate FROM clinics WHERE id = $1', [req.clinic!.id]))
+              .rows[0]?.tax_rate || 0
+          );
+          const tax = round2(subtotal * (taxRate / 100));
+          const total = round2(subtotal + tax);
+          const today = new Date().toISOString().slice(0, 10);
+
+          const c = await client.query('SELECT next_invoice_number FROM clinics WHERE id = $1 FOR UPDATE', [req.clinic!.id]);
+          const number = c.rows[0].next_invoice_number;
+          await client.query('UPDATE clinics SET next_invoice_number = next_invoice_number + 1 WHERE id = $1', [req.clinic!.id]);
+
+          const inv = await client.query(
+            `INSERT INTO invoices
+               (clinic_id, number, user_id, doctor_id, appointment_id, type, date,
+                subtotal, tax_rate, tax, discount, total, status,
+                created_by_email, created_by_name)
+             VALUES ($1, $2, $3, $4, $5, 'appointment', $6, $7, $8, $9, 0, $10, 'draft', $11, $12)
+             RETURNING id`,
+            [req.clinic!.id, number, rows[0].user_id, rows[0].doctor_id, rows[0].id, today,
+             subtotal, taxRate, tax, total, req.account!.email, req.account!.name]
+          );
+          draftInvoiceId = inv.rows[0].id;
+
+          for (let i = 0; i < planned.length; i++) {
+            const it = planned[i];
+            const qty = round2(Number(it.quantity) || 0);
+            const price = round2(Number(it.unit_price) || 0);
+            const lineTotal = round2(qty * price);
+            await client.query(
+              `INSERT INTO invoice_items (invoice_id, procedure_id, description, quantity, unit_price, total, position)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [draftInvoiceId, it.procedure_id, it.procedure_name, qty, price, lineTotal, i]
+            );
+          }
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+  } catch (e: any) {
+    await client.query('ROLLBACK');
+    return res.status(500).json({ error: e.message || 'No se pudo actualizar el estado' });
+  } finally {
+    client.release();
+  }
+
+  const { rows: result } = await pool.query(`${SELECT_WITH_RELATIONS} WHERE a.id = $1`, [req.params.id]);
+  const procs = await loadAppointmentProcedures(Number(req.params.id));
+  res.json({ ...result[0], procedures: procs, draft_invoice_id: draftInvoiceId });
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {
