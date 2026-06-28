@@ -424,6 +424,10 @@ export const api = {
       date?: string; tax_rate?: number; discount?: number; notes?: string;
       items: { procedure_id?: number | null; description: string; quantity: number; unit_price: number }[];
     }) => request<InvoiceDetail>('/invoices', { method:'POST', body:JSON.stringify(d) }),
+    update: (id: number, d: {
+      tax_rate?: number; discount?: number; notes?: string;
+      items: { procedure_id?: number | null; description: string; quantity: number; unit_price: number }[];
+    }) => request<InvoiceDetail>(`/invoices/${id}`, { method:'PUT', body:JSON.stringify(d) }),
     uploadPdf: async (id: number, blob: Blob): Promise<{ ok: true }> => {
       const form = new FormData();
       form.append('file', blob, `factura-${id}.pdf`);

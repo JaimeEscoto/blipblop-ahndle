@@ -203,7 +203,67 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// Cambiar estado (típicamente para cancelar)
+// Editar una factura. Solo permitido en estado 'draft' (borrador preliminar).
+// Reemplaza items, recalcula totales y permite ajustar tax_rate, discount y notas.
+// No toca user_id, doctor_id, appointment_id, type, number ni date original.
+router.put('/:id', async (req: Request, res: Response) => {
+  const { tax_rate, discount, notes, items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'La factura debe tener al menos un ítem' });
+  }
+
+  const current = await pool.query(
+    'SELECT status FROM invoices WHERE id = $1 AND clinic_id = $2',
+    [req.params.id, req.clinic!.id]
+  );
+  if (!current.rows[0]) return res.status(404).json({ error: 'Factura no encontrada' });
+  if (current.rows[0].status !== 'draft') {
+    return res.status(409).json({ error: 'Solo se puede editar una factura en borrador' });
+  }
+
+  const useTaxRate = tax_rate !== undefined && tax_rate !== null ? Number(tax_rate) : 0;
+  const useDiscount = round2(Number(discount) || 0);
+  const totals = computeTotals(items, useTaxRate, useDiscount);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE invoices SET
+         subtotal = $1, tax_rate = $2, tax = $3, discount = $4, total = $5, notes = $6
+       WHERE id = $7 AND clinic_id = $8`,
+      [totals.subtotal, useTaxRate, totals.tax, totals.discount, totals.total,
+       notes ?? null, req.params.id, req.clinic!.id]
+    );
+    await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [req.params.id]);
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const qty = round2(Number(it.quantity) || 0);
+      const price = round2(Number(it.unit_price) || 0);
+      const total = round2(qty * price);
+      const desc = (it.description || '').trim();
+      if (!desc) throw new Error('Cada ítem necesita una descripción');
+      await client.query(
+        `INSERT INTO invoice_items (invoice_id, procedure_id, description, quantity, unit_price, total, position)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [req.params.id, it.procedure_id || null, desc, qty, price, total, i]
+      );
+    }
+    await client.query('COMMIT');
+
+    const r = await pool.query(`${SELECT_INVOICE} WHERE i.id = $1`, [req.params.id]);
+    const [its, pays] = await Promise.all([loadItems(Number(req.params.id)), loadPayments(Number(req.params.id))]);
+    res.json({ ...r.rows[0], items: its, payments: pays });
+  } catch (e: any) {
+    await client.query('ROLLBACK');
+    console.error('Error editando factura:', e);
+    res.status(500).json({ error: e.message || 'No se pudo editar la factura' });
+  } finally {
+    client.release();
+  }
+});
+
+// Cambiar estado (típicamente para cancelar o emitir desde borrador)
 router.patch('/:id/status', async (req: Request, res: Response) => {
   const { status } = req.body;
   if (!['draft', 'issued', 'partial', 'paid', 'cancelled'].includes(status)) {

@@ -581,10 +581,13 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
   invoice: InvoiceDetail; currency: string; onClose: () => void; onChange: () => Promise<void>;
 }) {
   const [showPayment, setShowPayment] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [issuing, setIssuing] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeletePayment, setConfirmDeletePayment] = useState<number | null>(null);
 
+  const isDraft = invoice.status === 'draft';
   const balance = Number(invoice.total) - Number(invoice.total_paid);
   const status = STATUS_LABEL[invoice.status];
 
@@ -599,6 +602,20 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
   const deletePayment = async (pid: number) => {
     await api.invoices.deletePayment(invoice.id, pid);
     setConfirmDeletePayment(null); await onChange();
+  };
+
+  // Emite la factura: draft → issued. Sube el PDF actualizado al storage.
+  const issue = async () => {
+    setIssuing(true);
+    try {
+      await api.invoices.setStatus(invoice.id, 'issued');
+      // Regeneramos el PDF con el estado ya emitido (best-effort)
+      try {
+        const fresh = await api.invoices.get(invoice.id);
+        await uploadInvoicePdf(fresh, currency);
+      } catch { /* no bloquea la emisión si falla el upload */ }
+      await onChange();
+    } finally { setIssuing(false); }
   };
 
   const print = async () => {
@@ -678,11 +695,17 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
           )}
         </div>
 
+        {isDraft && (
+          <p className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            Esta factura está en borrador. Edita items, IVA, descuento o notas, y cuando esté lista, emítela para empezar a cobrar.
+          </p>
+        )}
+
         {/* Abonos */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-700">Abonos</h3>
-            {invoice.status !== 'cancelled' && balance > 0 && (
+            {!isDraft && invoice.status !== 'cancelled' && balance > 0 && (
               <button onClick={() => setShowPayment(true)} className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline">
                 <Plus className="w-3.5 h-3.5" /> Registrar abono
               </button>
@@ -721,7 +744,17 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
 
         {/* Acciones */}
         <div className="flex gap-2 pt-2 border-t border-gray-100">
-          {invoice.status !== 'cancelled' && (
+          {isDraft && (
+            <>
+              <button onClick={() => setEditing(true)} className="flex-1 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100">
+                Editar
+              </button>
+              <button onClick={issue} disabled={issuing} className="flex-1 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-60">
+                {issuing ? 'Emitiendo…' : 'Emitir factura'}
+              </button>
+            </>
+          )}
+          {!isDraft && invoice.status !== 'cancelled' && (
             <button onClick={() => setConfirmCancel(true)} className="flex-1 py-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100">
               Anular factura
             </button>
@@ -737,9 +770,163 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
           onClose={() => setShowPayment(false)}
           onAdded={async () => { setShowPayment(false); await onChange(); }} />
       )}
+      {editing && (
+        <EditDraftInvoiceModal invoice={invoice} currency={currency}
+          onClose={() => setEditing(false)}
+          onSaved={async () => { setEditing(false); await onChange(); }} />
+      )}
       {confirmCancel && <ConfirmDialog message="¿Anular esta factura? Quedará marcada como anulada (no se podrán registrar más abonos)." onConfirm={cancel} onCancel={() => setConfirmCancel(false)} />}
       {confirmDelete && <ConfirmDialog message="¿Eliminar esta factura? Se borrarán también todos sus abonos. No se puede deshacer." onConfirm={remove} onCancel={() => setConfirmDelete(false)} />}
       {confirmDeletePayment !== null && <ConfirmDialog message="¿Eliminar este abono?" onConfirm={() => deletePayment(confirmDeletePayment)} onCancel={() => setConfirmDeletePayment(null)} />}
+    </Modal>
+  );
+}
+
+// ── Modal: editar factura en borrador ───────────────────────────────────
+// Solo cambia items, IVA, descuento y notas. Paciente, doctor, cita y número
+// quedan fijos (vienen del momento en que se cerró la cita).
+function EditDraftInvoiceModal({ invoice, currency, onClose, onSaved }: {
+  invoice: InvoiceDetail; currency: string;
+  onClose: () => void; onSaved: () => void;
+}) {
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [items, setItems] = useState<InvoiceItemDraft[]>(
+    invoice.items.length > 0
+      ? invoice.items.map(it => ({
+          procedure_id: it.procedure_id,
+          description: it.description,
+          quantity: String(it.quantity),
+          unit_price: String(it.unit_price),
+        }))
+      : [{ procedure_id: null, description: '', quantity: '1', unit_price: '0' }]
+  );
+  const [taxRate, setTaxRate] = useState(String(invoice.tax_rate));
+  const [discount, setDiscount] = useState(String(invoice.discount));
+  const [notes, setNotes] = useState(invoice.notes || '');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { api.procedures.list().then(setProcedures).catch(() => {}); }, []);
+
+  const setItem = (i: number, patch: Partial<InvoiceItemDraft>) =>
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it));
+  const addItem = () => setItems(prev => [...prev, { procedure_id: null, description: '', quantity: '1', unit_price: '0' }]);
+  const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
+  const pickProcedure = (i: number, procId: string) => {
+    if (!procId) { setItem(i, { procedure_id: null }); return; }
+    const p = procedures.find(x => x.id === Number(procId));
+    if (!p) return;
+    setItem(i, { procedure_id: p.id, description: p.name, unit_price: String(p.default_price) });
+  };
+
+  const subtotal = items.reduce((acc, it) => acc + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
+  const dsc = Number(discount) || 0;
+  const taxBase = Math.max(0, subtotal - dsc);
+  const tax = taxBase * ((Number(taxRate) || 0) / 100);
+  const total = taxBase + tax;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError('');
+    if (items.length === 0) { setError('Agrega al menos un ítem'); return; }
+    for (const it of items) {
+      if (!it.description.trim()) { setError('Cada ítem necesita una descripción'); return; }
+      if (Number(it.quantity) <= 0) { setError('La cantidad debe ser mayor que cero'); return; }
+    }
+    setLoading(true);
+    try {
+      await api.invoices.update(invoice.id, {
+        tax_rate: Number(taxRate) || 0,
+        discount: dsc,
+        notes: notes.trim() || undefined,
+        items: items.map(it => ({
+          procedure_id: it.procedure_id, description: it.description.trim(),
+          quantity: Number(it.quantity), unit_price: Number(it.unit_price),
+        })),
+      });
+      onSaved();
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <Modal title={`Editar factura #${String(invoice.number).padStart(4, '0')}`} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-3">
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+
+        <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
+          <span className="font-semibold text-gray-800">{invoice.user_name}</span>
+          {invoice.doctor_name && <> · Dr. {invoice.doctor_name}</>}
+          {invoice.appointment_id && <> · Cita #{invoice.appointment_id}</>}
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">Items</label>
+          <div className="space-y-2">
+            {items.map((it, i) => (
+              <div key={i} className="grid grid-cols-12 gap-2 items-start">
+                <div className="col-span-5">
+                  <select className="input text-xs"
+                    value={it.procedure_id || ''}
+                    onChange={e => pickProcedure(i, e.target.value)}>
+                    <option value="">— Manual / insumo —</option>
+                    {procedures.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <input className="input mt-1 text-xs" placeholder="Descripción"
+                    value={it.description} onChange={e => setItem(i, { description: e.target.value })} />
+                </div>
+                <div className="col-span-2">
+                  <input className="input text-xs text-right" type="number" min="0" step="0.5"
+                    value={it.quantity} onChange={e => setItem(i, { quantity: e.target.value })} placeholder="Cant" />
+                </div>
+                <div className="col-span-3">
+                  <input className="input text-xs text-right" type="number" min="0" step="0.01"
+                    value={it.unit_price} onChange={e => setItem(i, { unit_price: e.target.value })} placeholder="Precio" />
+                </div>
+                <div className="col-span-1 text-right text-xs text-gray-600 pt-2">
+                  {((Number(it.quantity) || 0) * (Number(it.unit_price) || 0)).toFixed(2)}
+                </div>
+                <button type="button" onClick={() => removeItem(i)} disabled={items.length === 1}
+                  className="col-span-1 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-30">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={addItem} className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:underline">
+            <Plus className="w-3 h-3" /> Agregar ítem
+          </button>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-sm">
+          <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>{formatMoney(subtotal, currency)}</span></div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-600 flex-1">Descuento</label>
+            <input type="number" min="0" step="0.01" className="input w-28 text-xs text-right"
+              value={discount} onChange={e => setDiscount(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-600 flex-1">IVA (%)</label>
+            <input type="number" min="0" max="100" step="0.01" className="input w-28 text-xs text-right"
+              value={taxRate} onChange={e => setTaxRate(e.target.value)} />
+            <span className="text-xs text-gray-500 w-20 text-right">{formatMoney(tax, currency)}</span>
+          </div>
+          <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
+            <span>Total</span><span>{formatMoney(total, currency)}</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">Notas</label>
+          <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+          <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+            {loading ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }
