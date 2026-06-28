@@ -133,6 +133,7 @@ export interface Account {
   clinic_id: number | null;
   language: 'es' | 'en';
   is_shadow?: boolean;
+  is_demo_visitor?: boolean;
 }
 export interface Clinic {
   id: number; slug: string; name: string;
@@ -304,6 +305,12 @@ export const api = {
     checkSlug: (slug: string) => publicGet<{ available: boolean; reason: 'taken' | 'invalid' | null }>(`/clinics/check-slug/${encodeURIComponent(slug)}`),
     create: (credential: string, slug: string, name: string, accepted_terms_version_id: number) =>
       publicRequest<{ token: string; account: Account; clinic: Clinic }>('/clinics', { credential, slug, name, accepted_terms_version_id }),
+  },
+  demo: {
+    enter: (slug: string, token: string, visitor_name: string) =>
+      publicRequest<{ token: string; account: Account; clinic: Clinic }>(`/demo/${encodeURIComponent(slug)}/enter`, { token, visitor_name }),
+    reset: (slug: string, token: string) =>
+      publicRequest<{ ok: true }>(`/demo/${encodeURIComponent(slug)}/reset`, { token }),
   },
   terms: {
     current: () => publicGet<{ id: number; version: string; content: string; effective_from: string }>('/terms/current'),

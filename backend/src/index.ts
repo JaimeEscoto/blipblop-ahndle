@@ -23,6 +23,7 @@ import financeRouter from './routes/finance';
 import adminRouter from './routes/admin';
 import termsRouter from './routes/terms';
 import trackingRouter from './routes/tracking';
+import demoRouter from './routes/demo';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -54,6 +55,7 @@ app.use('/api/clinics', clinicsRouter);
 app.use('/api/terms', termsRouter);
 app.use('/api/super', superRouter);
 app.use('/api/admin', adminRouter); // ahora solo desde superadmin host
+app.use('/api/demo', demoRouter);   // demo público: link especial sin sesión previa
 
 // Auth (cada ruta interna decide si necesita clínica)
 app.use('/api/auth', authRouter);

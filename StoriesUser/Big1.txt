@@ -1,2 +1,0 @@
-Es un sistema administrativo para una clinica dental. Crea un MVP, claramente separado en Backend y Frontend.
-Se hosteara en Render y Supabase.

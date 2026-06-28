@@ -494,6 +494,16 @@ export async function initDB() {
       ON appointment_procedures(appointment_id, position);
   `);
 
+  // --- Migración: clínica de demostración ---
+  // is_demo + demo_token habilitan un link público que cualquier visitante
+  // puede usar para entrar al sistema (introduciendo su nombre) y ver/usar
+  // la clínica como un sandbox compartido. demo_token es un secreto en la URL.
+  await pool.query(`
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS demo_token TEXT;
+    CREATE INDEX IF NOT EXISTS clinics_demo_token_idx ON clinics(demo_token) WHERE demo_token IS NOT NULL;
+  `);
+
   // --- Migración: tipo de factura (cita vs venta de insumos) ---
   await pool.query(`
     ALTER TABLE invoices

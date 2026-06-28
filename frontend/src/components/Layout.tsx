@@ -1,11 +1,53 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, LogOut, Shield, Settings, Wallet } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, LogOut, Shield, Settings, Wallet, FlaskConical, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { withSlug } from '../tenant';
+import { withSlug, currentSlug } from '../tenant';
 import TermsGate from './TermsGate';
+
+// Banner persistente que avisa al visitante que está en modo demo.
+// Incluye un botón para resetear el sandbox compartido.
+function DemoBanner({ visitorName }: { visitorName: string }) {
+  const [resetting, setResetting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const slug = currentSlug();
+  const token = (() => { try { return localStorage.getItem('demo_token_' + slug) || ''; } catch { return ''; } })();
+  const reset = async () => {
+    if (!slug || !token) return;
+    setResetting(true);
+    try {
+      await api.demo.reset(slug, token);
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      setResetting(false);
+    }
+  };
+  return (
+    <div className="bg-amber-500 text-white px-4 py-2 text-xs flex items-center gap-3 justify-center flex-wrap z-40 relative">
+      <FlaskConical className="w-4 h-4 shrink-0" />
+      <span className="font-medium">Modo demostración</span>
+      <span className="opacity-90">·</span>
+      <span>Hola, <strong className="font-semibold">{visitorName || 'visitante'}</strong></span>
+      <span className="opacity-90">·</span>
+      {confirming ? (
+        <span className="flex items-center gap-2">
+          <span>¿Resetear datos demo?</span>
+          <button onClick={reset} disabled={resetting} className="bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded font-semibold disabled:opacity-60">
+            {resetting ? 'Reseteando…' : 'Sí, resetear'}
+          </button>
+          <button onClick={() => setConfirming(false)} className="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded">No</button>
+        </span>
+      ) : (
+        <button onClick={() => setConfirming(true)} className="flex items-center gap-1 bg-white/15 hover:bg-white/25 px-2 py-0.5 rounded font-semibold">
+          <RotateCcw className="w-3 h-3" /> Resetear datos
+        </button>
+      )}
+    </div>
+  );
+}
 
 const baseNavItems = [
   { to: 'inicio',       label: 'menu.home',        icon: Home },
@@ -58,6 +100,8 @@ export default function Layout() {
         <img src="/icono.png" alt="" aria-hidden="true"
           className="w-[min(70vw,520px)] max-w-none opacity-[0.05]" />
       </div>
+      {/* Banner persistente para visitantes del modo demostración */}
+      {account?.is_demo_visitor && <DemoBanner visitorName={account.name || ''} />}
       {/* Header */}
       <header className="bg-blue-900 text-white shadow-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">

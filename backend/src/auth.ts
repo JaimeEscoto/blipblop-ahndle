@@ -18,6 +18,10 @@ export interface SessionAccount {
   // Sus acciones quedan en activity_log con internal=true y no se le ve
   // en las listas de usuarios/invitaciones de la clínica.
   is_shadow?: boolean;
+  // Visitante de una clínica demo: entró por link público + nombre.
+  // No tiene fila propia en accounts; las acciones se auditan con su
+  // nombre pero accountId=NULL. Sandbox compartido y reseteable.
+  is_demo_visitor?: boolean;
 }
 
 export const SUPERUSER_EMAIL = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();

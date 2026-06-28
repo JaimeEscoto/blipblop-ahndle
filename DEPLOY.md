@@ -1,5 +1,5 @@
 # Manual de Despliegue — ClínicaPro
-## Supabase (Base de datos) + Render (Backend + Frontend)
+## Neon (Base de datos) + Render (Backend + Frontend)
 
 ---
 
@@ -10,17 +10,19 @@ Tu código (GitHub)
        │
        ├──► Render  ──► Backend Node.js  (clinica-backend.onrender.com)
        │                    │
-       │               Supabase (PostgreSQL)
+       │                  Neon (PostgreSQL)
        │
        └──► Render  ──► Frontend React   (clinica-frontend.onrender.com)
 ```
+
+> **Por qué Neon:** su plan gratuito **no caduca** (a diferencia de las bases PostgreSQL gratuitas de Render, que se suspenden a los 30 días). El backend crea las tablas automáticamente al arrancar, así que no hay que ejecutar SQL a mano.
 
 ---
 
 ## Requisitos previos
 
 - Cuenta en [github.com](https://github.com)
-- Cuenta en [supabase.com](https://supabase.com)
+- Cuenta en [neon.tech](https://neon.tech) — registro con GitHub, sin tarjeta
 - Cuenta en [render.com](https://render.com) — registro con GitHub, sin tarjeta
 
 ---
@@ -56,70 +58,35 @@ Verifica en GitHub que ves las carpetas `backend/` y `frontend/` en el repositor
 
 ---
 
-## PASO 2 — Configurar Supabase (Base de datos)
+## PASO 2 — Configurar Neon (Base de datos)
 
 ### 2.1 Crear el proyecto
 
-1. Ve a [app.supabase.com](https://app.supabase.com) → **New project**
+1. Ve a [console.neon.tech](https://console.neon.tech) → **New Project**
 2. Completa:
-   - **Name:** `clinica-pro`
-   - **Database Password:** elige una contraseña fuerte y **guárdala**
-   - **Region:** `South America (São Paulo)` para menor latencia
-3. Clic en **Create new project** — espera 1-2 minutos
+   - **Project name:** `clinica-pro`
+   - **Postgres version:** la más reciente (por defecto)
+   - **Region:** `AWS US East (N. Virginia)` u otra cercana a tus usuarios
+3. Clic en **Create project**
 
-### 2.2 Crear las tablas
+### 2.2 Obtener la cadena de conexión
 
-1. En el panel → **SQL Editor** (ícono de terminal en la barra lateral)
-2. Clic en **New query**
-3. Pega el siguiente SQL y clic en **Run**:
-
-```sql
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  phone TEXT,
-  document_id TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS doctors (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  specialty TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  phone TEXT,
-  license_number TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS appointments (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  time TIME NOT NULL,
-  reason TEXT,
-  status TEXT NOT NULL DEFAULT 'scheduled'
-    CHECK(status IN ('scheduled','completed','cancelled')),
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-Debes ver **"Success. No rows returned"** en verde.
-
-### 2.3 Obtener la cadena de conexión
-
-1. Panel de Supabase → **Project Settings** (engranaje) → **Database**
-2. Baja hasta **Connection string** → pestaña **URI**
-3. Copia el string. Luce así:
+1. En el panel de Neon → **Connect** (o **Connection Details** en el dashboard del proyecto)
+2. Selecciona la rama **production** y la base **neondb**
+3. Copia la **connection string**. Luce así:
    ```
-   postgresql://postgres:[PASSWORD]@db.xxxxxxxxxx.supabase.co:5432/postgres
+   postgresql://neondb_owner:XXXXXXXX@ep-nombre-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require
    ```
-4. Reemplaza `[PASSWORD]` con la contraseña que definiste en el paso 2.1
 
 > **Guarda este string como `DATABASE_URL`** — lo usarás en el paso 3.
+
+### 2.3 Las tablas se crean solas
+
+**No necesitas ejecutar SQL manualmente.** Al arrancar, el backend ejecuta `initDB()` (ver `backend/src/database.ts`), que crea de forma idempotente las 10 tablas del sistema y aplica las migraciones:
+
+`users`, `doctors`, `appointments`, `medical_info`, `clinical_records`, `inventory`, `reminders`, `accounts`, `invitations`, `activity_log`.
+
+También registra automáticamente al **superusuario** definido en `SUPERUSER_EMAIL` (paso 3.2).
 
 ---
 
@@ -149,9 +116,12 @@ En la sección **Environment Variables** (antes de crear el servicio):
 
 | Key | Value |
 |-----|-------|
-| `DATABASE_URL` | El string de conexión de Supabase del paso 2.3 |
+| `DATABASE_URL` | El string de conexión de Neon del paso 2.2 |
 | `NODE_ENV` | `production` |
 | `FRONTEND_URL` | (déjalo vacío por ahora — lo actualizas en el paso 4.3) |
+| `GOOGLE_CLIENT_ID` | Tu Client ID de Google OAuth (`xxxx.apps.googleusercontent.com`) |
+| `JWT_SECRET` | Una clave larga y secreta para firmar sesiones |
+| `SUPERUSER_EMAIL` | El email del administrador (acceso total, sin invitación) |
 
 5. Clic en **Create Web Service**
 
@@ -224,7 +194,7 @@ https://clinica-frontend.onrender.com
 2. Ve a **Médicos** → crea un médico de prueba
 3. Ve a **Pacientes** → crea un paciente de prueba
 4. Ve a **Citas** → agenda una cita
-5. En Supabase → **Table Editor** → verifica que los datos aparecen en las tablas
+5. En Neon → **Tables** (en el panel del proyecto) → verifica que los datos aparecen en las tablas
 
 ---
 
@@ -240,13 +210,35 @@ Render detecta el push y redespliega frontend y backend automáticamente.
 
 ---
 
+## Migrar datos a una nueva base PostgreSQL
+
+Como la app usa PostgreSQL estándar (driver `pg`) conectado por una sola variable `DATABASE_URL`, cambiar de proveedor es solo copiar los datos y actualizar esa URL.
+
+**Con `pg_dump` / `psql`** (si los tienes instalados):
+
+```bash
+# 1. Exportar la base actual (usa la connection string EXTERNA si es de Render)
+pg_dump "URL_VIEJA" > respaldo.sql
+
+# 2. Importar a la nueva base (Neon)
+psql "URL_NUEVA_DE_NEON" < respaldo.sql
+```
+
+Luego actualiza `DATABASE_URL` en Render → **Environment** con la nueva URL y guarda (redespliega solo).
+
+> **Nota Render:** la base PostgreSQL de Render tiene dos URLs. La **Internal** (`@dpg-xxxx-a/...`, sin dominio) solo funciona dentro de Render; para copiar desde tu máquina usa la **External** (`@dpg-xxxx-a.oregon-postgres.render.com/...`).
+
+---
+
 ## Límites del plan gratuito
 
-| Servicio | Límite gratuito | Se duerme |
-|----------|----------------|-----------|
-| **Supabase** | 500 MB DB, 2 GB transferencia/mes | No |
-| **Render Web Service** | 750 hrs/mes, 512 MB RAM | **Sí** (15 min sin tráfico) |
-| **Render Static Site** | Bandwidth ilimitado | No |
+| Servicio | Límite gratuito | Caduca | Se duerme |
+|----------|----------------|--------|-----------|
+| **Neon** | 0.5 GB almacenamiento | **No** (se pausa tras ~5 min de inactividad y reanuda solo) | No |
+| **Render Web Service** | 750 hrs/mes, 512 MB RAM | No | **Sí** (15 min sin tráfico) |
+| **Render Static Site** | Bandwidth ilimitado | No | No |
+
+> ⚠️ **Evita la base PostgreSQL gratuita de Render:** se suspende a los 30 días. Por eso este proyecto usa Neon.
 
 ---
 
@@ -256,18 +248,22 @@ Render detecta el push y redespliega frontend y backend automáticamente.
 → Normal en el plan gratuito. El backend se durmió por inactividad y tarda ~30 segundos en despertar. Recarga la página.
 
 ### `/api/health` devuelve error
-→ Verifica que `DATABASE_URL` está correctamente copiado en Render (sin espacios).
+→ Verifica que `DATABASE_URL` está correctamente copiado en Render (sin espacios) y que **termina en `?sslmode=require`** (Neon exige SSL).
 → Revisa los logs en Render → tu servicio → pestaña **Logs**.
 
 ### El frontend carga pero no muestra datos
 → Verifica que `VITE_API_URL` apunta exactamente a la URL del backend (sin `/` al final).
 → Verifica que `FRONTEND_URL` en el backend coincide con la URL del frontend.
 
+### No puedo iniciar sesión / "no autorizado"
+→ Verifica que `GOOGLE_CLIENT_ID`, `JWT_SECRET` y `SUPERUSER_EMAIL` están configurados en Render.
+→ El email con el que inicias sesión debe ser el `SUPERUSER_EMAIL`, o tener una invitación aceptada.
+
 ### Error 409 al crear registros
 → Estás intentando registrar un email que ya existe. Usa un email diferente.
 
 ### "relation does not exist" en los logs
-→ Repite el paso 2.2: ejecuta el SQL en el SQL Editor de Supabase.
+→ El backend no alcanzó a crear las tablas. Reinicia el servicio en Render (**Manual Deploy → Clear build cache & deploy**) para que `initDB()` corra de nuevo.
 
 ### Render muestra "Build failed"
 → Verifica que **Root Directory** está configurado como `backend` para el Web Service y `frontend` para el Static Site.

@@ -18,6 +18,7 @@ import Landing from './pages/Landing';
 import CreateClinic from './pages/CreateClinic';
 import GlobalLogin from './pages/GlobalLogin';
 import SuperAdminPortal from './pages/SuperAdminPortal';
+import Demo from './pages/Demo';
 import InstallPrompt from './components/InstallPrompt';
 import { useAuth } from './auth/AuthContext';
 
@@ -36,6 +37,9 @@ export default function App() {
         <Route path="/crear-clinica" element={<CreateClinic />} />
         <Route path="/login" element={<GlobalLogin />} />
         <Route path="/cita/:code" element={<PublicAppointment />} />
+
+        {/* Demo público: pide nombre y entra a la clínica de demostración */}
+        <Route path="/demo/:slug" element={<Demo />} />
 
         {/* Portal Super Admin */}
         <Route path="/superadmin/*" element={<SuperAdminPortal />} />

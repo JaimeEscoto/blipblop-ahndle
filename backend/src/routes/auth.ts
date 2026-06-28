@@ -345,7 +345,7 @@ router.post('/super/google', async (req: Request, res: Response) => {
 router.get('/me', requireAuth, attachClinic, async (req: Request, res: Response) => {
   const acc = req.account!;
   let language: 'es' | 'en' = 'es';
-  if (acc.clinic_id !== null && !acc.is_shadow) {
+  if (acc.clinic_id !== null && !acc.is_shadow && !acc.is_demo_visitor) {
     const r = await pool.query('SELECT language FROM accounts WHERE id = $1 AND clinic_id = $2', [acc.id, acc.clinic_id]);
     if (r.rows[0]) language = r.rows[0].language;
   }
@@ -360,7 +360,7 @@ router.put('/language', requireAuth, async (req: Request, res: Response) => {
   if (!language) return res.status(400).json({ error: 'Idioma inválido' });
   const acc = req.account!;
   // El super admin global y las sesiones sombra no persisten idioma por clínica
-  if (acc.clinic_id !== null && !acc.is_shadow) {
+  if (acc.clinic_id !== null && !acc.is_shadow && !acc.is_demo_visitor) {
     await pool.query('UPDATE accounts SET language = $1 WHERE id = $2 AND clinic_id = $3', [language, acc.id, acc.clinic_id]);
     recordActivity({
       clinicId: acc.clinic_id,

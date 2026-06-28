@@ -240,9 +240,12 @@ export function auditLog(req: Request, res: Response, next: NextFunction) {
     const entry = buildEntry(req.method, req.originalUrl, req.body, responseBody);
     if (!entry) return;                        // listados/sondeos: no se registran
 
+    // Visitante demo no tiene fila en accounts → accountId queda NULL pero
+    // se preserva su nombre para que el dueño de la clínica pueda ver quién hizo qué.
+    const accountId = req.account.is_demo_visitor ? null : req.account.id;
     recordActivity({
       clinicId: req.account.clinic_id,
-      accountId: req.account.id,
+      accountId,
       accountEmail: req.account.email,
       accountName: req.account.name,
       action: entry.action,
