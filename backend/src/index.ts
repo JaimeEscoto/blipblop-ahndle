@@ -24,6 +24,7 @@ import adminRouter from './routes/admin';
 import termsRouter from './routes/terms';
 import trackingRouter from './routes/tracking';
 import demoRouter from './routes/demo';
+import treatmentsRouter from './routes/treatments';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -74,6 +75,7 @@ app.use('/api/consents', consentsRouter);
 app.use('/api/procedures', proceduresRouter);
 app.use('/api/invoices', invoicesRouter);
 app.use('/api/finance', financeRouter);
+app.use('/api/treatments', treatmentsRouter);
 
 initDB()
   .then(() => app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`)))

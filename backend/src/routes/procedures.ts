@@ -17,27 +17,31 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 router.post('/', async (req: Request, res: Response) => {
-  const { name, code, description, default_price, duration_minutes } = req.body;
+  const { name, code, description, default_price, duration_minutes, default_sessions } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'El nombre es requerido' });
+  const sessions = Math.max(1, Number(default_sessions) || 1);
   const { rows } = await pool.query(
-    `INSERT INTO procedures (clinic_id, name, code, description, default_price, duration_minutes)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    `INSERT INTO procedures (clinic_id, name, code, description, default_price, duration_minutes, default_sessions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
     [req.clinic!.id, name.trim(), code || null, description || null,
-     Number(default_price) || 0, duration_minutes ? Number(duration_minutes) : null]
+     Number(default_price) || 0, duration_minutes ? Number(duration_minutes) : null, sessions]
   );
   res.status(201).json(rows[0]);
 });
 
 router.put('/:id', async (req: Request, res: Response) => {
-  const { name, code, description, default_price, duration_minutes, active } = req.body;
+  const { name, code, description, default_price, duration_minutes, default_sessions, active } = req.body;
   const before = await pool.query('SELECT * FROM procedures WHERE id=$1 AND clinic_id=$2', [req.params.id, req.clinic!.id]);
   req.auditBefore = before.rows[0] || null;
+  const sessions = default_sessions === undefined ? null : Math.max(1, Number(default_sessions) || 1);
   const { rows } = await pool.query(
     `UPDATE procedures SET name=$1, code=$2, description=$3, default_price=$4, duration_minutes=$5,
-       active=COALESCE($6, active)
-     WHERE id=$7 AND clinic_id=$8 RETURNING *`,
+       default_sessions=COALESCE($6, default_sessions),
+       active=COALESCE($7, active)
+     WHERE id=$8 AND clinic_id=$9 RETURNING *`,
     [name?.trim() || null, code || null, description || null,
      Number(default_price) || 0, duration_minutes ? Number(duration_minutes) : null,
+     sessions,
      active === undefined ? null : !!active,
      req.params.id, req.clinic!.id]
   );

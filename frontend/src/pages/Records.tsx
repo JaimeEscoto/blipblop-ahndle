@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api, User, Doctor, ClinicalRecord, MedicalInfo } from '../api/client';
 import Attachments from '../components/Attachments';
 import Consents from '../components/Consents';
+import TreatmentsTab from '../components/TreatmentsTab';
 import { Paperclip, Receipt } from 'lucide-react';
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronUp, Heart, FileText, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -24,7 +25,7 @@ export default function Records() {
   const [medicalInfos, setMedicalInfos] = useState<Record<number, MedicalInfo | null>>({});
   const [modal, setModal] = useState<{ type: 'record' | 'info'; userId: number; record?: ClinicalRecord } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'history' | 'info' | 'odontogram' | 'files' | 'consents'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'info' | 'odontogram' | 'treatments' | 'files' | 'consents'>('history');
   const [openChart, setOpenChart] = useState<number | null>(null);
   const [openFiles, setOpenFiles] = useState<number | null>(null);
   const [form, setForm] = useState<any>({});
@@ -136,12 +137,13 @@ export default function Records() {
               <div className="border-t border-gray-100 px-4 pb-4">
                 {/* Tabs */}
                 <div className="flex gap-1 my-3 bg-gray-100 rounded-lg p-1 overflow-x-auto">
-                  {(['history','info','odontogram','files','consents'] as const).map(tab => (
+                  {(['history','info','odontogram','treatments','files','consents'] as const).map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
                       className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
                       {tab === 'history' ? t('records.tabHistory')
                         : tab === 'info' ? t('records.tabInfo')
                         : tab === 'odontogram' ? t('records.tabOdontogram')
+                        : tab === 'treatments' ? 'Tratamientos'
                         : tab === 'files' ? t('records.tabFiles')
                         : 'Consentimientos'}
                     </button>
@@ -247,6 +249,10 @@ export default function Records() {
                       : <p className="text-sm text-gray-400 text-center py-4">{t('records.noChart')}</p>
                     }
                   </div>
+                )}
+
+                {activeTab === 'treatments' && (
+                  <TreatmentsTab userId={u.id} doctors={doctors} currency="HNL" />
                 )}
 
                 {activeTab === 'files' && (

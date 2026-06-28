@@ -164,7 +164,29 @@ export interface Procedure {
   id: number; clinic_id: number;
   code: string | null; name: string; description: string | null;
   default_price: number; duration_minutes: number | null;
+  default_sessions: number;
   active: boolean; created_at: string;
+}
+
+export type TreatmentPlanStatus = 'active' | 'completed' | 'cancelled';
+export interface TreatmentPlanAppointment {
+  id: number; session_number: number;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  public_code: string | null;
+  date: string; time: string;
+}
+export interface TreatmentPlan {
+  id: number; clinic_id: number;
+  user_id: number; doctor_id: number; procedure_id: number;
+  total_amount: number; sessions_planned: number; per_session_amount: number;
+  status: TreatmentPlanStatus; notes: string | null; created_at: string;
+  user_name: string;
+  doctor_name: string; doctor_specialty: string;
+  procedure_name: string; procedure_code: string | null;
+  sessions_completed: number; sessions_scheduled: number; sessions_cancelled: number;
+}
+export interface TreatmentPlanDetail extends TreatmentPlan {
+  appointments: TreatmentPlanAppointment[];
 }
 export interface InvoiceItem {
   id: number; invoice_id: number;
@@ -410,6 +432,28 @@ export const api = {
     create: (d: Partial<Procedure>) => request<Procedure>('/procedures', { method:'POST', body:JSON.stringify(d) }),
     update: (id: number, d: Partial<Procedure>) => request<Procedure>(`/procedures/${id}`, { method:'PUT', body:JSON.stringify(d) }),
     delete: (id: number) => request<Procedure>(`/procedures/${id}`, { method:'DELETE' }),
+  },
+  treatments: {
+    list: (params?: { user_id?: number; status?: TreatmentPlanStatus }) => {
+      const q = new URLSearchParams();
+      if (params?.user_id) q.set('user_id', String(params.user_id));
+      if (params?.status) q.set('status', params.status);
+      const qs = q.toString();
+      return request<TreatmentPlan[]>(`/treatments${qs ? `?${qs}` : ''}`);
+    },
+    get: (id: number) => request<TreatmentPlanDetail>(`/treatments/${id}`),
+    create: (d: {
+      user_id: number; doctor_id: number; procedure_id: number;
+      total_amount: number; sessions_planned: number;
+      start_date: string; time: string; interval_weeks: number;
+      notes?: string;
+    }) => request<TreatmentPlanDetail>('/treatments', { method:'POST', body:JSON.stringify(d) }),
+    update: (id: number, d: { total_amount: number; sessions_planned: number; notes?: string }) =>
+      request<TreatmentPlanDetail>(`/treatments/${id}`, { method:'PUT', body:JSON.stringify(d) }),
+    reschedule: (id: number, sessionNumber: number, d: { date: string; time: string; cascade_following: boolean }) =>
+      request<TreatmentPlanDetail>(`/treatments/${id}/sessions/${sessionNumber}/reschedule`, { method:'PATCH', body:JSON.stringify(d) }),
+    setStatus: (id: number, status: TreatmentPlanStatus) =>
+      request<{ id: number; status: TreatmentPlanStatus }>(`/treatments/${id}/status`, { method:'PATCH', body:JSON.stringify({ status }) }),
   },
   invoices: {
     list: (params?: { user_id?: number; status?: InvoiceStatus; type?: InvoiceType; from?: string; to?: string; limit?: number }) => {

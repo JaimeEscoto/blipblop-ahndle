@@ -531,6 +531,37 @@ export async function initDB() {
       END IF;
     END$$;
   `);
+
+  // --- Migración: planes de tratamiento (procedimientos multi-sesión) ---
+  // Algunos procedimientos requieren varias citas (ortodoncia, endodoncia
+  // multirradicular, blanqueamiento). El catálogo declara las sesiones por
+  // defecto y, al crear un plan para un paciente concreto, se puede ajustar
+  // total + sesiones; el sistema desglosa precio por sesión y genera N citas.
+  await pool.query(`
+    ALTER TABLE procedures ADD COLUMN IF NOT EXISTS default_sessions INTEGER NOT NULL DEFAULT 1;
+
+    CREATE TABLE IF NOT EXISTS treatment_plans (
+      id SERIAL PRIMARY KEY,
+      clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE RESTRICT,
+      procedure_id INTEGER NOT NULL REFERENCES procedures(id) ON DELETE RESTRICT,
+      total_amount NUMERIC NOT NULL,
+      sessions_planned INTEGER NOT NULL CHECK (sessions_planned >= 1),
+      per_session_amount NUMERIC NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','completed','cancelled')),
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS treatment_plans_user_idx
+      ON treatment_plans(clinic_id, user_id, status);
+
+    ALTER TABLE appointments ADD COLUMN IF NOT EXISTS treatment_plan_id
+      INTEGER REFERENCES treatment_plans(id) ON DELETE SET NULL;
+    ALTER TABLE appointments ADD COLUMN IF NOT EXISTS session_number INTEGER;
+    CREATE INDEX IF NOT EXISTS appointments_plan_idx
+      ON appointments(treatment_plan_id, session_number);
+  `);
 }
 
 export default pool;

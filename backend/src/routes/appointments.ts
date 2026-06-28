@@ -224,7 +224,8 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      'UPDATE appointments SET status=$1 WHERE id=$2 AND clinic_id=$3 RETURNING id, user_id, doctor_id',
+      `UPDATE appointments SET status=$1 WHERE id=$2 AND clinic_id=$3
+       RETURNING id, user_id, doctor_id, treatment_plan_id, session_number`,
       [status, req.params.id, req.clinic!.id]
     );
     if (!rows[0]) {
@@ -232,16 +233,43 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Cita no encontrada' });
     }
 
-    // Al cerrar la cita: si tiene procedimientos planeados y aún no hay
-    // factura ligada, crear una factura preliminar (draft) lista para revisar.
+    // Al cerrar la cita: construye los items de la factura draft.
+    // - Si la cita pertenece a un plan de tratamiento: agrega una línea
+    //   "Sesión X de N — {procedimiento}" al per_session_amount del plan.
+    // - Suma cualquier procedimiento ad-hoc en appointment_procedures
+    //   (radiografías o resinas adicionales que no son parte del plan).
     if (status === 'completed') {
       const existing = await client.query(
         'SELECT id FROM invoices WHERE appointment_id = $1 AND clinic_id = $2 LIMIT 1',
         [rows[0].id, req.clinic!.id]
       );
       if (!existing.rows[0]) {
+        const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+        const items: Array<{ procedure_id: number | null; description: string; quantity: number; unit_price: number }> = [];
+
+        // 1) Línea del plan (si aplica)
+        if (rows[0].treatment_plan_id) {
+          const planRes = await client.query(
+            `SELECT tp.per_session_amount, tp.sessions_planned, tp.procedure_id, p.name AS procedure_name
+             FROM treatment_plans tp
+             JOIN procedures p ON p.id = tp.procedure_id
+             WHERE tp.id = $1`,
+            [rows[0].treatment_plan_id]
+          );
+          if (planRes.rows[0]) {
+            const plan = planRes.rows[0];
+            items.push({
+              procedure_id: plan.procedure_id,
+              description: `Sesión ${rows[0].session_number} de ${plan.sessions_planned} — ${plan.procedure_name}`,
+              quantity: 1,
+              unit_price: Number(plan.per_session_amount),
+            });
+          }
+        }
+
+        // 2) Procedimientos ad-hoc cargados a esta cita
         const { rows: planned } = await client.query(
-          `SELECT ap.procedure_id, ap.quantity, ap.unit_price, ap.position,
+          `SELECT ap.procedure_id, ap.quantity, ap.unit_price,
              p.name AS procedure_name
            FROM appointment_procedures ap
            JOIN procedures p ON p.id = ap.procedure_id
@@ -249,10 +277,18 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
            ORDER BY ap.position ASC, ap.id ASC`,
           [rows[0].id]
         );
-        if (planned.length > 0) {
-          const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+        for (const it of planned) {
+          items.push({
+            procedure_id: it.procedure_id,
+            description: it.procedure_name,
+            quantity: Number(it.quantity),
+            unit_price: Number(it.unit_price),
+          });
+        }
+
+        if (items.length > 0) {
           let subtotal = 0;
-          for (const it of planned) subtotal += (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+          for (const it of items) subtotal += it.quantity * it.unit_price;
           subtotal = round2(subtotal);
           const taxRate = Number(
             (await client.query('SELECT tax_rate FROM clinics WHERE id = $1', [req.clinic!.id]))
@@ -278,15 +314,15 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
           );
           draftInvoiceId = inv.rows[0].id;
 
-          for (let i = 0; i < planned.length; i++) {
-            const it = planned[i];
-            const qty = round2(Number(it.quantity) || 0);
-            const price = round2(Number(it.unit_price) || 0);
+          for (let i = 0; i < items.length; i++) {
+            const it = items[i];
+            const qty = round2(it.quantity);
+            const price = round2(it.unit_price);
             const lineTotal = round2(qty * price);
             await client.query(
               `INSERT INTO invoice_items (invoice_id, procedure_id, description, quantity, unit_price, total, position)
                VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-              [draftInvoiceId, it.procedure_id, it.procedure_name, qty, price, lineTotal, i]
+              [draftInvoiceId, it.procedure_id, it.description, qty, price, lineTotal, i]
             );
           }
         }

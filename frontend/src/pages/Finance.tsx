@@ -86,7 +86,7 @@ function ProceduresTab({ currency }: { currency: string }) {
   const [items, setItems] = useState<Procedure[]>([]);
   const [modal, setModal] = useState<{ procedure?: Procedure } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: '', code: '', description: '', default_price: '', duration_minutes: '' });
+  const [form, setForm] = useState({ name: '', code: '', description: '', default_price: '', duration_minutes: '', default_sessions: '1' });
   const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -96,7 +96,8 @@ function ProceduresTab({ currency }: { currency: string }) {
   const open = (p?: Procedure) => {
     setForm({
       name: p?.name || '', code: p?.code || '', description: p?.description || '',
-      default_price: p ? String(p.default_price) : '', duration_minutes: p?.duration_minutes ? String(p.duration_minutes) : ''
+      default_price: p ? String(p.default_price) : '', duration_minutes: p?.duration_minutes ? String(p.duration_minutes) : '',
+      default_sessions: p ? String(p.default_sessions || 1) : '1',
     });
     setError(''); setModal({ procedure: p });
   };
@@ -108,6 +109,7 @@ function ProceduresTab({ currency }: { currency: string }) {
         name: form.name.trim(), code: form.code.trim() || null, description: form.description.trim() || null,
         default_price: Number(form.default_price) || 0,
         duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
+        default_sessions: Math.max(1, Number(form.default_sessions) || 1),
       };
       if (modal?.procedure) await api.procedures.update(modal.procedure.id, payload);
       else await api.procedures.create(payload);
@@ -147,9 +149,14 @@ function ProceduresTab({ currency }: { currency: string }) {
           {filtered.map(p => (
             <div key={p.id} className="flex items-center justify-between p-3.5 gap-2">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-medium text-gray-900 truncate">{p.name}</p>
                   {p.code && <span className="text-xs text-gray-400">#{p.code}</span>}
+                  {(p.default_sessions || 1) > 1 && (
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                      {p.default_sessions} sesiones
+                    </span>
+                  )}
                   {!p.active && <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">Inactivo</span>}
                 </div>
                 {p.description && <p className="text-xs text-gray-500 truncate mt-0.5">{p.description}</p>}
@@ -185,7 +192,7 @@ function ProceduresTab({ currency }: { currency: string }) {
               <label className="text-xs font-medium text-gray-700 mb-1 block">Descripción</label>
               <textarea className="input resize-none" rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-1 block">Precio ({currencySymbol(currency)}) *</label>
                 <input required type="number" min="0" step="0.01" className="input" value={form.default_price} onChange={e => setForm({ ...form, default_price: e.target.value })} />
@@ -194,7 +201,14 @@ function ProceduresTab({ currency }: { currency: string }) {
                 <label className="text-xs font-medium text-gray-700 mb-1 block">Duración (min)</label>
                 <input type="number" min="0" className="input" value={form.duration_minutes} onChange={e => setForm({ ...form, duration_minutes: e.target.value })} placeholder="30" />
               </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block" title="Sesiones por defecto al crear un plan de tratamiento">Sesiones</label>
+                <input type="number" min="1" step="1" className="input" value={form.default_sessions} onChange={e => setForm({ ...form, default_sessions: e.target.value })} />
+              </div>
             </div>
+            <p className="text-[11px] text-gray-400">
+              Si el procedimiento requiere varias citas (ortodoncia, endodoncia, blanqueamiento), pon aquí las sesiones por defecto. En cada cotización podrás ajustarlas.
+            </p>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
