@@ -68,6 +68,7 @@ export interface User {
   document_type: string | null; birth_date: string | null;
   gender: string | null; address: string | null;
   city: string | null; department: string | null;
+  country: string | null;
   occupation: string | null; created_at: string;
 }
 export interface Doctor {
@@ -228,6 +229,7 @@ export interface PatientBalance {
 }
 export interface FinanceSettings {
   currency: string; tax_rate: number; next_invoice_number: number;
+  default_country: string;
 }
 export interface FinanceReport {
   from: string; to: string;
@@ -505,7 +507,7 @@ export const api = {
   },
   finance: {
     settings: () => request<FinanceSettings>('/finance/settings'),
-    updateSettings: (d: { currency: string; tax_rate: number }) => request<FinanceSettings>('/finance/settings', { method:'PUT', body:JSON.stringify(d) }),
+    updateSettings: (d: { currency: string; tax_rate: number; default_country?: string }) => request<FinanceSettings>('/finance/settings', { method:'PUT', body:JSON.stringify(d) }),
     balance: (userId: number) => request<PatientBalance>(`/finance/balance/${userId}`),
     balances: () => request<(PatientBalance & { user_id: number })[]>(`/finance/balances`),
     report: (from?: string, to?: string) => {

@@ -532,6 +532,19 @@ export async function initDB() {
     END$$;
   `);
 
+  // --- Migración: soporte multi-país en pacientes ---
+  // Cada clínica define un país por defecto (ISO alpha-2). Cada paciente puede
+  // pertenecer a un país distinto — útil para clínicas fronterizas. Backfill:
+  // pacientes existentes reciben el país por defecto de su clínica.
+  await pool.query(`
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS default_country TEXT NOT NULL DEFAULT 'HN';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;
+  `);
+  await pool.query(`
+    UPDATE users u SET country = c.default_country
+    FROM clinics c WHERE u.clinic_id = c.id AND u.country IS NULL;
+  `);
+
   // --- Migración: planes de tratamiento (procedimientos multi-sesión) ---
   // Algunos procedimientos requieren varias citas (ortodoncia, endodoncia
   // multirradicular, blanqueamiento). El catálogo declara las sesiones por

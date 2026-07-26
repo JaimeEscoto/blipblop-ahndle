@@ -10,22 +10,23 @@ router.use(requireClinic, requireAuth, requireClinicMember);
 
 router.get('/settings', async (req: Request, res: Response) => {
   const { rows } = await pool.query(
-    'SELECT currency, tax_rate, next_invoice_number FROM clinics WHERE id = $1',
+    'SELECT currency, tax_rate, next_invoice_number, default_country FROM clinics WHERE id = $1',
     [req.clinic!.id]
   );
-  res.json(rows[0] || { currency: 'HNL', tax_rate: 0, next_invoice_number: 1 });
+  res.json(rows[0] || { currency: 'HNL', tax_rate: 0, next_invoice_number: 1, default_country: 'HN' });
 });
 
 router.put('/settings', async (req: Request, res: Response) => {
   if (req.account?.role !== 'clinic_admin' && req.account?.role !== 'superuser') {
-    return res.status(403).json({ error: 'Solo el administrador puede cambiar la moneda y los impuestos' });
+    return res.status(403).json({ error: 'Solo el administrador puede cambiar la configuración' });
   }
   const currency = (req.body.currency || 'HNL').toString().toUpperCase().slice(0, 6);
   const taxRate = Math.max(0, Math.min(100, Number(req.body.tax_rate) || 0));
+  const defaultCountry = (req.body.default_country || 'HN').toString().toUpperCase().slice(0, 2);
   const { rows } = await pool.query(
-    `UPDATE clinics SET currency = $1, tax_rate = $2 WHERE id = $3
-     RETURNING currency, tax_rate, next_invoice_number`,
-    [currency, taxRate, req.clinic!.id]
+    `UPDATE clinics SET currency = $1, tax_rate = $2, default_country = $3 WHERE id = $4
+     RETURNING currency, tax_rate, next_invoice_number, default_country`,
+    [currency, taxRate, defaultCountry, req.clinic!.id]
   );
   res.json(rows[0]);
 });

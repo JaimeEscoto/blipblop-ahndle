@@ -6,6 +6,7 @@ import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { withSlug, currentSlug } from '../tenant';
 import TermsGate from './TermsGate';
+import WhatsNewModal from './WhatsNewModal';
 
 // Banner persistente que avisa al visitante que está en modo demo.
 // Incluye un botón para resetear el sandbox compartido.
@@ -177,6 +178,9 @@ export default function Layout() {
 
       {/* Modal bloqueante de Términos de Servicio si la versión vigente no ha sido aceptada */}
       <TermsGate />
+
+      {/* Novedades del sistema (una vez por usuario, salta lo ya visto) */}
+      <WhatsNewModal isDemoVisitor={account?.is_demo_visitor} />
 
       {/* Bottom nav mobile — solo primeras 5 */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-30">

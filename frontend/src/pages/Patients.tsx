@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api, User, PatientBalance } from '../api/client';
 import { Plus, Pencil, Trash2, Search, Phone, Mail, CreditCard, MapPin, Cake, Upload, Download, CheckCircle, AlertCircle, Wallet } from 'lucide-react';
 import { formatMoney } from '../utils/money';
+import { COUNTRIES, findCountry } from '../data/countries';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -17,15 +18,16 @@ const HEADER_MAP: Record<string, string> = {
   telefono: 'phone', celular: 'phone', tel: 'phone',
   email: 'email', correo: 'email',
   direccion: 'address', domicilio: 'address',
-  departamento: 'department', depto: 'department',
+  departamento: 'department', depto: 'department', provincia: 'department',
   municipio: 'city', ciudad: 'city',
+  pais: 'country', país: 'country',
   tipo_sangre: 'blood_type', sangre: 'blood_type', grupo_sanguineo: 'blood_type',
   alergias: 'allergies',
   contacto_emergencia: 'emergency_contact', emergencia_contacto: 'emergency_contact',
   telefono_emergencia: 'emergency_phone', tel_emergencia: 'emergency_phone', emergencia_telefono: 'emergency_phone',
 };
 
-const TEMPLATE_HEADERS = ['nombre', 'tipo_documento', 'documento', 'fecha_nacimiento', 'genero', 'ocupacion', 'telefono', 'email', 'direccion', 'departamento', 'municipio', 'tipo_sangre', 'alergias', 'contacto_emergencia', 'telefono_emergencia'];
+const TEMPLATE_HEADERS = ['nombre', 'tipo_documento', 'documento', 'fecha_nacimiento', 'genero', 'ocupacion', 'telefono', 'email', 'direccion', 'pais', 'departamento', 'municipio', 'tipo_sangre', 'alergias', 'contacto_emergencia', 'telefono_emergencia'];
 
 const normalizeHeader = (h: string) =>
   h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -59,18 +61,13 @@ const normalizeDate = (s: string) => {
 
 interface ImportRow { name: string; [k: string]: string }
 
-const DEPARTMENTS = [
-  'Atlántida', 'Choluteca', 'Colón', 'Comayagua', 'Copán', 'Cortés', 'El Paraíso',
-  'Francisco Morazán', 'Gracias a Dios', 'Intibucá', 'Islas de la Bahía', 'La Paz',
-  'Lempira', 'Ocotepeque', 'Olancho', 'Santa Bárbara', 'Valle', 'Yoro',
-];
 const DOC_TYPES = ['Identidad', 'RTN', 'Pasaporte', 'Carné de menor', 'Otro'];
 const GENDERS = ['Masculino', 'Femenino', 'Otro'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const EMPTY = {
   name: '', email: '', phone: '', document_id: '', document_type: 'Identidad',
-  birth_date: '', gender: '', address: '', city: '', department: '', occupation: '',
+  birth_date: '', gender: '', address: '', city: '', department: '', country: '', occupation: '',
   // datos médicos (medical_info)
   blood_type: '', allergies: '', emergency_contact: '', emergency_phone: '',
   medical_conditions: '', current_medications: '',
@@ -95,29 +92,43 @@ export default function Patients() {
 
   const [balances, setBalances] = useState<Record<number, PatientBalance>>({});
   const [currency, setCurrency] = useState('HNL');
+  const [defaultCountry, setDefaultCountry] = useState('HN');
 
   const load = useCallback(async () => {
     const [u, bs, s] = await Promise.all([
       api.users.list(),
       api.finance.balances().catch(() => [] as (PatientBalance & { user_id: number })[]),
-      api.finance.settings().catch(() => ({ currency: 'HNL', tax_rate: 0, next_invoice_number: 1 })),
+      api.finance.settings().catch(() => ({ currency: 'HNL', tax_rate: 0, next_invoice_number: 1, default_country: 'HN' })),
     ]);
     setUsers(u);
     setBalances(Object.fromEntries(bs.map(b => [b.user_id, b])));
     setCurrency(s.currency);
+    setDefaultCountry(s.default_country || 'HN');
   }, []);
   useEffect(() => { load(); }, [load]);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
-  const openCreate = () => { setForm({ ...EMPTY }); setError(''); setModal({ type: 'create' }); };
+  // Al cambiar de país, si el departamento actual no existe en el nuevo, lo limpiamos.
+  const setCountry = (code: string) => setForm(f => {
+    const c = findCountry(code);
+    const divs = c?.divisions || [];
+    const dept = divs.includes(f.department) ? f.department : '';
+    return { ...f, country: code, department: dept };
+  });
+
+  const openCreate = () => {
+    setForm({ ...EMPTY, country: defaultCountry });
+    setError(''); setModal({ type: 'create' });
+  };
 
   const openEdit = async (u: User) => {
     setForm({
       ...EMPTY,
       name: u.name, email: u.email || '', phone: u.phone || '', document_id: u.document_id || '',
       document_type: u.document_type || 'Identidad', birth_date: u.birth_date || '', gender: u.gender || '',
-      address: u.address || '', city: u.city || '', department: u.department || '', occupation: u.occupation || '',
+      address: u.address || '', city: u.city || '', department: u.department || '',
+      country: u.country || defaultCountry, occupation: u.occupation || '',
     });
     setError(''); setModal({ type: 'edit', user: u });
     // Carga los datos médicos existentes para no perderlos al guardar
@@ -139,7 +150,8 @@ export default function Patients() {
       const userPayload = {
         name: form.name, email: form.email, phone: form.phone, document_id: form.document_id,
         document_type: form.document_type, birth_date: form.birth_date, gender: form.gender,
-        address: form.address, city: form.city, department: form.department, occupation: form.occupation,
+        address: form.address, city: form.city, department: form.department, country: form.country,
+        occupation: form.occupation,
       };
       const userId = modal?.type === 'create'
         ? (await api.users.create(userPayload as any)).id
@@ -372,16 +384,28 @@ export default function Patients() {
               {field(t('patients.email'), 'email', t('patients.emailPlaceholder'), 'email')}
             </div>
             {field(t('patients.address'), 'address', t('patients.addressPlaceholder'))}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.department')}</label>
-                <select className="input" value={form.department} onChange={e => set('department', e.target.value)}>
-                  <option value="">{t('common.select')}</option>
-                  {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              {field(t('patients.city'), 'city', t('patients.cityPlaceholder'))}
-            </div>
+            {(() => {
+              const country = findCountry(form.country);
+              const divisionLabel = country?.divisionLabel || t('patients.department');
+              return (
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">País</label>
+                    <select className="input" value={form.country} onChange={e => setCountry(e.target.value)}>
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">{divisionLabel}</label>
+                    <select className="input" value={form.department} onChange={e => set('department', e.target.value)}>
+                      <option value="">{t('common.select')}</option>
+                      {(country?.divisions || []).map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  {field(t('patients.city'), 'city', t('patients.cityPlaceholder'))}
+                </div>
+              );
+            })()}
 
             {sectionTitle(t('patients.sectionMedical'))}
             <div className="grid grid-cols-2 gap-3">

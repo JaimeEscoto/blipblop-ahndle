@@ -20,7 +20,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   res.json(rows[0]);
 });
 
-const FIELDS = ['name', 'email', 'phone', 'document_id', 'document_type', 'birth_date', 'gender', 'address', 'city', 'department', 'occupation'];
+const FIELDS = ['name', 'email', 'phone', 'document_id', 'document_type', 'birth_date', 'gender', 'address', 'city', 'department', 'country', 'occupation'];
 
 function pick(body: any) {
   const v: Record<string, any> = {};
@@ -33,9 +33,9 @@ router.post('/', async (req: Request, res: Response) => {
   const v = pick(req.body);
   try {
     const { rows } = await pool.query(
-      `INSERT INTO users (name, email, phone, document_id, document_type, birth_date, gender, address, city, department, occupation, clinic_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-      [v.name, v.email, v.phone, v.document_id, v.document_type, v.birth_date, v.gender, v.address, v.city, v.department, v.occupation, req.clinic!.id]
+      `INSERT INTO users (name, email, phone, document_id, document_type, birth_date, gender, address, city, department, country, occupation, clinic_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [v.name, v.email, v.phone, v.document_id, v.document_type, v.birth_date, v.gender, v.address, v.city, v.department, v.country, v.occupation, req.clinic!.id]
     );
     res.status(201).json(rows[0]);
   } catch (e: any) {
@@ -51,9 +51,9 @@ router.put('/:id', async (req: Request, res: Response) => {
     req.auditBefore = before.rows[0] || null;
     const { rows } = await pool.query(
       `UPDATE users SET name=$1, email=$2, phone=$3, document_id=$4, document_type=$5, birth_date=$6,
-         gender=$7, address=$8, city=$9, department=$10, occupation=$11
-       WHERE id=$12 AND clinic_id=$13 RETURNING *`,
-      [v.name, v.email, v.phone, v.document_id, v.document_type, v.birth_date, v.gender, v.address, v.city, v.department, v.occupation, req.params.id, req.clinic!.id]
+         gender=$7, address=$8, city=$9, department=$10, country=$11, occupation=$12
+       WHERE id=$13 AND clinic_id=$14 RETURNING *`,
+      [v.name, v.email, v.phone, v.document_id, v.document_type, v.birth_date, v.gender, v.address, v.city, v.department, v.country, v.occupation, req.params.id, req.clinic!.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(rows[0]);

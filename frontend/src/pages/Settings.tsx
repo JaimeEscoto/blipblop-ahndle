@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import LanguageToggle from '../components/LanguageToggle';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { COUNTRIES } from '../data/countries';
 
 function fmtBytes(b: number): string {
   if (b < 1_000_000) return `${(b / 1024).toFixed(0)} KB`;
@@ -34,7 +35,7 @@ export default function Settings() {
 
   // Finanzas
   const [finance, setFinance] = useState<FinanceSettings | null>(null);
-  const [financeForm, setFinanceForm] = useState({ currency: 'HNL', tax_rate: '0' });
+  const [financeForm, setFinanceForm] = useState({ currency: 'HNL', tax_rate: '0', default_country: 'HN' });
   const [financeSaving, setFinanceSaving] = useState(false);
   const [financeSaved, setFinanceSaved] = useState(false);
   const isAdmin = account?.role === 'clinic_admin' || account?.role === 'superuser';
@@ -45,7 +46,7 @@ export default function Settings() {
   useEffect(() => {
     api.finance.settings().then(s => {
       setFinance(s);
-      setFinanceForm({ currency: s.currency, tax_rate: String(s.tax_rate) });
+      setFinanceForm({ currency: s.currency, tax_rate: String(s.tax_rate), default_country: s.default_country || 'HN' });
     }).catch(() => {});
     api.attachments.usage().then(setUsage).catch(() => {});
   }, []);
@@ -72,6 +73,7 @@ export default function Settings() {
       const updated = await api.finance.updateSettings({
         currency: financeForm.currency,
         tax_rate: Number(financeForm.tax_rate) || 0,
+        default_country: financeForm.default_country,
       });
       setFinance(updated);
       setFinanceSaved(true);
@@ -206,6 +208,16 @@ export default function Settings() {
                     value={financeForm.tax_rate}
                     onChange={e => setFinanceForm({ ...financeForm, tax_rate: e.target.value })} />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">País por defecto</label>
+                <select className="input" value={financeForm.default_country}
+                  onChange={e => setFinanceForm({ ...financeForm, default_country: e.target.value })}>
+                  {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Nuevos pacientes se crearán con este país pre-seleccionado. Se puede cambiar por paciente.
+                </p>
               </div>
 
               <div className="flex items-center gap-3">
