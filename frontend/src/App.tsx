@@ -4,7 +4,6 @@ import Layout from './components/Layout';
 import Appointments from './pages/Appointments';
 import Doctors from './pages/Doctors';
 import Patients from './pages/Patients';
-import Records from './pages/Records';
 import Inventory from './pages/Inventory';
 import Reminders from './pages/Reminders';
 import Finance from './pages/Finance';
@@ -68,7 +67,6 @@ function ClinicApp() {
         <Route index               element={<Home />} />
         <Route path="inicio"        element={<Home />} />
         <Route path="citas"         element={<Appointments />} />
-        <Route path="expedientes"   element={<Records />} />
         <Route path="medicos"       element={<Doctors />} />
         <Route path="pacientes"     element={<Patients />} />
         <Route path="inventario"    element={<Inventory />} />
@@ -79,6 +77,8 @@ function ClinicApp() {
         {/* Rutas antiguas: ahora viven dentro de Super Admin */}
         <Route path="invitaciones"  element={<Navigate to="../superadmin" replace />} />
         <Route path="actividad"     element={<Navigate to="../superadmin" replace />} />
+        {/* Expedientes se fusionó con Pacientes (pestañas dentro de cada ficha) */}
+        <Route path="expedientes"   element={<Navigate to="../pacientes" replace />} />
         <Route path="*"             element={<Navigate to="inicio" replace />} />
       </Route>
     </Routes>

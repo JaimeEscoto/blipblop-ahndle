@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { api, User, PatientBalance } from '../api/client';
-import { Plus, Pencil, Trash2, Search, Phone, Mail, CreditCard, MapPin, Cake, Upload, Download, CheckCircle, AlertCircle, Wallet, FileText } from 'lucide-react';
+import { api, User, Doctor, ClinicalRecord, MedicalInfo, PatientBalance } from '../api/client';
+import Attachments from '../components/Attachments';
+import Consents from '../components/Consents';
+import TreatmentsTab from '../components/TreatmentsTab';
+import {
+  Plus, Pencil, Trash2, Search, Upload, Download, CheckCircle, AlertCircle,
+  ChevronDown, ChevronUp, Paperclip, Receipt, Activity,
+} from 'lucide-react';
 import { formatMoney } from '../utils/money';
 import { COUNTRIES, findCountry } from '../data/countries';
 import { withSlug } from '../tenant';
+import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Odontogram from '../components/Odontogram';
 
 // --- Importación CSV ---
 const HEADER_MAP: Record<string, string> = {
@@ -67,24 +74,141 @@ const DOC_TYPES = ['Identidad', 'RTN', 'Pasaporte', 'Carné de menor', 'Otro'];
 const GENDERS = ['Masculino', 'Femenino', 'Otro'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-const EMPTY = {
+const EMPTY_DEMOGRAPHICS = {
   name: '', email: '', phone: '', document_id: '', document_type: 'Identidad',
   birth_date: '', gender: '', address: '', city: '', department: '', country: '', occupation: '',
-  // datos médicos (medical_info)
-  blood_type: '', allergies: '', emergency_contact: '', emergency_phone: '',
-  medical_conditions: '', current_medications: '',
 };
+
+// ── Campos demográficos, reutilizados tanto en la pestaña "Datos" como en el alta rápida ──
+function DemographicFields({ form, set }: { form: any; set: (k: string, v: string) => void }) {
+  const { t } = useTranslation();
+  const country = findCountry(form.country);
+  const divisionLabel = country?.divisionLabel || t('patients.department');
+  const age = (() => {
+    if (!form.birth_date) return null;
+    const d = new Date(form.birth_date + 'T00:00:00');
+    if (isNaN(d.getTime())) return null;
+    return Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000));
+  })();
+
+  return (
+    <>
+      <div>
+        <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.fullName')} *</label>
+        <input required className="input" value={form.name || ''} onChange={e => set('name', e.target.value)} placeholder={t('patients.fullNamePlaceholder')} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.documentType')}</label>
+          <select className="input" value={form.document_type || 'Identidad'} onChange={e => set('document_type', e.target.value)}>
+            {DOC_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.documentNumber')}</label>
+          <input className="input" value={form.document_id || ''} onChange={e => set('document_id', e.target.value)} placeholder={t('patients.documentNumberPlaceholder')} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">
+            {t('patients.birthDate')}{age !== null && <span className="text-gray-400 font-normal"> ({t('patients.yearsOld', { count: age })})</span>}
+          </label>
+          <input type="date" className="input" value={form.birth_date || ''} onChange={e => set('birth_date', e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.gender')}</label>
+          <select className="input" value={form.gender || ''} onChange={e => set('gender', e.target.value)}>
+            <option value="">{t('common.select')}</option>
+            {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.occupation')}</label>
+        <input className="input" value={form.occupation || ''} onChange={e => set('occupation', e.target.value)} placeholder={t('patients.occupationPlaceholder')} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.phone')}</label>
+          <input className="input" value={form.phone || ''} onChange={e => set('phone', e.target.value)} placeholder="+504 9999 9999" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.email')}</label>
+          <input type="email" className="input" value={form.email || ''} onChange={e => set('email', e.target.value)} placeholder={t('patients.emailPlaceholder')} />
+        </div>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.address')}</label>
+        <input className="input" value={form.address || ''} onChange={e => set('address', e.target.value)} placeholder={t('patients.addressPlaceholder')} />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">País</label>
+          <select className="input" value={form.country || ''} onChange={e => {
+            const code = e.target.value;
+            const c = findCountry(code);
+            const divs = c?.divisions || [];
+            set('country', code);
+            if (!divs.includes(form.department)) set('department', '');
+          }}>
+            {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{divisionLabel}</label>
+          <select className="input" value={form.department || ''} onChange={e => set('department', e.target.value)}>
+            <option value="">{t('common.select')}</option>
+            {(country?.divisions || []).map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.city')}</label>
+          <input className="input" value={form.city || ''} onChange={e => set('city', e.target.value)} placeholder={t('patients.cityPlaceholder')} />
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function Patients() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Lista + finanzas
   const [users, setUsers] = useState<User[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState<{ type: 'create' | 'edit'; user?: User } | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [form, setForm] = useState({ ...EMPTY });
+  const [balances, setBalances] = useState<Record<number, PatientBalance>>({});
+  const [currency, setCurrency] = useState('HNL');
+  const [defaultCountry, setDefaultCountry] = useState('HN');
+
+  // Expediente expandido: pestaña activa + datos clínicos cargados perezosamente
+  const [expandedUser, setExpandedUser] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'data' | 'history' | 'info' | 'odontogram' | 'treatments' | 'files' | 'consents'>('data');
+  const [records, setRecords] = useState<Record<number, ClinicalRecord[]>>({});
+  const [medicalInfos, setMedicalInfos] = useState<Record<number, MedicalInfo | null>>({});
+  const [openChart, setOpenChart] = useState<number | null>(null);
+  const [openFiles, setOpenFiles] = useState<number | null>(null);
+
+  // Pestaña "Datos": edición inline de los datos demográficos del paciente expandido
+  const [demoForm, setDemoForm] = useState<any>({});
+  const [demoError, setDemoError] = useState('');
+  const [demoSaving, setDemoSaving] = useState(false);
+
+  // Modal de historial clínico / datos médicos (dentro del expediente)
+  const [modal, setModal] = useState<{ type: 'record' | 'info'; userId: number; record?: ClinicalRecord } | null>(null);
+  const [form, setForm] = useState<any>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deleteRecordId, setDeleteRecordId] = useState<number | null>(null);
+
+  // Alta de paciente nuevo (aún sin expediente que expandir)
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ ...EMPTY_DEMOGRAPHICS });
+  const [createError, setCreateError] = useState('');
+  const [createSaving, setCreateSaving] = useState(false);
+  const [deletePatientId, setDeletePatientId] = useState<number | null>(null);
 
   // Importación CSV
   const [importOpen, setImportOpen] = useState(false);
@@ -93,60 +217,50 @@ export default function Patients() {
   const [importing, setImporting] = useState(false);
   const [importDone, setImportDone] = useState<{ ok: number; fail: { name: string; reason: string }[] } | null>(null);
 
-  const [balances, setBalances] = useState<Record<number, PatientBalance>>({});
-  const [currency, setCurrency] = useState('HNL');
-  const [defaultCountry, setDefaultCountry] = useState('HN');
-
   const load = useCallback(async () => {
-    const [u, bs, s] = await Promise.all([
+    const [u, d, bs, s] = await Promise.all([
       api.users.list(),
+      api.doctors.list(),
       api.finance.balances().catch(() => [] as (PatientBalance & { user_id: number })[]),
       api.finance.settings().catch(() => ({ currency: 'HNL', tax_rate: 0, next_invoice_number: 1, default_country: 'HN' })),
     ]);
     setUsers(u);
+    setDoctors(d);
     setBalances(Object.fromEntries(bs.map(b => [b.user_id, b])));
     setCurrency(s.currency);
     setDefaultCountry(s.default_country || 'HN');
+    return u;
   }, []);
+
   useEffect(() => { load(); }, [load]);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
-
-  // Al cambiar de país, si el departamento actual no existe en el nuevo, lo limpiamos.
-  const setCountry = (code: string) => setForm(f => {
-    const c = findCountry(code);
-    const divs = c?.divisions || [];
-    const dept = divs.includes(f.department) ? f.department : '';
-    return { ...f, country: code, department: dept };
-  });
-
-  const openCreate = () => {
-    setForm({ ...EMPTY, country: defaultCountry });
-    setError(''); setModal({ type: 'create' });
+  const loadUserData = async (userId: number) => {
+    if (records[userId]) return;
+    const [recs, info] = await Promise.all([api.medical.getRecords(userId), api.medical.getInfo(userId)]);
+    setRecords(r => ({ ...r, [userId]: recs }));
+    setMedicalInfos(m => ({ ...m, [userId]: info }));
   };
 
-  const openEdit = async (u: User) => {
-    setForm({
-      ...EMPTY,
+  // Expande el expediente de un paciente y precarga su pestaña "Datos" con lo que ya tenemos en memoria.
+  const expandUser = (u: User) => {
+    setExpandedUser(u.id);
+    setActiveTab('data');
+    setDemoForm({
       name: u.name, email: u.email || '', phone: u.phone || '', document_id: u.document_id || '',
       document_type: u.document_type || 'Identidad', birth_date: u.birth_date || '', gender: u.gender || '',
       address: u.address || '', city: u.city || '', department: u.department || '',
       country: u.country || defaultCountry, occupation: u.occupation || '',
     });
-    setError(''); setModal({ type: 'edit', user: u });
-    // Carga los datos médicos existentes para no perderlos al guardar
-    try {
-      const info = await api.medical.getInfo(u.id);
-      if (info) setForm(f => ({
-        ...f,
-        blood_type: info.blood_type || '', allergies: info.allergies || '',
-        emergency_contact: info.emergency_contact || '', emergency_phone: info.emergency_phone || '',
-        medical_conditions: info.medical_conditions || '', current_medications: info.current_medications || '',
-      }));
-    } catch { /* noop */ }
+    setDemoError('');
+    loadUserData(u.id);
   };
 
-  // ?user=ID → abre directamente la edición de ese paciente (ej. desde Expedientes)
+  const toggleUser = (u: User) => {
+    if (expandedUser === u.id) { setExpandedUser(null); return; }
+    expandUser(u);
+  };
+
+  // ?user=ID → abre directamente el expediente de ese paciente (ej. desde una factura en Finanzas)
   const deepLinkHandled = useRef(false);
   useEffect(() => {
     if (deepLinkHandled.current || users.length === 0) return;
@@ -155,41 +269,117 @@ export default function Patients() {
     const userParam = params.get('user');
     if (!userParam) return;
     const u = users.find(x => x.id === Number(userParam));
-    if (u) openEdit(u);
+    if (u) expandUser(u);
     const url = new URL(window.location.href);
     url.searchParams.delete('user');
     window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(''); setLoading(true);
+  // ── Guardar cambios de la pestaña "Datos" ──
+  const saveDemoData = async (userId: number) => {
+    setDemoError(''); setDemoSaving(true);
     try {
-      const userPayload = {
-        name: form.name, email: form.email, phone: form.phone, document_id: form.document_id,
-        document_type: form.document_type, birth_date: form.birth_date, gender: form.gender,
-        address: form.address, city: form.city, department: form.department, country: form.country,
-        occupation: form.occupation,
-      };
-      const userId = modal?.type === 'create'
-        ? (await api.users.create(userPayload as any)).id
-        : (await api.users.update(modal!.user!.id, userPayload as any)).id;
+      const updated = await api.users.update(userId, {
+        name: demoForm.name, email: demoForm.email || null, phone: demoForm.phone || null,
+        document_id: demoForm.document_id || null, document_type: demoForm.document_type || null,
+        birth_date: demoForm.birth_date || null, gender: demoForm.gender || null,
+        address: demoForm.address || null, city: demoForm.city || null, department: demoForm.department || null,
+        country: demoForm.country || null, occupation: demoForm.occupation || null,
+      } as any);
+      setUsers(list => list.map(x => x.id === userId ? updated : x));
+    } catch (e: any) { setDemoError(e.message); }
+    finally { setDemoSaving(false); }
+  };
 
-      // Guarda datos médicos básicos solo si hay algo que guardar
-      const med = { blood_type: form.blood_type, allergies: form.allergies, emergency_contact: form.emergency_contact, emergency_phone: form.emergency_phone, medical_conditions: form.medical_conditions, current_medications: form.current_medications };
-      if (Object.values(med).some(v => v && v.trim())) {
-        await api.medical.saveInfo(userId, med);
-      }
+  // ── Alta de paciente nuevo ──
+  const openCreate = () => {
+    setCreateForm({ ...EMPTY_DEMOGRAPHICS, country: defaultCountry });
+    setCreateError(''); setCreateOpen(true);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault(); setCreateError(''); setCreateSaving(true);
+    try {
+      const created = await api.users.create({
+        name: createForm.name, email: createForm.email || null, phone: createForm.phone || null,
+        document_id: createForm.document_id || null, document_type: createForm.document_type || null,
+        birth_date: createForm.birth_date || null, gender: createForm.gender || null,
+        address: createForm.address || null, city: createForm.city || null, department: createForm.department || null,
+        country: createForm.country || null, occupation: createForm.occupation || null,
+      } as any);
+      setCreateOpen(false);
       await load();
+      // Deja el expediente recién creado ya abierto, listo para completar historial/tratamientos.
+      setExpandedUser(created.id);
+      setActiveTab('data');
+      setDemoForm({
+        name: created.name, email: created.email || '', phone: created.phone || '', document_id: created.document_id || '',
+        document_type: created.document_type || 'Identidad', birth_date: created.birth_date || '', gender: created.gender || '',
+        address: created.address || '', city: created.city || '', department: created.department || '',
+        country: created.country || defaultCountry, occupation: created.occupation || '',
+      });
+    } catch (e: any) { setCreateError(e.message); }
+    finally { setCreateSaving(false); }
+  };
+
+  const handleDeletePatient = async () => {
+    if (!deletePatientId) return;
+    await api.users.delete(deletePatientId);
+    if (expandedUser === deletePatientId) setExpandedUser(null);
+    await load();
+    setDeletePatientId(null);
+  };
+
+  // ── Historial clínico / datos médicos (modal) ──
+  const openRecord = (userId: number, record?: ClinicalRecord) => {
+    setForm(record ? {
+      doctor_id: String(record.doctor_id), date: record.date,
+      diagnosis: record.diagnosis || '', treatment: record.treatment || '',
+      observations: record.observations || '', tooth_chart: record.tooth_chart || {}
+    } : {
+      doctor_id: '', date: new Date().toISOString().split('T')[0],
+      diagnosis: '', treatment: '', observations: '', tooth_chart: {}
+    });
+    setError(''); setModal({ type: 'record', userId, record });
+  };
+
+  const openInfo = (userId: number) => {
+    const info = medicalInfos[userId];
+    setForm(info ? {
+      blood_type: info.blood_type || '', allergies: info.allergies || '',
+      medical_conditions: info.medical_conditions || '', current_medications: info.current_medications || '',
+      emergency_contact: info.emergency_contact || '', emergency_phone: info.emergency_phone || ''
+    } : { blood_type: '', allergies: '', medical_conditions: '', current_medications: '', emergency_contact: '', emergency_phone: '' });
+    setError(''); setModal({ type: 'info', userId });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setLoading(true);
+    try {
+      if (modal?.type === 'info') {
+        const info = await api.medical.saveInfo(modal.userId, form);
+        setMedicalInfos(m => ({ ...m, [modal.userId]: info }));
+      } else {
+        const payload = { ...form, user_id: modal!.userId, doctor_id: Number(form.doctor_id) };
+        if (modal?.record) {
+          const updated = await api.medical.updateRecord(modal.record.id, payload);
+          setRecords(r => ({ ...r, [modal.userId]: r[modal.userId].map(x => x.id === updated.id ? updated : x) }));
+        } else {
+          const created = await api.medical.createRecord(payload);
+          setRecords(r => ({ ...r, [modal!.userId]: [created, ...(r[modal!.userId] || [])] }));
+        }
+      }
       setModal(null);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    await api.users.delete(deleteId);
-    await load(); setDeleteId(null);
+  const handleDeleteRecord = async () => {
+    if (!deleteRecordId || !expandedUser) return;
+    await api.medical.deleteRecord(deleteRecordId);
+    setRecords(r => ({ ...r, [expandedUser]: r[expandedUser].filter(x => x.id !== deleteRecordId) }));
+    setDeleteRecordId(null);
   };
 
   // ── Importación CSV ──────────────────────────────────────
@@ -258,26 +448,11 @@ export default function Patients() {
     await load();
   };
 
-  const age = (b: string | null) => {
-    if (!b) return null;
-    const d = new Date(b + 'T00:00:00');
-    return Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000));
-  };
-
   const filtered = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
     (u.document_id || '').includes(search)
   );
-
-  const field = (label: string, key: string, placeholder = '', type = 'text', required = false) => (
-    <div>
-      <label className="text-xs font-medium text-gray-700 mb-1 block">{label}{required && ' *'}</label>
-      <input required={required} type={type} className="input" value={(form as any)[key] || ''} onChange={e => set(key, e.target.value)} placeholder={placeholder} />
-    </div>
-  );
-
-  const sectionTitle = (t: string) => <p className="text-xs font-bold text-gray-400 uppercase tracking-wide pt-2">{t}</p>;
 
   return (
     <div>
@@ -306,148 +481,268 @@ export default function Patients() {
         />
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400 text-sm">{t('patients.noneFound')}</div>
         )}
-        {filtered.map(u => {
-          const a = age(u.birth_date);
-          return (
-            <div key={u.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{u.name}</p>
-                  <div className="mt-1 space-y-0.5">
-                    {u.document_id && (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <CreditCard className="w-3.5 h-3.5 shrink-0" />
-                        <span>{u.document_type || t('patients.doc')}: {u.document_id}</span>
-                      </div>
-                    )}
-                    {u.phone && (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Phone className="w-3.5 h-3.5 shrink-0" /><span>{u.phone}</span>
-                      </div>
-                    )}
-                    {u.email && (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Mail className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{u.email}</span>
-                      </div>
-                    )}
-                    {(u.city || u.department) && (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{[u.city, u.department].filter(Boolean).join(', ')}</span>
-                      </div>
-                    )}
-                    {a !== null && (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Cake className="w-3.5 h-3.5 shrink-0" /><span>{t('patients.yearsOld', { count: a })}{u.gender ? ` · ${u.gender}` : ''}</span>
-                      </div>
-                    )}
-                    {balances[u.id] && balances[u.id].balance > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium">
-                        <Wallet className="w-3.5 h-3.5 shrink-0" />
-                        <span>Saldo: {formatMoney(balances[u.id].balance, currency)}
-                          {balances[u.id].pending_count > 0 && <span className="text-amber-500 font-normal"> · {balances[u.id].pending_count} factura{balances[u.id].pending_count > 1 ? 's' : ''} pendiente{balances[u.id].pending_count > 1 ? 's' : ''}</span>}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <button onClick={() => navigate(withSlug(`/expedientes?user=${u.id}`))} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Ver expediente clínico">
-                    <FileText className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => openEdit(u)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => setDeleteId(u.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+        {filtered.map(u => (
+          <div key={u.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="w-full flex items-center gap-2 p-4">
+              <button className="flex-1 min-w-0 text-left" onClick={() => toggleUser(u)}>
+                <p className="font-semibold text-gray-900 truncate">{u.name}</p>
+                <p className="text-xs text-gray-400 truncate">{u.document_id || u.email || u.phone || '—'}</p>
+              </button>
+              {balances[u.id] && balances[u.id].balance > 0 && (
+                <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full whitespace-nowrap">
+                  {formatMoney(balances[u.id].balance, currency)}
+                </span>
+              )}
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => setDeletePatientId(u.id)} title={t('common.delete')} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => toggleUser(u)} className="p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg">
+                  {expandedUser === u.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
               </div>
             </div>
-          );
-        })}
+
+            {expandedUser === u.id && (
+              <div className="border-t border-gray-100 px-4 pb-4">
+                {/* Tabs */}
+                <div className="flex gap-1 my-3 bg-gray-100 rounded-lg p-1 overflow-x-auto">
+                  {(['data', 'history', 'info', 'odontogram', 'treatments', 'files', 'consents'] as const).map(tab => (
+                    <button key={tab} onClick={() => setActiveTab(tab)}
+                      className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+                      {tab === 'data' ? 'Datos'
+                        : tab === 'history' ? t('records.tabHistory')
+                        : tab === 'info' ? t('records.tabInfo')
+                        : tab === 'odontogram' ? t('records.tabOdontogram')
+                        : tab === 'treatments' ? 'Tratamientos'
+                        : tab === 'files' ? t('records.tabFiles')
+                        : 'Consentimientos'}
+                    </button>
+                  ))}
+                </div>
+
+                {activeTab === 'data' && (
+                  <form onSubmit={e => { e.preventDefault(); saveDemoData(u.id); }} className="space-y-3">
+                    {demoError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{demoError}</p>}
+                    <DemographicFields form={demoForm} set={(k, v) => setDemoForm((f: any) => ({ ...f, [k]: v }))} />
+                    <div className="flex justify-end pt-1">
+                      <button type="submit" disabled={demoSaving} className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+                        {demoSaving ? t('common.saving') : t('common.save')}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {activeTab === 'history' && (
+                  <div>
+                    <button onClick={() => openRecord(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 font-medium hover:underline">
+                      <Plus className="w-4 h-4" /> {t('records.newEntry')}
+                    </button>
+                    {(records[u.id] || []).length === 0
+                      ? <p className="text-sm text-gray-400 text-center py-4">{t('records.noHistory')}</p>
+                      : (records[u.id] || []).map(r => (
+                        <div key={r.id} className="border border-gray-100 rounded-lg p-3 mb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-xs text-gray-400">{r.date} · Dr. {r.doctor_name}</p>
+                              {r.diagnosis && <p className="text-sm font-medium mt-1">{r.diagnosis}</p>}
+                              {r.treatment && <p className="text-xs text-gray-500 mt-0.5">{t('records.treatmentLabel', { value: r.treatment })}</p>}
+                              {r.observations && <p className="text-xs text-gray-400 mt-0.5 italic">{r.observations}</p>}
+                            </div>
+                            <div className="flex gap-1">
+                              <button onClick={() => openRecord(u.id, r)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setDeleteRecordId(r.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </div>
+                          {r.invoice_id && (
+                            <div className="mt-2 pt-2 border-t border-gray-50">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`${withSlug('/finanzas')}?invoice=${r.invoice_id}`)}
+                                className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline"
+                                title="Ver factura asociada a esta cita"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                Ver factura #{String(r.invoice_number).padStart(4, '0')}
+                              </button>
+                            </div>
+                          )}
+                          {r.tooth_chart && Object.keys(r.tooth_chart).length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-50">
+                              <button onClick={() => setOpenChart(openChart === r.id ? null : r.id)}
+                                className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline">
+                                <Activity className="w-3.5 h-3.5" />
+                                {openChart === r.id ? t('records.hideChart') : t('records.showChart')}
+                              </button>
+                              {openChart === r.id && (
+                                <div className="mt-3">
+                                  <Odontogram value={r.tooth_chart} onChange={() => {}} readOnly />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="mt-2 pt-2 border-t border-gray-50">
+                            <button onClick={() => setOpenFiles(openFiles === r.id ? null : r.id)}
+                              className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline">
+                              <Paperclip className="w-3.5 h-3.5" />
+                              {openFiles === r.id ? t('records.hideFiles') : t('records.showFiles')}
+                            </button>
+                            {openFiles === r.id && (
+                              <div className="mt-3">
+                                <Attachments userId={u.id} recordId={r.id} compact />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+
+                {activeTab === 'info' && (
+                  <div>
+                    <button onClick={() => openInfo(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 font-medium hover:underline">
+                      <Pencil className="w-4 h-4" /> {t('records.editMedical')}
+                    </button>
+                    {medicalInfos[u.id] ? (
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {[
+                          [t('records.bloodType'), medicalInfos[u.id]?.blood_type],
+                          [t('records.allergies'), medicalInfos[u.id]?.allergies],
+                          [t('records.conditionsShort'), medicalInfos[u.id]?.medical_conditions],
+                          [t('records.medicationsShort'), medicalInfos[u.id]?.current_medications],
+                          [t('records.emergencyContactShort'), medicalInfos[u.id]?.emergency_contact],
+                          [t('records.emergencyPhoneShort'), medicalInfos[u.id]?.emergency_phone],
+                        ].map(([label, val]) => val ? (
+                          <div key={label as string} className="col-span-2 sm:col-span-1">
+                            <p className="text-xs text-gray-400">{label}</p>
+                            <p className="text-sm text-gray-700">{val}</p>
+                          </div>
+                        ) : null)}
+                      </div>
+                    ) : <p className="text-sm text-gray-400 text-center py-4">{t('records.noMedical')}</p>}
+                  </div>
+                )}
+
+                {activeTab === 'odontogram' && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-3">{t('records.lastChart')}</p>
+                    {(records[u.id] || []).length > 0
+                      ? <Odontogram value={records[u.id][0].tooth_chart || {}} onChange={() => {}} readOnly />
+                      : <p className="text-sm text-gray-400 text-center py-4">{t('records.noChart')}</p>
+                    }
+                  </div>
+                )}
+
+                {activeTab === 'treatments' && (
+                  <TreatmentsTab userId={u.id} doctors={doctors} currency={currency} />
+                )}
+
+                {activeTab === 'files' && (
+                  <div className="pt-1">
+                    <Attachments userId={u.id} />
+                  </div>
+                )}
+
+                {activeTab === 'consents' && (
+                  <div className="pt-1">
+                    <Consents user={u} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
+      {createOpen && (
+        <Modal title={t('patients.createTitle')} onClose={() => setCreateOpen(false)}>
+          <form onSubmit={handleCreate} className="space-y-3">
+            {createError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{createError}</p>}
+            <DemographicFields form={createForm} set={(k, v) => setCreateForm(f => ({ ...f, [k]: v }))} />
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setCreateOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                {t('common.cancel')}
+              </button>
+              <button type="submit" disabled={createSaving} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+                {createSaving ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {modal && (
-        <Modal title={modal.type === 'create' ? t('patients.createTitle') : t('patients.editTitle')} onClose={() => setModal(null)}>
+        <Modal
+          title={modal.type === 'info' ? t('records.infoTitle') : modal.record ? t('records.editEntry') : t('records.newEntryTitle')}
+          onClose={() => setModal(null)}
+        >
           <form onSubmit={handleSubmit} className="space-y-3">
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-            {sectionTitle(t('patients.sectionGeneral'))}
-            {field(t('patients.fullName'), 'name', t('patients.fullNamePlaceholder'), 'text', true)}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.documentType')}</label>
-                <select className="input" value={form.document_type} onChange={e => set('document_type', e.target.value)}>
-                  {DOC_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              {field(t('patients.documentNumber'), 'document_id', t('patients.documentNumberPlaceholder'))}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {field(t('patients.birthDate'), 'birth_date', '', 'date')}
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.gender')}</label>
-                <select className="input" value={form.gender} onChange={e => set('gender', e.target.value)}>
-                  <option value="">{t('common.select')}</option>
-                  {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
-            </div>
-            {field(t('patients.occupation'), 'occupation', t('patients.occupationPlaceholder'))}
-
-            {sectionTitle(t('patients.sectionContact'))}
-            <div className="grid grid-cols-2 gap-3">
-              {field(t('patients.phone'), 'phone', '+504 9999 9999')}
-              {field(t('patients.email'), 'email', t('patients.emailPlaceholder'), 'email')}
-            </div>
-            {field(t('patients.address'), 'address', t('patients.addressPlaceholder'))}
-            {(() => {
-              const country = findCountry(form.country);
-              const divisionLabel = country?.divisionLabel || t('patients.department');
-              return (
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">País</label>
-                    <select className="input" value={form.country} onChange={e => setCountry(e.target.value)}>
-                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">{divisionLabel}</label>
-                    <select className="input" value={form.department} onChange={e => set('department', e.target.value)}>
-                      <option value="">{t('common.select')}</option>
-                      {(country?.divisions || []).map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  {field(t('patients.city'), 'city', t('patients.cityPlaceholder'))}
+            {modal.type === 'info' ? (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.bloodType')}</label>
+                  <select className="input" value={form.blood_type} onChange={e => setForm({ ...form, blood_type: e.target.value })}>
+                    <option value="">{t('common.select')}</option>
+                    {BLOOD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
                 </div>
-              );
-            })()}
-
-            {sectionTitle(t('patients.sectionMedical'))}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.bloodType')}</label>
-                <select className="input" value={form.blood_type} onChange={e => set('blood_type', e.target.value)}>
-                  <option value="">{t('common.select')}</option>
-                  {BLOOD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </div>
-              {field(t('patients.allergies'), 'allergies', t('patients.allergiesPlaceholder'))}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {field(t('patients.emergencyContact'), 'emergency_contact', t('patients.emergencyContactPlaceholder'))}
-              {field(t('patients.emergencyPhone'), 'emergency_phone', '+504 9999 9999')}
-            </div>
+                {[
+                  ['allergies', t('records.allergies'), t('records.allergiesPlaceholder')],
+                  ['medical_conditions', t('records.conditions'), t('records.conditionsPlaceholder')],
+                  ['current_medications', t('records.medications'), t('records.medicationsPlaceholder')],
+                  ['emergency_contact', t('records.emergencyContact'), t('records.emergencyContactPlaceholder')],
+                  ['emergency_phone', t('records.emergencyPhone'), t('records.emergencyPhonePlaceholder')],
+                ].map(([field, label, placeholder]) => (
+                  <div key={field}>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">{label}</label>
+                    <input className="input" placeholder={placeholder} value={form[field] || ''}
+                      onChange={e => setForm({ ...form, [field]: e.target.value })} />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.doctor')} *</label>
+                    <select required className="input" value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })}>
+                      <option value="">{t('common.select')}</option>
+                      {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.date')} *</label>
+                    <input required type="date" className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.diagnosis')}</label>
+                  <input className="input" value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder={t('records.diagnosisPlaceholder')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.treatment')}</label>
+                  <input className="input" value={form.treatment} onChange={e => setForm({ ...form, treatment: e.target.value })} placeholder={t('records.treatmentPlaceholder')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.observations')}</label>
+                  <textarea className="input resize-none" rows={2} value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder={t('records.observationsPlaceholder')} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-2 block">{t('records.tabOdontogram')}</label>
+                  <Odontogram value={form.tooth_chart || {}} onChange={tc => setForm({ ...form, tooth_chart: tc })} />
+                </div>
+              </>
+            )}
 
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                {t('common.cancel')}
-              </button>
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">{t('common.cancel')}</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {loading ? t('common.saving') : t('common.save')}
               </button>
@@ -514,11 +809,13 @@ export default function Patients() {
         </Modal>
       )}
 
-      {deleteId && (
+      {deleteRecordId && <ConfirmDialog message={t('records.deleteConfirm')} onConfirm={handleDeleteRecord} onCancel={() => setDeleteRecordId(null)} />}
+
+      {deletePatientId && (
         <ConfirmDialog
           message={t('patients.deleteConfirm')}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteId(null)}
+          onConfirm={handleDeletePatient}
+          onCancel={() => setDeletePatientId(null)}
         />
       )}
     </div>

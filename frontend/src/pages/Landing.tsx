@@ -434,7 +434,7 @@ function MockOdontogram() {
   const upper: (keyof typeof TOOTH_COLORS)[] = ['healthy','healthy','filled','healthy','cavity','healthy','healthy','crown','healthy','healthy','healthy','filled','healthy','healthy','healthy','healthy'];
   const lower: (keyof typeof TOOTH_COLORS)[] = ['healthy','healthy','healthy','healthy','filled','healthy','extracted','healthy','healthy','cavity','healthy','healthy','healthy','healthy','healthy','healthy'];
   return (
-    <BrowserChrome url="odontiacloud.com/dental-sur/expedientes">
+    <BrowserChrome url="odontiacloud.com/dental-sur/pacientes">
       <div className="text-[10px] uppercase tracking-wider text-blue-600 font-semibold">Expediente</div>
       <div className="text-base font-bold text-gray-900 mt-0.5 mb-3">Luis Pérez · 34 años</div>
 
