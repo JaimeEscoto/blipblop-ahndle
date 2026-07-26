@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import pool from '../database';
 import { requireAuth, requireClinicMember } from '../auth';
 import { requireClinic } from '../tenant';
-import { generateAppointmentCode } from '../utils/code';
+import { generatePublicCode } from '../utils/code';
 
 const router = Router();
 router.use(requireClinic, requireAuth, requireClinicMember);
@@ -117,7 +117,7 @@ router.post('/', async (req: Request, res: Response) => {
         [req.clinic!.id, user_id, doctor_id,
          start_date, (i - 1) * interval, time,
          `Sesión ${i} de ${sessions} — ${proc.rows[0].name}`,
-         generateAppointmentCode(), planId, i]
+         generatePublicCode(), planId, i]
       );
     }
 
@@ -200,7 +200,7 @@ router.put('/:id', async (req: Request, res: Response) => {
           [req.clinic!.id, last.rows[0].user_id, last.rows[0].doctor_id,
            baseDate, offset, baseTime,
            `Sesión ${n} de ${sessions} — ${last.rows[0].procedure_name}`,
-           generateAppointmentCode(), req.params.id, n]
+           generatePublicCode(), req.params.id, n]
         );
       }
     } else if (sessions < currentSessions) {

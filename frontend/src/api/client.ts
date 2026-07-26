@@ -244,20 +244,26 @@ export interface FinanceReport {
 
 export interface ConsentTemplate {
   id: number; clinic_id: number;
-  title: string; body: string; active: boolean;
+  title: string; pdf_storage_key: string | null; active: boolean;
   created_at: string; updated_at: string;
 }
+export type ConsentStatus = 'pending' | 'signed';
 export interface Consent {
   id: number; clinic_id: number; user_id: number;
   template_id: number | null; appointment_id: number | null;
-  title: string; body: string;
-  signer_name: string; signer_document: string | null;
+  title: string; status: ConsentStatus; public_code: string | null;
+  signer_name: string | null; signer_document: string | null;
   pdf_storage_key: string | null;
-  signed_at: string;
+  signed_at: string | null;
   witnessed_by_email: string | null; witnessed_by_name: string | null;
 }
+export interface PublicConsent {
+  status: ConsentStatus; title: string; clinic_name: string; user_name: string;
+  signed_at: string | null; signer_name: string | null;
+  pdf_view_url: string | null;
+}
 export interface ConsentFull extends Consent {
-  signature_data_url: string;
+  signature_data_url: string | null;
   signed_ip: string | null; signed_user_agent: string | null;
 }
 
@@ -534,23 +540,15 @@ export const api = {
   },
   consents: {
     templates: (all?: boolean) => request<ConsentTemplate[]>(`/consents/templates${all ? '?all=1' : ''}`),
-    createTemplate: (d: { title: string; body: string }) => request<ConsentTemplate>('/consents/templates', { method:'POST', body:JSON.stringify(d) }),
-    updateTemplate: (id: number, d: { title: string; body: string; active?: boolean }) => request<ConsentTemplate>(`/consents/templates/${id}`, { method:'PUT', body:JSON.stringify(d) }),
+    createTemplate: (d: { title: string }) => request<ConsentTemplate>('/consents/templates', { method:'POST', body:JSON.stringify(d) }),
+    updateTemplate: (id: number, d: { title: string; active?: boolean }) => request<ConsentTemplate>(`/consents/templates/${id}`, { method:'PUT', body:JSON.stringify(d) }),
     deleteTemplate: (id: number) => request<{ id: number }>(`/consents/templates/${id}`, { method:'DELETE' }),
-    list: (userId: number) => request<Consent[]>(`/consents?user_id=${userId}`),
-    get: (id: number) => request<ConsentFull>(`/consents/${id}`),
-    create: (d: {
-      user_id: number; template_id?: number | null; appointment_id?: number | null;
-      title: string; body: string; signer_name: string; signer_document?: string;
-      signature_data_url: string;
-    }) => request<Consent>('/consents', { method:'POST', body:JSON.stringify(d) }),
-    delete: (id: number) => request<{ id: number }>(`/consents/${id}`, { method:'DELETE' }),
-    uploadPdf: async (id: number, blob: Blob): Promise<{ ok: true }> => {
+    uploadTemplatePdf: async (id: number, file: File): Promise<{ ok: true }> => {
       const form = new FormData();
-      form.append('file', blob, `consentimiento-${id}.pdf`);
+      form.append('file', file, file.name || `plantilla-${id}.pdf`);
       const token = getToken();
       const slug = (await import('../tenant')).currentSlug();
-      const res = await fetch(`${BASE}/consents/${id}/pdf`, {
+      const res = await fetch(`${BASE}/consents/templates/${id}/pdf`, {
         method: 'POST',
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -562,7 +560,24 @@ export const api = {
       if (!res.ok) throw new Error(data.error || 'No se pudo subir el PDF');
       return data;
     },
+    templatePdfUrl: (id: number) => request<{ url: string }>(`/consents/templates/${id}/pdf`),
+    list: (userId: number) => request<Consent[]>(`/consents?user_id=${userId}`),
+    get: (id: number) => request<ConsentFull>(`/consents/${id}`),
+    // Firma presencial: el paciente firma de inmediato, en el dispositivo del staff.
+    create: (d: {
+      user_id: number; template_id: number; appointment_id?: number | null;
+      signer_name: string; signer_document?: string;
+      signature_data_url: string;
+    }) => request<Consent>('/consents', { method:'POST', body:JSON.stringify(d) }),
+    // Asigna una plantilla a una cita y genera el enlace público de firma remota.
+    assign: (d: { user_id: number; appointment_id: number; template_id: number }) =>
+      request<Consent>('/consents/assign', { method:'POST', body:JSON.stringify(d) }),
+    delete: (id: number) => request<{ id: number }>(`/consents/${id}`, { method:'DELETE' }),
     pdfUrl: (id: number) => request<{ url: string }>(`/consents/${id}/pdf`),
+    // Público, sin sesión: lo abre el paciente desde el enlace en su celular.
+    getPublic: (code: string) => request<PublicConsent>(`/consents/public/${code}`),
+    signPublic: (code: string, d: { signer_name: string; signer_document?: string; signature_data_url: string }) =>
+      request<{ status: ConsentStatus; signed_at: string }>(`/consents/public/${code}/sign`, { method:'POST', body:JSON.stringify(d) }),
   },
   attachments: {
     // record_id: number → archivos de esa visita; 'patient' → solo del paciente; undefined → todos

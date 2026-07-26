@@ -1,8 +1,8 @@
-// Genera un código corto, legible y aleatorio para identificar una cita
-// (sin caracteres ambiguos como O/0, I/1).
+// Genera un código corto, legible y aleatorio para identificar un recurso
+// público (cita, consentimiento) sin caracteres ambiguos como O/0, I/1.
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-export function generateAppointmentCode(): string {
+export function generatePublicCode(): string {
   let s = '';
   for (let i = 0; i < 8; i++) {
     s += CHARS[Math.floor(Math.random() * CHARS.length)];

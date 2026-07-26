@@ -250,7 +250,8 @@ function ConsentTemplatesCard() {
   const [items, setItems] = useState<ConsentTemplate[]>([]);
   const [modal, setModal] = useState<{ tpl?: ConsentTemplate } | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [form, setForm] = useState({ title: '', body: '' });
+  const [title, setTitle] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -258,14 +259,18 @@ function ConsentTemplatesCard() {
   useEffect(() => { load(); }, [load]);
 
   const open = (tpl?: ConsentTemplate) => {
-    setForm({ title: tpl?.title || '', body: tpl?.body || '' });
+    setTitle(tpl?.title || ''); setFile(null);
     setError(''); setModal({ tpl });
   };
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setLoading(true);
+    e.preventDefault(); setError('');
+    if (!modal?.tpl && !file) { setError('Sube el PDF de la plantilla'); return; }
+    setLoading(true);
     try {
-      if (modal?.tpl) await api.consents.updateTemplate(modal.tpl.id, { title: form.title.trim(), body: form.body.trim(), active: modal.tpl.active });
-      else await api.consents.createTemplate({ title: form.title.trim(), body: form.body.trim() });
+      const saved = modal?.tpl
+        ? await api.consents.updateTemplate(modal.tpl.id, { title: title.trim(), active: modal.tpl.active })
+        : await api.consents.createTemplate({ title: title.trim() });
+      if (file) await api.consents.uploadTemplatePdf(saved.id, file);
       await load(); setModal(null);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -274,6 +279,12 @@ function ConsentTemplatesCard() {
     if (!deleteId) return;
     await api.consents.deleteTemplate(deleteId);
     await load(); setDeleteId(null);
+  };
+  const viewPdf = async (id: number) => {
+    try {
+      const { url } = await api.consents.templatePdfUrl(id);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch { /* si no tiene PDF aún, no hace nada */ }
   };
 
   return (
@@ -288,7 +299,7 @@ function ConsentTemplatesCard() {
         </button>
       </div>
       <p className="text-xs text-gray-500 mb-3">
-        Documentos reutilizables que el paciente firma desde su expediente (informados, autorizaciones, etc.).
+        Sube el PDF del documento (informados, autorizaciones, etc.). El paciente lo ve y lo firma desde su expediente o por un enlace remoto.
       </p>
       {items.length === 0 ? (
         <p className="text-xs text-gray-400 text-center py-3">Sin plantillas todavía.</p>
@@ -296,10 +307,12 @@ function ConsentTemplatesCard() {
         <div className="space-y-1.5">
           {items.map(t => (
             <div key={t.id} className="flex items-center gap-2 border border-gray-100 rounded-lg p-2">
-              <FileSignature className="w-4 h-4 text-gray-400 shrink-0" />
+              <button onClick={() => viewPdf(t.id)} disabled={!t.pdf_storage_key} className="shrink-0 disabled:opacity-30">
+                <FileSignature className="w-4 h-4 text-gray-400" />
+              </button>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800 truncate">{t.title}</p>
-                <p className="text-[10px] text-gray-400 truncate">{t.body.slice(0, 100)}</p>
+                <p className="text-[10px] text-gray-400 truncate">{t.pdf_storage_key ? 'PDF cargado' : 'Sin PDF todavía'}</p>
               </div>
               <button onClick={() => open(t)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-3.5 h-3.5" /></button>
               <button onClick={() => setDeleteId(t.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -314,12 +327,14 @@ function ConsentTemplatesCard() {
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">Título *</label>
-              <input required className="input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ej. Consentimiento para endodoncia" />
+              <input required className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Consentimiento para endodoncia" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Contenido *</label>
-              <textarea required className="input resize-none font-mono text-xs" rows={10} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} placeholder="Yo, _______, autorizo al Dr. ___ a realizar el siguiente procedimiento..." />
-              <p className="text-[10px] text-gray-400 mt-1">El cuerpo se puede personalizar al firmar con cada paciente.</p>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">
+                PDF {modal.tpl?.pdf_storage_key ? '(deja en blanco para conservar el actual)' : '*'}
+              </label>
+              <input type="file" accept="application/pdf" className="input"
+                onChange={e => setFile(e.target.files?.[0] || null)} />
             </div>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
