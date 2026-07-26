@@ -140,13 +140,24 @@ export default function Records() {
       <div className="space-y-2">
         {filtered.map(u => (
           <div key={u.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <button className="w-full flex items-center justify-between p-4" onClick={() => toggleUser(u.id)}>
-              <div className="text-left">
+            <div className="w-full flex items-center justify-between p-4">
+              <button className="flex-1 text-left" onClick={() => toggleUser(u.id)}>
                 <p className="font-semibold text-gray-900">{u.name}</p>
                 <p className="text-xs text-gray-400">{u.document_id || u.email}</p>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => navigate(withSlug(`/pacientes?user=${u.id}`))}
+                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                  title="Editar datos del paciente"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button onClick={() => toggleUser(u.id)} className="p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg">
+                  {expandedUser === u.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
               </div>
-              {expandedUser === u.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-            </button>
+            </div>
 
             {expandedUser === u.id && (
               <div className="border-t border-gray-100 px-4 pb-4">
