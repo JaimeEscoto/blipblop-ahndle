@@ -10,6 +10,17 @@ const router = Router();
 function clinicToday(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
 }
+
+// Verifica que el paciente y el médico referenciados pertenezcan a la clínica.
+// Evita que una sesión de una clínica cree/edite citas apuntando a pacientes o
+// médicos de OTRA clínica (los SELECT hacen JOIN global por id).
+async function ensureRefsInClinic(userId: any, doctorId: any, clinicId: number): Promise<boolean> {
+  const [u, d] = await Promise.all([
+    pool.query('SELECT 1 FROM users WHERE id = $1 AND clinic_id = $2', [userId, clinicId]),
+    pool.query('SELECT 1 FROM doctors WHERE id = $1 AND clinic_id = $2', [doctorId, clinicId]),
+  ]);
+  return !!u.rows[0] && !!d.rows[0];
+}
 function isPastDate(date: string): boolean {
   return date < clinicToday();
 }
@@ -147,6 +158,9 @@ router.post('/', async (req: Request, res: Response) => {
   if (!user_id || !doctor_id || !date || !time) {
     return res.status(400).json({ error: 'Paciente, médico, fecha y hora son requeridos' });
   }
+  if (!(await ensureRefsInClinic(user_id, doctor_id, req.clinic!.id))) {
+    return res.status(404).json({ error: 'Paciente o médico no encontrado' });
+  }
   if (isPastDate(date)) {
     return res.status(400).json({ error: 'No se pueden agendar citas en una fecha pasada' });
   }
@@ -178,6 +192,9 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   const { user_id, doctor_id, date, time, reason, status, notes, procedures } = req.body;
+  if (!(await ensureRefsInClinic(user_id, doctor_id, req.clinic!.id))) {
+    return res.status(404).json({ error: 'Paciente o médico no encontrado' });
+  }
   const current = await pool.query('SELECT TO_CHAR(date, $2) AS date FROM appointments WHERE id=$1 AND clinic_id=$3',
     [req.params.id, 'YYYY-MM-DD', req.clinic!.id]);
   if (current.rows[0] && date !== current.rows[0].date && isPastDate(date)) {
