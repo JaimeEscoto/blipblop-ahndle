@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, Package, Bell, LogOut, Shield, Settings, Wallet, FlaskConical, RotateCcw, Search } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, Package, Bell, LogOut, Shield, Settings, Wallet, FlaskConical, RotateCcw, Search, Sun, Moon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useTheme } from '../theme/ThemeContext';
 import { withSlug, currentSlug } from '../tenant';
 import TermsGate from './TermsGate';
 import WhatsNewModal from './WhatsNewModal';
@@ -77,6 +78,7 @@ function buildNavGroups(isAdmin: boolean) {
 export default function Layout() {
   const { account, logout } = useAuth();
   const { t } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
   const isAdmin = account?.role === 'superuser' || account?.role === 'clinic_admin';
   const navGroups = buildNavGroups(isAdmin).map(g => ({
     ...g,
@@ -108,7 +110,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col relative">
       {/* Marca de agua: logo degradado al fondo */}
       <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
         <img src="/icono.png" alt="" aria-hidden="true"
@@ -126,6 +128,9 @@ export default function Layout() {
             <GlobalSearch />
           </div>
           <div className="flex-1 md:hidden" />
+          <button onClick={toggleTheme} title={theme === 'dark' ? t('menu.lightMode') : t('menu.darkMode')} className="hidden md:flex shrink-0 items-center p-2 rounded-lg text-blue-100 hover:bg-blue-700">
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
           <button onClick={logout} title={t('menu.logout')} className="hidden md:flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
             <LogOut className="w-4 h-4" />
           </button>
@@ -160,6 +165,10 @@ export default function Layout() {
             })}
             <div className="border-t border-blue-700 mt-1 pt-2">
               {account && <p className="px-3 text-xs text-blue-200 mb-1 truncate">{account.email}</p>}
+              <button onClick={toggleTheme} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {theme === 'dark' ? t('menu.lightMode') : t('menu.darkMode')}
+              </button>
               <button onClick={() => { setMenuOpen(false); logout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
                 <LogOut className="w-4 h-4" /> {t('menu.logout')}
               </button>
@@ -170,10 +179,10 @@ export default function Layout() {
 
       {/* Sidebar (desktop) + contenido */}
       <div className="flex-1 flex w-full min-h-0">
-        <aside className="hidden md:block w-56 shrink-0 border-r border-gray-100 bg-white relative z-10 py-4 px-3 overflow-y-auto">
+        <aside className="hidden md:block w-56 shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 relative z-10 py-4 px-3 overflow-y-auto">
           {navGroups.map(group => (
             <div key={group.label} className="mb-4">
-              <p className="px-3 mb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wide">{group.label}</p>
+              <p className="px-3 mb-1 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{group.label}</p>
               <div className="space-y-0.5">
                 {group.items.map(({ to, label, icon: Icon }) => {
                   const badge = getBadge(to);
@@ -181,7 +190,7 @@ export default function Layout() {
                     <NavLink key={to} to={to}
                       className={({ isActive }) =>
                         `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                          isActive ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/60'
                         }`}>
                       <Icon className="w-4 h-4 shrink-0" />
                       <span className="truncate">{t(label)}</span>
@@ -215,14 +224,14 @@ export default function Layout() {
       <WhatsNewModal isDemoVisitor={account?.is_demo_visitor} />
 
       {/* Bottom nav mobile — solo primeras 5 */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-30">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex z-30">
         {navItems.slice(0, 5).map(({ to, label, icon: Icon }) => {
           const badge = getBadge(to);
           return (
             <NavLink key={to} to={to}
               className={({ isActive }) =>
                 `relative flex-1 flex flex-col items-center py-2 text-xs font-medium transition-colors ${
-                  isActive ? 'text-[#1e6f9f]' : 'text-gray-500 hover:text-[#36c1d6]'
+                  isActive ? 'text-[#1e6f9f] dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 hover:text-[#36c1d6]'
                 }`}>
               <Icon className="w-5 h-5 mb-0.5" />
               {t(label)}

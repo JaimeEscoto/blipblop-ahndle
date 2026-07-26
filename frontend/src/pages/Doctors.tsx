@@ -147,7 +147,7 @@ export default function Doctors() {
       {modal && (
         <Modal title={modal.type === 'create' ? t('doctors.createTitle') : t('doctors.editTitle')} onClose={() => setModal(null)}>
           <form onSubmit={handleSubmit} className="space-y-3">
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 dark:bg-red-900/30 dark:text-red-400">{error}</p>}
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.fullName')} *</label>
               <input required className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('doctors.fullNamePlaceholder')} />
@@ -172,7 +172,7 @@ export default function Doctors() {
               <input className="input" value={form.license_number || ''} onChange={e => setForm({ ...form, license_number: e.target.value })} placeholder={t('doctors.licenseNumberPlaceholder')} />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600">
                 {t('common.cancel')}
               </button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">

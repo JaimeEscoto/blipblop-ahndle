@@ -288,34 +288,34 @@ function ConsentTemplatesCard() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <FileSignature className="w-4 h-4 text-blue-600" />
-          <h2 className="text-sm font-semibold text-gray-800">Plantillas de consentimientos</h2>
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Plantillas de consentimientos</h2>
         </div>
-        <button onClick={() => open()} className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700">
+        <button onClick={() => open()} className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
           <Plus className="w-3.5 h-3.5" /> Nueva
         </button>
       </div>
-      <p className="text-xs text-gray-500 mb-3">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
         Sube el PDF del documento (informados, autorizaciones, etc.). El paciente lo ve y lo firma desde su expediente o por un enlace remoto.
       </p>
       {items.length === 0 ? (
-        <p className="text-xs text-gray-400 text-center py-3">Sin plantillas todavía.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">Sin plantillas todavía.</p>
       ) : (
         <div className="space-y-1.5">
           {items.map(t => (
-            <div key={t.id} className="flex items-center gap-2 border border-gray-100 rounded-lg p-2">
+            <div key={t.id} className="flex items-center gap-2 border border-gray-100 dark:border-gray-700 rounded-lg p-2">
               <button onClick={() => viewPdf(t.id)} disabled={!t.pdf_storage_key} className="shrink-0 disabled:opacity-30">
-                <FileSignature className="w-4 h-4 text-gray-400" />
+                <FileSignature className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               </button>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{t.title}</p>
-                <p className="text-[10px] text-gray-400 truncate">{t.pdf_storage_key ? 'PDF cargado' : 'Sin PDF todavía'}</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{t.title}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{t.pdf_storage_key ? 'PDF cargado' : 'Sin PDF todavía'}</p>
               </div>
-              <button onClick={() => open(t)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setDeleteId(t.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+              <button onClick={() => open(t)} className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setDeleteId(t.id)} className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
         </div>
@@ -324,20 +324,20 @@ function ConsentTemplatesCard() {
       {modal && (
         <Modal title={modal.tpl ? 'Editar plantilla' : 'Nueva plantilla'} onClose={() => setModal(null)}>
           <form onSubmit={submit} className="space-y-3">
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 rounded-lg px-3 py-2">{error}</p>}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Título *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Título *</label>
               <input required className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Consentimiento para endodoncia" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
                 PDF {modal.tpl?.pdf_storage_key ? '(deja en blanco para conservar el actual)' : '*'}
               </label>
               <input type="file" accept="application/pdf" className="input"
                 onChange={e => setFile(e.target.files?.[0] || null)} />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {loading ? 'Guardando…' : 'Guardar'}
               </button>

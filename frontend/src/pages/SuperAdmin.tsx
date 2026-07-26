@@ -24,17 +24,17 @@ export default function SuperAdmin() {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">{t('superadmin.title')}</h1>
-        <p className="text-sm text-gray-500">{t('superadmin.subtitle')}</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('superadmin.title')}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('superadmin.subtitle')}</p>
       </div>
 
-      <div className="flex gap-1 border-b border-gray-200 mb-5 overflow-x-auto">
+      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 mb-5 overflow-x-auto">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
-              tab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === id ? 'border-blue-600 text-blue-700 dark:text-blue-300' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             <Icon className="w-4 h-4" /> {t(label)}
@@ -74,11 +74,11 @@ function TrafficPanel() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">Período:</label>
+          <label className="text-sm text-gray-600 dark:text-gray-300">Período:</label>
           <select
             value={days}
             onChange={e => setDays(Number(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
+            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 dark:text-gray-100"
           >
             <option value={1}>Últimas 24 h</option>
             <option value={7}>Últimos 7 días</option>
@@ -90,14 +90,14 @@ function TrafficPanel() {
         <button
           onClick={load}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-700 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 disabled:opacity-50"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           Actualizar
         </button>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {data && (
         <>
@@ -123,14 +123,14 @@ function TrafficPanel() {
             <Breakdown title="Dispositivo" rows={data.by_device.map(r => ({ label: r.device, value: r.visits }))} total={data.total_visits} />
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900 text-sm">Visitas recientes</h3>
-              <p className="text-xs text-gray-500">Últimas {data.recent.length}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Visitas recientes</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Últimas {data.recent.length}</p>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-xs">
-                <thead className="bg-gray-50 text-gray-500">
+                <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-500 dark:text-gray-400">
                   <tr>
                     <th className="text-left px-3 py-2 font-medium">Fecha</th>
                     <th className="text-left px-3 py-2 font-medium">Fuente</th>
@@ -143,21 +143,21 @@ function TrafficPanel() {
                 </thead>
                 <tbody>
                   {data.recent.map(v => (
-                    <tr key={v.id} className="border-t border-gray-100">
-                      <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{new Date(v.created_at).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-gray-900">{v.referrer_source || 'Directo'}</td>
-                      <td className="px-3 py-2 text-gray-600 font-mono truncate max-w-[160px]" title={v.path || ''}>{v.path}</td>
-                      <td className="px-3 py-2 text-gray-600">
+                    <tr key={v.id} className="border-t border-gray-100 dark:border-gray-700">
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">{new Date(v.created_at).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-gray-900 dark:text-gray-100">{v.referrer_source || 'Directo'}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300 font-mono truncate max-w-[160px]" title={v.path || ''}>{v.path}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                         {v.country_code ? `${flag(v.country_code)} ` : ''}{v.country || '—'}
-                        {v.city ? <span className="text-gray-400"> · {v.city}</span> : null}
+                        {v.city ? <span className="text-gray-400 dark:text-gray-500"> · {v.city}</span> : null}
                       </td>
-                      <td className="px-3 py-2 text-gray-600">{v.browser || '—'}</td>
-                      <td className="px-3 py-2 text-gray-600">{v.os || '—'}</td>
-                      <td className="px-3 py-2 text-gray-600">{v.device || '—'}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{v.browser || '—'}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{v.os || '—'}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{v.device || '—'}</td>
                     </tr>
                   ))}
                   {data.recent.length === 0 && (
-                    <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-400">Sin visitas en este período.</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-400 dark:text-gray-500">Sin visitas en este período.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -171,9 +171,9 @@ function TrafficPanel() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-2xl font-bold text-gray-900 mt-1">{value.toLocaleString()}</div>
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
+      <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{value.toLocaleString()}</div>
     </div>
   );
 }
@@ -181,10 +181,10 @@ function Stat({ label, value }: { label: string; value: number }) {
 function Breakdown({ title, rows, total }: { title: string; rows: { label: string; value: number }[]; total: number }) {
   const max = Math.max(1, ...rows.map(r => r.value));
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-      <h3 className="font-semibold text-gray-900 text-sm mb-3">{title}</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
+      <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-3">{title}</h3>
       {rows.length === 0 ? (
-        <p className="text-xs text-gray-400">Sin datos.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">Sin datos.</p>
       ) : (
         <ul className="space-y-1.5">
           {rows.slice(0, 8).map((r, i) => {
@@ -192,10 +192,10 @@ function Breakdown({ title, rows, total }: { title: string; rows: { label: strin
             return (
               <li key={i}>
                 <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-gray-700 truncate pr-2">{r.label}</span>
-                  <span className="text-gray-500 whitespace-nowrap">{r.value.toLocaleString()} · {pct}%</span>
+                  <span className="text-gray-700 dark:text-gray-300 truncate pr-2">{r.label}</span>
+                  <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.value.toLocaleString()} · {pct}%</span>
                 </div>
-                <div className="mt-1 h-1.5 bg-gray-100 rounded">
+                <div className="mt-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded">
                   <div className="h-1.5 bg-blue-500 rounded" style={{ width: `${(r.value / max) * 100}%` }} />
                 </div>
               </li>
@@ -241,16 +241,16 @@ function BackupPanel() {
 
   return (
     <div className="max-w-2xl">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
         <div className="flex items-start gap-4">
-          <div className="shrink-0 p-3 rounded-xl bg-blue-100">
-            <Database className="w-6 h-6 text-blue-600" />
+          <div className="shrink-0 p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40">
+            <Database className="w-6 h-6 text-blue-600 dark:text-blue-300" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-semibold text-gray-900">{t('superadmin.backupTitle')}</h2>
-            <p className="text-sm text-gray-500 mt-1">{t('superadmin.backupDesc')}</p>
+            <h2 className="font-semibold text-gray-900 dark:text-gray-100">{t('superadmin.backupTitle')}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('superadmin.backupDesc')}</p>
 
-            <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2.5">
+            <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-100 dark:border-amber-800 rounded-lg p-2.5">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{t('superadmin.backupWarning')}</span>
             </div>
@@ -263,7 +263,7 @@ function BackupPanel() {
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {loading ? t('superadmin.backupGenerating') : t('superadmin.backupButton')}
             </button>
-            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</p>}
           </div>
         </div>
       </div>

@@ -13,9 +13,9 @@ interface Props {
 }
 
 const STATUS_LABEL: Record<TreatmentPlan['status'], { label: string; cls: string }> = {
-  active:    { label: 'Activo',    cls: 'bg-blue-100 text-blue-700' },
-  completed: { label: 'Finalizado', cls: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelado',  cls: 'bg-red-100 text-red-700' },
+  active:    { label: 'Activo',    cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  completed: { label: 'Finalizado', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+  cancelled: { label: 'Cancelado',  cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
 };
 
 export default function TreatmentsTab({ userId, doctors, currency }: Props) {
@@ -59,7 +59,7 @@ export default function TreatmentsTab({ userId, doctors, currency }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-gray-500">{loading ? 'Cargando…' : `${plans.length} plan${plans.length === 1 ? '' : 'es'}`}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{loading ? 'Cargando…' : `${plans.length} plan${plans.length === 1 ? '' : 'es'}`}</p>
         <button
           onClick={() => setCreateOpen(true)}
           className="flex items-center gap-1.5 text-sm text-blue-600 font-medium hover:underline"
@@ -69,7 +69,7 @@ export default function TreatmentsTab({ userId, doctors, currency }: Props) {
       </div>
 
       {plans.length === 0 && !loading && (
-        <p className="text-sm text-gray-400 text-center py-4">
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
           Este paciente no tiene planes de tratamiento. Crea uno para procedimientos multi-sesión (ortodoncia, endodoncia, etc.).
         </p>
       )}
@@ -80,28 +80,28 @@ export default function TreatmentsTab({ userId, doctors, currency }: Props) {
             ? Math.round((p.sessions_completed / p.sessions_planned) * 100) : 0;
           const isOpen = expanded === p.id;
           return (
-            <div key={p.id} className="border border-gray-100 rounded-lg overflow-hidden">
+            <div key={p.id} className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
               <button
                 onClick={() => openDetail(p.id)}
-                className="w-full p-3 text-left hover:bg-gray-50 flex items-start gap-3"
+                className="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/60 flex items-start gap-3"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-gray-900 truncate">{p.procedure_name}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{p.procedure_name}</p>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_LABEL[p.status].cls}`}>
                       {STATUS_LABEL[p.status].label}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Dr. {p.doctor_name} · {p.sessions_completed} de {p.sessions_planned} sesiones
                   </p>
-                  <div className="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+                  <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
                     <div className="h-full bg-blue-500 transition-all" style={{ width: `${progressPct}%` }} />
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-gray-900">{formatMoney(p.total_amount, currency)}</p>
-                  <p className="text-[10px] text-gray-400">{formatMoney(p.per_session_amount, currency)}/sesión</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatMoney(p.total_amount, currency)}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500">{formatMoney(p.per_session_amount, currency)}/sesión</p>
                 </div>
               </button>
 
@@ -168,29 +168,29 @@ function PlanDetailBody({
 }) {
   const navigate = useNavigate();
   return (
-    <div className="border-t border-gray-100 p-3 bg-gray-50">
+    <div className="border-t border-gray-100 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-700/60">
       <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
-        <div className="bg-white rounded-lg p-2">
-          <p className="text-gray-400">Total</p>
-          <p className="font-semibold text-gray-900">{formatMoney(plan.total_amount, currency)}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2">
+          <p className="text-gray-400 dark:text-gray-500">Total</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">{formatMoney(plan.total_amount, currency)}</p>
         </div>
-        <div className="bg-white rounded-lg p-2">
-          <p className="text-gray-400">Por sesión</p>
-          <p className="font-semibold text-gray-900">{formatMoney(plan.per_session_amount, currency)}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2">
+          <p className="text-gray-400 dark:text-gray-500">Por sesión</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">{formatMoney(plan.per_session_amount, currency)}</p>
         </div>
-        <div className="bg-white rounded-lg p-2">
-          <p className="text-gray-400">Progreso</p>
-          <p className="font-semibold text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2">
+          <p className="text-gray-400 dark:text-gray-500">Progreso</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">
             {plan.sessions_completed}/{plan.sessions_planned}
           </p>
         </div>
       </div>
 
       {plan.notes && (
-        <p className="text-[11px] text-gray-500 italic mb-3">{plan.notes}</p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 italic mb-3">{plan.notes}</p>
       )}
 
-      <p className="text-xs font-semibold text-gray-700 mb-2">Sesiones</p>
+      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Sesiones</p>
       <div className="space-y-1.5 mb-3">
         {plan.appointments.map(a => {
           const Icon = a.status === 'completed' ? CheckCircle
@@ -198,11 +198,11 @@ function PlanDetailBody({
           const color = a.status === 'completed' ? 'text-green-600'
             : a.status === 'cancelled' ? 'text-red-500' : 'text-blue-600';
           return (
-            <div key={a.id} className="flex items-center gap-2 bg-white rounded-lg px-2 py-1.5 text-xs">
+            <div key={a.id} className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg px-2 py-1.5 text-xs">
               <Icon className={`w-4 h-4 shrink-0 ${color}`} />
-              <span className="font-semibold text-gray-700 shrink-0 w-12">#{a.session_number}</span>
-              <span className="flex items-center gap-1 text-gray-500"><Calendar className="w-3 h-3" />{a.date}</span>
-              <span className="flex items-center gap-1 text-gray-500"><Clock className="w-3 h-3" />{a.time}</span>
+              <span className="font-semibold text-gray-700 dark:text-gray-300 shrink-0 w-12">#{a.session_number}</span>
+              <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400"><Calendar className="w-3 h-3" />{a.date}</span>
+              <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400"><Clock className="w-3 h-3" />{a.time}</span>
               <div className="flex-1" />
               {a.status !== 'completed' && plan.status === 'active' && (
                 <button
@@ -229,10 +229,10 @@ function PlanDetailBody({
 
       {plan.status === 'active' && (
         <div className="flex gap-2">
-          <button onClick={onEdit} className="flex-1 py-2 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 flex items-center justify-center gap-1.5">
+          <button onClick={onEdit} className="flex-1 py-2 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/60 flex items-center justify-center gap-1.5">
             <Pencil className="w-3.5 h-3.5" /> Editar plan
           </button>
-          <button onClick={onCancelPlan} className="flex-1 py-2 text-xs font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100">
+          <button onClick={onCancelPlan} className="flex-1 py-2 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/40 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/60">
             Cancelar plan
           </button>
         </div>
@@ -312,10 +312,10 @@ function CreatePlanModal({
   return (
     <Modal title="Nuevo plan de tratamiento" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 rounded-lg px-3 py-2">{error}</p>}
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Procedimiento *</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Procedimiento *</label>
           <select required className="input" value={procedureId} onChange={e => onProcedure(e.target.value)}>
             <option value="">Seleccionar…</option>
             {procedures.map(p => (
@@ -327,7 +327,7 @@ function CreatePlanModal({
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Doctor *</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Doctor *</label>
           <select required className="input" value={doctorId} onChange={e => setDoctorId(e.target.value)}>
             <option value="">Seleccionar…</option>
             {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name} — {d.specialty}</option>)}
@@ -336,62 +336,62 @@ function CreatePlanModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Total *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Total *</label>
             <input required type="number" min="0" step="0.01" className="input"
               value={total} onChange={e => setTotal(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Sesiones *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Sesiones *</label>
             <input required type="number" min="1" step="1" className="input"
               value={sessions} onChange={e => setSessions(e.target.value)} />
           </div>
         </div>
 
-        <div className="bg-indigo-50 rounded-lg px-3 py-2 text-xs text-indigo-800">
+        <div className="bg-indigo-50 dark:bg-indigo-900/40 rounded-lg px-3 py-2 text-xs text-indigo-800 dark:text-indigo-300">
           <strong>{formatMoney(perSession, currency)}</strong> por sesión
           {sessionsN > 1 && <> · {sessionsN} cuotas</>}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha 1ª sesión *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Fecha 1ª sesión *</label>
             <input required type="date" min={today} className="input"
               value={startDate} onChange={e => setStartDate(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Hora *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Hora *</label>
             <input required type="time" className="input"
               value={time} onChange={e => setTime(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block" title="Cada cuántas semanas entre sesiones">Cada (sem)</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block" title="Cada cuántas semanas entre sesiones">Cada (sem)</label>
             <input type="number" min="0" step="1" className="input"
               value={intervalWeeks} onChange={e => setIntervalWeeks(e.target.value)} />
           </div>
         </div>
 
         {previewDates.length > 0 && (
-          <div className="text-xs text-gray-500">
-            <p className="font-semibold text-gray-600 mb-1">Vista previa</p>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="font-semibold text-gray-600 dark:text-gray-300 mb-1">Vista previa</p>
             <div className="flex flex-wrap gap-1.5">
               {previewDates.map((d, i) => (
-                <span key={i} className="bg-gray-100 px-2 py-0.5 rounded">#{i + 1} · {d}</span>
+                <span key={i} className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">#{i + 1} · {d}</span>
               ))}
-              {sessionsN > 5 && <span className="text-gray-400">… +{sessionsN - 5} más</span>}
+              {sessionsN > 5 && <span className="text-gray-400 dark:text-gray-500">… +{sessionsN - 5} más</span>}
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
               Podrás reprogramar cualquier sesión después de crear el plan.
             </p>
           </div>
         )}
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Notas</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Notas</label>
           <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
           <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
             {loading ? 'Creando…' : 'Crear plan'}
           </button>
@@ -437,32 +437,32 @@ function EditPlanModal({ plan, currency, onClose, onSaved }: {
   return (
     <Modal title="Editar plan" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-        <p className="text-[11px] text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+        {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 rounded-lg px-3 py-2">{error}</p>}
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/60 rounded-lg px-3 py-2">
           El cambio de precio por sesión afecta solo a las sesiones <strong>futuras</strong>. Las facturas ya creadas no cambian.
         </p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Total</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Total</label>
             <input type="number" min="0" step="0.01" className="input"
               value={total} onChange={e => setTotal(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Sesiones</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Sesiones</label>
             <input type="number" min={plan.sessions_completed || 1} step="1" className="input"
               value={sessions} onChange={e => setSessions(e.target.value)} />
-            <p className="text-[10px] text-gray-400 mt-1">{plan.sessions_completed} ya completadas</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{plan.sessions_completed} ya completadas</p>
           </div>
         </div>
-        <div className="bg-indigo-50 rounded-lg px-3 py-2 text-xs text-indigo-800">
+        <div className="bg-indigo-50 dark:bg-indigo-900/40 rounded-lg px-3 py-2 text-xs text-indigo-800 dark:text-indigo-300">
           Nuevo precio por sesión: <strong>{formatMoney(perSession, currency)}</strong>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Notas</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Notas</label>
           <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
           <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
             {loading ? 'Guardando…' : 'Guardar'}
           </button>
@@ -503,35 +503,35 @@ function RescheduleSessionModal({ plan, sessionNumber, onClose, onSaved }: {
   return (
     <Modal title={`Reprogramar sesión #${sessionNumber}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-        <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
+        {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 rounded-lg px-3 py-2">{error}</p>}
+        <div className="bg-gray-50 dark:bg-gray-700/60 rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
           Fecha actual: <strong>{original.date}</strong> a las <strong>{original.time}</strong>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Nueva fecha</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Nueva fecha</label>
             <input required type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Hora</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Hora</label>
             <input required type="time" className="input" value={time} onChange={e => setTime(e.target.value)} />
           </div>
         </div>
         {followingMovable > 0 && (
-          <label className="flex items-start gap-2 cursor-pointer bg-blue-50 rounded-lg px-3 py-2">
+          <label className="flex items-start gap-2 cursor-pointer bg-blue-50 dark:bg-blue-900/40 rounded-lg px-3 py-2">
             <input
               type="checkbox"
               checked={cascade}
               onChange={e => setCascade(e.target.checked)}
               className="mt-0.5"
             />
-            <span className="text-xs text-blue-900">
+            <span className="text-xs text-blue-900 dark:text-blue-300">
               Mover también las {followingMovable} sesiones siguientes el mismo número de días.
             </span>
           </label>
         )}
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
           <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
             {loading ? 'Guardando…' : 'Reprogramar'}
           </button>

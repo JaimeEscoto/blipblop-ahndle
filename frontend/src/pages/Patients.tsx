@@ -94,30 +94,30 @@ function DemographicFields({ form, set }: { form: any; set: (k: string, v: strin
   return (
     <>
       <div>
-        <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.fullName')} *</label>
+        <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.fullName')} *</label>
         <input required className="input" value={form.name || ''} onChange={e => set('name', e.target.value)} placeholder={t('patients.fullNamePlaceholder')} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.documentType')}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.documentType')}</label>
           <select className="input" value={form.document_type || 'Identidad'} onChange={e => set('document_type', e.target.value)}>
             {DOC_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.documentNumber')}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.documentNumber')}</label>
           <input className="input" value={form.document_id || ''} onChange={e => set('document_id', e.target.value)} placeholder={t('patients.documentNumberPlaceholder')} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">
-            {t('patients.birthDate')}{age !== null && <span className="text-gray-400 font-normal"> ({t('patients.yearsOld', { count: age })})</span>}
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+            {t('patients.birthDate')}{age !== null && <span className="text-gray-400 dark:text-gray-500 font-normal"> ({t('patients.yearsOld', { count: age })})</span>}
           </label>
           <input type="date" className="input" value={form.birth_date || ''} onChange={e => set('birth_date', e.target.value)} />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.gender')}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.gender')}</label>
           <select className="input" value={form.gender || ''} onChange={e => set('gender', e.target.value)}>
             <option value="">{t('common.select')}</option>
             {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
@@ -125,26 +125,26 @@ function DemographicFields({ form, set }: { form: any; set: (k: string, v: strin
         </div>
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.occupation')}</label>
+        <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.occupation')}</label>
         <input className="input" value={form.occupation || ''} onChange={e => set('occupation', e.target.value)} placeholder={t('patients.occupationPlaceholder')} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.phone')}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.phone')}</label>
           <input className="input" value={form.phone || ''} onChange={e => set('phone', e.target.value)} placeholder="+504 9999 9999" />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.email')}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.email')}</label>
           <input type="email" className="input" value={form.email || ''} onChange={e => set('email', e.target.value)} placeholder={t('patients.emailPlaceholder')} />
         </div>
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.address')}</label>
+        <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.address')}</label>
         <input className="input" value={form.address || ''} onChange={e => set('address', e.target.value)} placeholder={t('patients.addressPlaceholder')} />
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">País</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">País</label>
           <select className="input" value={form.country || ''} onChange={e => {
             const code = e.target.value;
             const c = findCountry(code);
@@ -156,14 +156,14 @@ function DemographicFields({ form, set }: { form: any; set: (k: string, v: strin
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{divisionLabel}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{divisionLabel}</label>
           <select className="input" value={form.department || ''} onChange={e => set('department', e.target.value)}>
             <option value="">{t('common.select')}</option>
             {(country?.divisions || []).map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.city')}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.city')}</label>
           <input className="input" value={form.city || ''} onChange={e => set('city', e.target.value)} placeholder={t('patients.cityPlaceholder')} />
         </div>
       </div>
@@ -458,11 +458,11 @@ export default function Patients() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('patients.title')}</h1>
-          <p className="text-sm text-gray-500">{t('patients.registeredCount', { count: users.length })}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('patients.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('patients.registeredCount', { count: users.length })}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={openImport} className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+          <button onClick={openImport} className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
             <Upload className="w-4 h-4" /> {t('patients.import')}
           </button>
           <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
@@ -474,7 +474,7 @@ export default function Patients() {
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder={t('patients.searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -483,37 +483,37 @@ export default function Patients() {
 
       <div className="space-y-2">
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm">{t('patients.noneFound')}</div>
+          <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">{t('patients.noneFound')}</div>
         )}
         {filtered.map(u => (
-          <div key={u.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div key={u.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
             <div className="w-full flex items-center gap-2 p-4">
               <button className="flex-1 min-w-0 text-left" onClick={() => toggleUser(u)}>
-                <p className="font-semibold text-gray-900 truncate">{u.name}</p>
-                <p className="text-xs text-gray-400 truncate">{u.document_id || u.email || u.phone || '—'}</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{u.name}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{u.document_id || u.email || u.phone || '—'}</p>
               </button>
               {balances[u.id] && balances[u.id].balance > 0 && (
-                <span className="shrink-0 text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full whitespace-nowrap">
+                <span className="shrink-0 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">
                   {formatMoney(balances[u.id].balance, currency)}
                 </span>
               )}
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => setDeletePatientId(u.id)} title={t('common.delete')} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                <button onClick={() => setDeletePatientId(u.id)} title={t('common.delete')} className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg">
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <button onClick={() => toggleUser(u)} className="p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg">
+                <button onClick={() => toggleUser(u)} className="p-1.5 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg">
                   {expandedUser === u.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             {expandedUser === u.id && (
-              <div className="border-t border-gray-100 px-4 pb-4">
+              <div className="border-t border-gray-100 dark:border-gray-700 px-4 pb-4">
                 {/* Tabs */}
-                <div className="flex gap-1 my-3 bg-gray-100 rounded-lg p-1 overflow-x-auto">
+                <div className="flex gap-1 my-3 bg-gray-100 dark:bg-gray-900/40 rounded-lg p-1 overflow-x-auto">
                   {(['data', 'history', 'info', 'odontogram', 'treatments', 'files', 'consents'] as const).map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+                      className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400'}`}>
                       {tab === 'data' ? 'Datos'
                         : tab === 'history' ? t('records.tabHistory')
                         : tab === 'info' ? t('records.tabInfo')
@@ -527,7 +527,7 @@ export default function Patients() {
 
                 {activeTab === 'data' && (
                   <form onSubmit={e => { e.preventDefault(); saveDemoData(u.id); }} className="space-y-3">
-                    {demoError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{demoError}</p>}
+                    {demoError && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 rounded-lg px-3 py-2">{demoError}</p>}
                     <DemographicFields form={demoForm} set={(k, v) => setDemoForm((f: any) => ({ ...f, [k]: v }))} />
                     <div className="flex justify-end pt-1">
                       <button type="submit" disabled={demoSaving} className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
@@ -539,31 +539,31 @@ export default function Patients() {
 
                 {activeTab === 'history' && (
                   <div>
-                    <button onClick={() => openRecord(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 font-medium hover:underline">
+                    <button onClick={() => openRecord(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 dark:text-blue-300 font-medium hover:underline">
                       <Plus className="w-4 h-4" /> {t('records.newEntry')}
                     </button>
                     {(records[u.id] || []).length === 0
-                      ? <p className="text-sm text-gray-400 text-center py-4">{t('records.noHistory')}</p>
+                      ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">{t('records.noHistory')}</p>
                       : (records[u.id] || []).map(r => (
-                        <div key={r.id} className="border border-gray-100 rounded-lg p-3 mb-2">
+                        <div key={r.id} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3 mb-2">
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="text-xs text-gray-400">{r.date} · Dr. {r.doctor_name}</p>
-                              {r.diagnosis && <p className="text-sm font-medium mt-1">{r.diagnosis}</p>}
-                              {r.treatment && <p className="text-xs text-gray-500 mt-0.5">{t('records.treatmentLabel', { value: r.treatment })}</p>}
-                              {r.observations && <p className="text-xs text-gray-400 mt-0.5 italic">{r.observations}</p>}
+                              <p className="text-xs text-gray-400 dark:text-gray-500">{r.date} · Dr. {r.doctor_name}</p>
+                              {r.diagnosis && <p className="text-sm font-medium mt-1 text-gray-800 dark:text-gray-100">{r.diagnosis}</p>}
+                              {r.treatment && <p className="text-xs text-gray-500 dark:text-gray-300 mt-0.5">{t('records.treatmentLabel', { value: r.treatment })}</p>}
+                              {r.observations && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 italic">{r.observations}</p>}
                             </div>
                             <div className="flex gap-1">
-                              <button onClick={() => openRecord(u.id, r)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => setDeleteRecordId(r.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => openRecord(u.id, r)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setDeleteRecordId(r.id)} className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
                           </div>
                           {r.invoice_id && (
-                            <div className="mt-2 pt-2 border-t border-gray-50">
+                            <div className="mt-2 pt-2 border-t border-gray-50 dark:border-gray-700">
                               <button
                                 type="button"
                                 onClick={() => navigate(`${withSlug('/finanzas')}?invoice=${r.invoice_id}`)}
-                                className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline"
+                                className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-300 font-medium hover:underline"
                                 title="Ver factura asociada a esta cita"
                               >
                                 <Receipt className="w-3.5 h-3.5" />
@@ -572,9 +572,9 @@ export default function Patients() {
                             </div>
                           )}
                           {r.tooth_chart && Object.keys(r.tooth_chart).length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-gray-50">
+                            <div className="mt-2 pt-2 border-t border-gray-50 dark:border-gray-700">
                               <button onClick={() => setOpenChart(openChart === r.id ? null : r.id)}
-                                className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline">
+                                className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-300 font-medium hover:underline">
                                 <Activity className="w-3.5 h-3.5" />
                                 {openChart === r.id ? t('records.hideChart') : t('records.showChart')}
                               </button>
@@ -585,9 +585,9 @@ export default function Patients() {
                               )}
                             </div>
                           )}
-                          <div className="mt-2 pt-2 border-t border-gray-50">
+                          <div className="mt-2 pt-2 border-t border-gray-50 dark:border-gray-700">
                             <button onClick={() => setOpenFiles(openFiles === r.id ? null : r.id)}
-                              className="flex items-center gap-1.5 text-xs text-blue-600 font-medium hover:underline">
+                              className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-300 font-medium hover:underline">
                               <Paperclip className="w-3.5 h-3.5" />
                               {openFiles === r.id ? t('records.hideFiles') : t('records.showFiles')}
                             </button>
@@ -605,7 +605,7 @@ export default function Patients() {
 
                 {activeTab === 'info' && (
                   <div>
-                    <button onClick={() => openInfo(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 font-medium hover:underline">
+                    <button onClick={() => openInfo(u.id)} className="flex items-center gap-1.5 mb-3 text-sm text-blue-600 dark:text-blue-300 font-medium hover:underline">
                       <Pencil className="w-4 h-4" /> {t('records.editMedical')}
                     </button>
                     {medicalInfos[u.id] ? (
@@ -619,21 +619,21 @@ export default function Patients() {
                           [t('records.emergencyPhoneShort'), medicalInfos[u.id]?.emergency_phone],
                         ].map(([label, val]) => val ? (
                           <div key={label as string} className="col-span-2 sm:col-span-1">
-                            <p className="text-xs text-gray-400">{label}</p>
-                            <p className="text-sm text-gray-700">{val}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{val}</p>
                           </div>
                         ) : null)}
                       </div>
-                    ) : <p className="text-sm text-gray-400 text-center py-4">{t('records.noMedical')}</p>}
+                    ) : <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">{t('records.noMedical')}</p>}
                   </div>
                 )}
 
                 {activeTab === 'odontogram' && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-3">{t('records.lastChart')}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{t('records.lastChart')}</p>
                     {(records[u.id] || []).length > 0
                       ? <Odontogram value={records[u.id][0].tooth_chart || {}} onChange={() => {}} readOnly />
-                      : <p className="text-sm text-gray-400 text-center py-4">{t('records.noChart')}</p>
+                      : <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">{t('records.noChart')}</p>
                     }
                   </div>
                 )}
@@ -662,10 +662,10 @@ export default function Patients() {
       {createOpen && (
         <Modal title={t('patients.createTitle')} onClose={() => setCreateOpen(false)}>
           <form onSubmit={handleCreate} className="space-y-3">
-            {createError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{createError}</p>}
+            {createError && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 rounded-lg px-3 py-2">{createError}</p>}
             <DemographicFields form={createForm} set={(k, v) => setCreateForm(f => ({ ...f, [k]: v }))} />
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setCreateOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              <button type="button" onClick={() => setCreateOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
                 {t('common.cancel')}
               </button>
               <button type="submit" disabled={createSaving} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
@@ -682,12 +682,12 @@ export default function Patients() {
           onClose={() => setModal(null)}
         >
           <form onSubmit={handleSubmit} className="space-y-3">
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 rounded-lg px-3 py-2">{error}</p>}
 
             {modal.type === 'info' ? (
               <>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.bloodType')}</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('records.bloodType')}</label>
                   <select className="input" value={form.blood_type} onChange={e => setForm({ ...form, blood_type: e.target.value })}>
                     <option value="">{t('common.select')}</option>
                     {BLOOD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
@@ -701,7 +701,7 @@ export default function Patients() {
                   ['emergency_phone', t('records.emergencyPhone'), t('records.emergencyPhonePlaceholder')],
                 ].map(([field, label, placeholder]) => (
                   <div key={field}>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">{label}</label>
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{label}</label>
                     <input className="input" placeholder={placeholder} value={form[field] || ''}
                       onChange={e => setForm({ ...form, [field]: e.target.value })} />
                   </div>
@@ -711,38 +711,38 @@ export default function Patients() {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.doctor')} *</label>
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('records.doctor')} *</label>
                     <select required className="input" value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })}>
                       <option value="">{t('common.select')}</option>
                       {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.date')} *</label>
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('records.date')} *</label>
                     <input required type="date" className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.diagnosis')}</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('records.diagnosis')}</label>
                   <input className="input" value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder={t('records.diagnosisPlaceholder')} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.treatment')}</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('records.treatment')}</label>
                   <input className="input" value={form.treatment} onChange={e => setForm({ ...form, treatment: e.target.value })} placeholder={t('records.treatmentPlaceholder')} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">{t('records.observations')}</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('records.observations')}</label>
                   <textarea className="input resize-none" rows={2} value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder={t('records.observationsPlaceholder')} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-2 block">{t('records.tabOdontogram')}</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 block">{t('records.tabOdontogram')}</label>
                   <Odontogram value={form.tooth_chart || {}} onChange={tc => setForm({ ...form, tooth_chart: tc })} />
                 </div>
               </>
             )}
 
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">{t('common.cancel')}</button>
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">{t('common.cancel')}</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {loading ? t('common.saving') : t('common.save')}
               </button>
@@ -754,18 +754,18 @@ export default function Patients() {
       {importOpen && (
         <Modal title={t('patients.importTitle')} onClose={() => setImportOpen(false)}>
           <div className="space-y-3">
-            {importError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{importError}</p>}
+            {importError && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 rounded-lg px-3 py-2">{importError}</p>}
 
             {importDone ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg px-3 py-2.5">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/40 rounded-lg px-3 py-2.5">
                   <CheckCircle className="w-5 h-5" />
                   <span className="text-sm font-medium">{t('patients.importedCount', { count: importDone.ok })}</span>
                 </div>
                 {importDone.fail.length > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700 mb-1"><AlertCircle className="w-4 h-4" />{t('patients.withError', { count: importDone.fail.length })}</p>
-                    <ul className="text-xs text-amber-700 space-y-0.5 max-h-32 overflow-y-auto">
+                  <div className="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 mb-1"><AlertCircle className="w-4 h-4" />{t('patients.withError', { count: importDone.fail.length })}</p>
+                    <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-0.5 max-h-32 overflow-y-auto">
                       {importDone.fail.map((f, i) => <li key={i}>• {f.name}: {f.reason}</li>)}
                     </ul>
                   </div>
@@ -774,22 +774,22 @@ export default function Patients() {
               </div>
             ) : (
               <>
-                <p className="text-sm text-gray-600">{t('patients.importIntro')} <span className="font-medium">{t('patients.nameWord')}</span>.</p>
-                <button onClick={downloadTemplate} className="flex items-center gap-1.5 text-sm text-blue-600 font-medium hover:underline">
+                <p className="text-sm text-gray-600 dark:text-gray-300">{t('patients.importIntro')} <span className="font-medium">{t('patients.nameWord')}</span>.</p>
+                <button onClick={downloadTemplate} className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-300 font-medium hover:underline">
                   <Download className="w-4 h-4" /> {t('patients.downloadTemplate')}
                 </button>
 
-                <label className="block border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30">
+                <label className="block border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/30 dark:hover:bg-blue-900/20">
                   <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                  <span className="text-sm text-gray-600 font-medium">{t('patients.chooseFile')}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">{t('patients.chooseFile')}</span>
                   <input type="file" accept=".csv,text/csv" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
                 </label>
 
                 {importRows.length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm font-medium text-gray-800 mb-1">{t('patients.detectedCount', { count: importRows.length })}</p>
-                    <ul className="text-xs text-gray-500 space-y-0.5 max-h-32 overflow-y-auto">
+                  <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 mb-1">{t('patients.detectedCount', { count: importRows.length })}</p>
+                    <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 max-h-32 overflow-y-auto">
                       {importRows.slice(0, 10).map((r, i) => <li key={i}>• {r.name}{r.document_id ? ` (${r.document_id})` : ''}</li>)}
                       {importRows.length > 10 && <li>{t('patients.andMore', { count: importRows.length - 10 })}</li>}
                     </ul>
@@ -797,7 +797,7 @@ export default function Patients() {
                 )}
 
                 <div className="flex gap-2 pt-1">
-                  <button type="button" onClick={() => setImportOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">{t('common.cancel')}</button>
+                  <button type="button" onClick={() => setImportOpen(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">{t('common.cancel')}</button>
                   <button onClick={runImport} disabled={importRows.length === 0 || importing}
                     className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                     {importing ? t('patients.importing') : t('patients.importAction', { count: importRows.length || '' })}

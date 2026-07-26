@@ -330,33 +330,33 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-10">Sin facturas todavía.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-10">Sin facturas todavía.</p>
       ) : (
         <div className="space-y-2">
           {filtered.map(inv => (
             <button key={inv.id} onClick={() => refreshDetail(inv.id)}
-              className="w-full text-left bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
+              className="w-full text-left bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 hover:border-blue-300 dark:hover:border-blue-500 transition-colors">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-500">#{String(inv.number).padStart(4, '0')}</span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">#{String(inv.number).padStart(4, '0')}</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_LABEL[inv.status].cls}`}>
                       {STATUS_LABEL[inv.status].label}
                     </span>
                     {inv.type === 'supply' && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Insumos</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Insumos</span>
                     )}
                   </div>
-                  <p className="font-semibold text-gray-900 truncate mt-0.5">{inv.user_name}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 truncate mt-0.5">{inv.user_name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     <Calendar className="w-3 h-3 inline -mt-0.5" /> {inv.date}
                     {inv.doctor_name && <> · Dr. {inv.doctor_name}</>}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-gray-900">{formatMoney(inv.total, currency)}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatMoney(inv.total, currency)}</p>
                   {Number(inv.total_paid) > 0 && Number(inv.total_paid) < Number(inv.total) && (
-                    <p className="text-xs text-amber-600">Pagado {formatMoney(inv.total_paid, currency)}</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Pagado {formatMoney(inv.total_paid, currency)}</p>
                   )}
                 </div>
               </div>

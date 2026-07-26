@@ -122,10 +122,10 @@ export default function Attachments({ userId, recordId, compact }: Props) {
     <div>
       {/* Encabezado + botón de subir */}
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
           <Paperclip className="w-4 h-4" />
           {compact ? 'Adjuntos' : 'Archivos del paciente'}
-          {items.length > 0 && <span className="text-xs text-gray-400">({items.length})</span>}
+          {items.length > 0 && <span className="text-xs text-gray-400 dark:text-gray-500">({items.length})</span>}
         </div>
         <button onClick={() => inputRef.current?.click()} disabled={uploading || clinicFull || globalFull}
           title={globalFull ? 'Sistema lleno' : clinicFull ? 'Cuota de la clínica alcanzada' : ''}
@@ -138,21 +138,21 @@ export default function Attachments({ userId, recordId, compact }: Props) {
 
       {/* Barra de uso de almacenamiento de la clínica */}
       {usage && !compact && (
-        <div className={`mb-2 px-2.5 py-2 rounded-lg text-xs ${clinicFull || globalFull ? 'bg-red-50' : clinicPct > 80 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+        <div className={`mb-2 px-2.5 py-2 rounded-lg text-xs ${clinicFull || globalFull ? 'bg-red-50 dark:bg-red-900/40' : clinicPct > 80 ? 'bg-amber-50 dark:bg-amber-900/40' : 'bg-gray-50 dark:bg-gray-700/60'}`}>
           <div className="flex items-center justify-between mb-1">
-            <span className="flex items-center gap-1.5 text-gray-600">
+            <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
               <HardDrive className="w-3.5 h-3.5" /> Espacio de la clínica
             </span>
-            <span className={`font-medium ${clinicFull ? 'text-red-700' : 'text-gray-700'}`}>
+            <span className={`font-medium ${clinicFull ? 'text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
               {fmtBytes(usage.clinic_used)} / {fmtBytes(usage.clinic_limit)}
             </span>
           </div>
-          <div className="h-1.5 bg-white rounded-full overflow-hidden">
+          <div className="h-1.5 bg-white dark:bg-gray-800 rounded-full overflow-hidden">
             <div className={`h-full rounded-full ${clinicFull ? 'bg-red-500' : clinicPct > 80 ? 'bg-amber-500' : 'bg-blue-500'}`}
               style={{ width: `${clinicPct}%` }} />
           </div>
           {globalFull && (
-            <p className="mt-1.5 text-red-700 flex items-start gap-1">
+            <p className="mt-1.5 text-red-700 dark:text-red-400 flex items-start gap-1">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               El sistema alcanzó el límite total. Contacta al administrador.
             </p>
@@ -161,24 +161,24 @@ export default function Attachments({ userId, recordId, compact }: Props) {
       )}
 
       {error && (
-        <div className="flex items-start gap-1.5 text-xs text-red-700 bg-red-50 rounded-lg px-2.5 py-1.5 mb-2">
+        <div className="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/40 rounded-lg px-2.5 py-1.5 mb-2">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {loading ? (
-        <p className="text-xs text-gray-400 py-2">Cargando…</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 py-2">Cargando…</p>
       ) : items.length === 0 ? (
-        <p className="text-xs text-gray-400 py-2">
+        <p className="text-xs text-gray-400 dark:text-gray-500 py-2">
           Sin archivos. Acepta JPG, PNG, WebP y PDF (máx {MAX_MB} MB).
         </p>
       ) : (
         <div className={compact ? 'space-y-1.5' : 'grid sm:grid-cols-2 gap-2'}>
           {items.map(a => (
             <div key={a.id}
-              className="flex items-center gap-2 border border-gray-100 rounded-lg p-2 bg-white">
-              <div className={`shrink-0 p-1.5 rounded ${isImage(a) ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+              className="flex items-center gap-2 border border-gray-100 dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+              <div className={`shrink-0 p-1.5 rounded ${isImage(a) ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-red-50 text-red-600 dark:bg-red-900/40 dark:text-red-300'}`}>
                 {isImage(a) ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
               </div>
 
@@ -192,35 +192,35 @@ export default function Attachments({ userId, recordId, compact }: Props) {
                       if (e.key === 'Enter') saveRename(a);
                       if (e.key === 'Escape') setRenamingId(null);
                     }}
-                    className="flex-1 min-w-0 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    className="flex-1 min-w-0 px-2 py-1 text-sm border border-blue-300 dark:border-blue-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-200 dark:bg-gray-800 dark:text-gray-100"
                   />
                   <button onClick={() => saveRename(a)} title="Guardar"
-                    className="p-1 text-green-600 hover:bg-green-50 rounded">
+                    className="p-1 text-green-600 hover:bg-green-50 rounded dark:text-green-400 dark:hover:bg-green-900/40">
                     <Check className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={() => setRenamingId(null)} title="Cancelar"
-                    className="p-1 text-gray-400 hover:bg-gray-50 rounded">
+                    className="p-1 text-gray-400 hover:bg-gray-50 rounded dark:text-gray-500 dark:hover:bg-gray-700">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
                 <>
                   <button onClick={() => setPreviewId(a.id)}
-                    className="flex-1 min-w-0 text-left hover:text-blue-700">
-                    <p className="text-sm font-medium text-gray-800 truncate">{a.file_name}</p>
-                    <p className="text-[10px] text-gray-400">
+                    className="flex-1 min-w-0 text-left hover:text-blue-700 dark:hover:text-blue-400">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{a.file_name}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
                       {fmtSize(a.size_bytes)} · {new Date(a.uploaded_at).toLocaleDateString('es-ES')}
                       {a.uploaded_by_name && ` · ${a.uploaded_by_name}`}
                     </p>
                   </button>
                   <button onClick={() => startRename(a)}
                     title="Renombrar"
-                    className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+                    className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded dark:text-gray-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/40">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={() => handleDelete(a)}
                     title="Eliminar"
-                    className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
+                    className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900/40">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </>
@@ -275,16 +275,16 @@ function PreviewModal({ attachment, onClose }: { attachment: Attachment; onClose
       aria-modal="true"
     >
       <div
-        className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
+        className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-gray-900 truncate" title={attachment.file_name}>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate" title={attachment.file_name}>
               {attachment.file_name}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {fmtSize(attachment.size_bytes)} · {new Date(attachment.uploaded_at).toLocaleString('es-ES')}
               {attachment.uploaded_by_name && ` · ${attachment.uploaded_by_name}`}
             </p>
@@ -297,21 +297,21 @@ function PreviewModal({ attachment, onClose }: { attachment: Attachment; onClose
           )}
           <button onClick={onClose}
             title="Cerrar (Esc)"
-            className="shrink-0 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+            className="shrink-0 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-auto bg-gray-50 flex items-center justify-center">
+        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
           {loadError && (
-            <div className="text-center text-sm text-red-600 p-8">
+            <div className="text-center text-sm text-red-600 dark:text-red-400 p-8">
               <AlertCircle className="w-8 h-8 mx-auto mb-2" />
               {loadError}
             </div>
           )}
           {!loadError && !previewUrl && (
-            <div className="text-center text-gray-400 p-8">
+            <div className="text-center text-gray-400 dark:text-gray-500 p-8">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
               <p className="text-sm">Cargando previsualización…</p>
             </div>
@@ -325,7 +325,7 @@ function PreviewModal({ attachment, onClose }: { attachment: Attachment; onClose
               className="w-full h-[75vh] border-0 bg-white" />
           )}
           {previewUrl && !isImage && !isPdf && (
-            <div className="text-center text-gray-500 p-8 text-sm">
+            <div className="text-center text-gray-500 dark:text-gray-400 p-8 text-sm">
               No hay previsualización para este tipo de archivo. Usa "Descargar".
             </div>
           )}

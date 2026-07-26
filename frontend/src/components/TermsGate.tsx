@@ -45,24 +45,24 @@ export default function TermsGate() {
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-3 border-b">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3 border-b dark:border-gray-700">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Términos de Servicio actualizados</h3>
-            <p className="text-xs text-gray-500">Versión {terms.version}. Acepta para continuar usando OdontiaCloud.</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Términos de Servicio actualizados</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Versión {terms.version}. Acepta para continuar usando OdontiaCloud.</p>
           </div>
           <button onClick={() => logout()} title="Cerrar sesión"
-            className="p-1 rounded hover:bg-gray-100">
-            <X className="w-4 h-4 text-gray-500" />
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+            <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700 leading-relaxed font-mono">
+        <div className="px-5 py-4 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-mono">
           {terms.content}
         </div>
-        {error && <p className="px-5 pb-2 text-sm text-red-600">{error}</p>}
-        <div className="px-5 py-3 border-t flex justify-between gap-2">
+        {error && <p className="px-5 pb-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        <div className="px-5 py-3 border-t dark:border-gray-700 flex justify-between gap-2">
           <button onClick={() => logout()}
-            className="px-4 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
+            className="px-4 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
             Salir
           </button>
           <button onClick={accept} disabled={submitting}

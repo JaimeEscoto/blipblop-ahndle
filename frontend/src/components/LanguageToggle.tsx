@@ -22,7 +22,7 @@ export default function LanguageToggle({ value, onChange }: Props) {
   ];
 
   return (
-    <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5" role="group" aria-label="Language">
+    <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-gray-600 dark:bg-gray-800" role="group" aria-label="Language">
       {langs.map(({ code, label }) => (
         <button
           key={code}
@@ -30,7 +30,7 @@ export default function LanguageToggle({ value, onChange }: Props) {
           onClick={() => select(code)}
           aria-pressed={current === code}
           className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${
-            current === code ? 'bg-blue-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+            current === code ? 'bg-blue-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
           }`}
         >
           {label}

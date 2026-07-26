@@ -77,13 +77,13 @@ export default function InstallPrompt() {
   if (!deferred && !showIosHint) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 max-w-sm w-[calc(100%-2rem)] bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex items-start gap-3">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 max-w-sm w-[calc(100%-2rem)] bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex items-start gap-3 dark:bg-gray-800 dark:border-gray-700">
       <img src="/icono.png" alt="" className="w-10 h-10 object-contain shrink-0" />
       <div className="flex-1 min-w-0">
         {deferred ? (
           <>
-            <p className="text-sm font-semibold text-gray-900">Instalar odontiacloud</p>
-            <p className="text-xs text-gray-500 mt-0.5">Tendrás la app en tu inicio, sin barras del navegador.</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Instalar odontiacloud</p>
+            <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-400">Tendrás la app en tu inicio, sin barras del navegador.</p>
             <button onClick={install}
               className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
               <Download className="w-3.5 h-3.5" /> Instalar
@@ -91,17 +91,17 @@ export default function InstallPrompt() {
           </>
         ) : (
           <>
-            <p className="text-sm font-semibold text-gray-900">Añade odontiacloud al inicio</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Toca <span className="font-mono px-1 bg-gray-100 rounded">Compartir</span> →{' '}
-              <span className="font-mono px-1 bg-gray-100 rounded">Añadir a inicio</span>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Añade odontiacloud al inicio</p>
+            <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-400">
+              Toca <span className="font-mono px-1 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-200">Compartir</span> →{' '}
+              <span className="font-mono px-1 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-200">Añadir a inicio</span>
             </p>
           </>
         )}
       </div>
       <button onClick={dismiss}
         title="No mostrar por un tiempo"
-        className="shrink-0 p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded">
+        className="shrink-0 p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700">
         <X className="w-4 h-4" />
       </button>
     </div>

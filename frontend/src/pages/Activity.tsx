@@ -10,12 +10,12 @@ import {
 const ENTITIES = ['Paciente', 'Médico', 'Cita', 'Inventario', 'Recordatorio', 'Invitación', 'Registro clínico', 'Información médica', 'Sesión'];
 
 function actionIcon(action: string) {
-  if (action.startsWith('Inició')) return { Icon: LogIn, color: 'text-indigo-600', bg: 'bg-indigo-100' };
-  if (action.startsWith('Consultó')) return { Icon: Eye, color: 'text-sky-600', bg: 'bg-sky-100' };
-  if (action.startsWith('Descargó')) return { Icon: Download, color: 'text-violet-600', bg: 'bg-violet-100' };
-  if (action.startsWith('Creó')) return { Icon: Plus, color: 'text-green-600', bg: 'bg-green-100' };
-  if (action.startsWith('Eliminó')) return { Icon: Trash2, color: 'text-red-600', bg: 'bg-red-100' };
-  return { Icon: Pencil, color: 'text-amber-600', bg: 'bg-amber-100' };
+  if (action.startsWith('Inició')) return { Icon: LogIn, color: 'text-indigo-600 dark:text-indigo-300', bg: 'bg-indigo-100 dark:bg-indigo-900/40' };
+  if (action.startsWith('Consultó')) return { Icon: Eye, color: 'text-sky-600 dark:text-sky-300', bg: 'bg-sky-100 dark:bg-sky-900/40' };
+  if (action.startsWith('Descargó')) return { Icon: Download, color: 'text-violet-600 dark:text-violet-300', bg: 'bg-violet-100 dark:bg-violet-900/40' };
+  if (action.startsWith('Creó')) return { Icon: Plus, color: 'text-green-600 dark:text-green-300', bg: 'bg-green-100 dark:bg-green-900/40' };
+  if (action.startsWith('Eliminó')) return { Icon: Trash2, color: 'text-red-600 dark:text-red-300', bg: 'bg-red-100 dark:bg-red-900/40' };
+  return { Icon: Pencil, color: 'text-amber-600 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/40' };
 }
 
 // Traduce las claves técnicas a etiquetas legibles para el detalle.
@@ -85,8 +85,8 @@ export default function Activity() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('activity.title')}</h1>
-          <p className="text-sm text-gray-500">{t('activity.subtitle')}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('activity.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('activity.subtitle')}</p>
         </div>
         <button onClick={load} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('activity.refresh')}
@@ -111,8 +111,8 @@ export default function Activity() {
 
       <div className="space-y-2">
         {!loading && logs.length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm flex flex-col items-center gap-2">
-            <ActivityIcon className="w-8 h-8 text-gray-300" />
+          <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm flex flex-col items-center gap-2">
+            <ActivityIcon className="w-8 h-8 text-gray-300 dark:text-gray-600" />
             {t('activity.none')}
           </div>
         )}
@@ -121,7 +121,7 @@ export default function Activity() {
           const hasDetails = log.details && Object.keys(log.details).length > 0;
           const open = expanded === log.id;
           return (
-            <div key={log.id} className="bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div key={log.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
               <button
                 disabled={!hasDetails}
                 onClick={() => setExpanded(open ? null : log.id)}
@@ -131,32 +131,32 @@ export default function Activity() {
                   <Icon className={`w-4 h-4 ${color}`} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-900 truncate">
-                    <span className="text-blue-700">{log.account_name || log.account_email || t('activity.unknown')}</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                    <span className="text-blue-700 dark:text-blue-300">{log.account_name || log.account_email || t('activity.unknown')}</span>
                     {' — '}{log.summary}
                   </p>
-                  <p className="text-xs text-gray-400">{fmt(log.created_at)}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{fmt(log.created_at)}</p>
                 </div>
                 {hasDetails && (open
-                  ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
-                  : <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />)}
+                  ? <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                  : <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />)}
               </button>
               {open && hasDetails && (() => {
                 const showsChanges = Object.values(log.details!).some(isChange);
                 return (
                 <div className="px-4 pb-4 -mt-1">
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2 font-medium">{t(showsChanges ? 'activity.changesDetail' : 'activity.operationDetail')}</p>
+                  <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2 font-medium">{t(showsChanges ? 'activity.changesDetail' : 'activity.operationDetail')}</p>
                     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
                       {Object.entries(log.details!).map(([k, v]) => (
                         <div key={k} className="flex gap-2 text-sm">
-                          <dt className="text-gray-500 shrink-0">{FIELD_LABELS[k] || k}:</dt>
-                          <dd className="text-gray-800 font-medium break-words min-w-0">
+                          <dt className="text-gray-500 dark:text-gray-400 shrink-0">{FIELD_LABELS[k] || k}:</dt>
+                          <dd className="text-gray-800 dark:text-gray-100 font-medium break-words min-w-0">
                             {isChange(v) ? (
                               <span className="inline-flex flex-wrap items-center gap-1.5">
-                                <span className="text-gray-400 line-through">{formatValue(k, v.from)}</span>
-                                <span className="text-gray-400">→</span>
-                                <span className="text-gray-900">{formatValue(k, v.to)}</span>
+                                <span className="text-gray-400 dark:text-gray-500 line-through">{formatValue(k, v.from)}</span>
+                                <span className="text-gray-400 dark:text-gray-500">→</span>
+                                <span className="text-gray-900 dark:text-gray-100">{formatValue(k, v.to)}</span>
                               </span>
                             ) : formatValue(k, v)}
                           </dd>
@@ -164,7 +164,7 @@ export default function Activity() {
                       ))}
                     </dl>
                     {log.path && (
-                      <p className="text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-100">
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                         {log.method} {log.path}
                       </p>
                     )}

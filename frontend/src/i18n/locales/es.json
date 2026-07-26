@@ -31,7 +31,9 @@
     "activity": "Actividad",
     "superadmin": "Super Admin",
     "settings": "Ajustes",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "darkMode": "Modo oscuro",
+    "lightMode": "Modo claro"
   },
   "login": {
     "subtitle": "Inicia sesión para administrar la clínica",
