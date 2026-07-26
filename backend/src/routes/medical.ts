@@ -12,6 +12,12 @@ async function ensureUserInClinic(userId: string, clinicId: number): Promise<boo
   return !!r.rows[0];
 }
 
+// Verifica que un médico pertenezca a la clínica (el JOIN a doctors es global por id).
+async function ensureDoctorInClinic(doctorId: any, clinicId: number): Promise<boolean> {
+  const r = await pool.query('SELECT 1 FROM doctors WHERE id = $1 AND clinic_id = $2', [doctorId, clinicId]);
+  return !!r.rows[0];
+}
+
 // --- MEDICAL INFO ---
 
 router.get('/info/:userId', async (req: Request, res: Response) => {
@@ -65,6 +71,7 @@ router.post('/records', async (req: Request, res: Response) => {
   const { user_id, doctor_id, appointment_id, date, diagnosis, treatment, observations, tooth_chart } = req.body;
   if (!user_id || !doctor_id || !date) return res.status(400).json({ error: 'Paciente, médico y fecha son requeridos' });
   if (!(await ensureUserInClinic(String(user_id), req.clinic!.id))) return res.status(404).json({ error: 'Paciente no encontrado' });
+  if (!(await ensureDoctorInClinic(doctor_id, req.clinic!.id))) return res.status(404).json({ error: 'Médico no encontrado' });
   const { rows } = await pool.query(
     `INSERT INTO clinical_records (user_id, doctor_id, appointment_id, date, diagnosis, treatment, observations, tooth_chart, clinic_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
@@ -81,6 +88,7 @@ router.post('/records', async (req: Request, res: Response) => {
 
 router.put('/records/:id', async (req: Request, res: Response) => {
   const { doctor_id, date, diagnosis, treatment, observations, tooth_chart } = req.body;
+  if (!(await ensureDoctorInClinic(doctor_id, req.clinic!.id))) return res.status(404).json({ error: 'Médico no encontrado' });
   const beforeRec = await pool.query(
     `SELECT cr.*, d.name as doctor_name, TO_CHAR(cr.date,'YYYY-MM-DD') as date
      FROM clinical_records cr JOIN doctors d ON cr.doctor_id = d.id WHERE cr.id = $1 AND cr.clinic_id = $2`,
