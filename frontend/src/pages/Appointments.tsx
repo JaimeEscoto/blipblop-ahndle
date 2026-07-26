@@ -17,9 +17,9 @@ interface ProcRow { procedure_id: string; quantity: string; unit_price: string; 
 const EMPTY_PROC_ROW: ProcRow = { procedure_id: '', quantity: '1', unit_price: '' };
 
 const STATUS_CONFIG: Record<Status, { icon: typeof CheckCircle; className: string }> = {
-  scheduled: { icon: AlertCircle, className: 'bg-blue-100 text-blue-700' },
-  completed: { icon: CheckCircle, className: 'bg-green-100 text-green-700' },
-  cancelled: { icon: XCircle, className: 'bg-red-100 text-red-700' },
+  scheduled: { icon: AlertCircle, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  completed: { icon: CheckCircle, className: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+  cancelled: { icon: XCircle, className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
 };
 
 const TIMES = Array.from({ length: 24 }, (_, h) =>
@@ -272,7 +272,7 @@ export default function Appointments() {
     const cfg = STATUS_CONFIG[a.status];
     const Icon = cfg.icon;
     return (
-      <div key={a.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+      <div key={a.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -280,21 +280,21 @@ export default function Appointments() {
                 <Icon className="w-3 h-3" />{statusLabel(a.status)}
               </span>
             </div>
-            <p className="font-semibold text-gray-900 truncate">{a.user_name}</p>
-            <p className="text-sm text-gray-600">Dr. {a.doctor_name} · <span className="text-gray-400">{a.doctor_specialty}</span></p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{a.user_name}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Dr. {a.doctor_name} · <span className="text-gray-400 dark:text-gray-500">{a.doctor_specialty}</span></p>
             <div className="flex items-center gap-3 mt-1">
-              <span className="flex items-center gap-1 text-xs text-gray-500">
+              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <Calendar className="w-3.5 h-3.5" />{formatDate(a.date)}
               </span>
-              <span className="flex items-center gap-1 text-xs text-gray-500">
+              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <Clock className="w-3.5 h-3.5" />{a.time}
               </span>
             </div>
-            {a.reason && <p className="text-xs text-gray-400 mt-1 truncate">{a.reason}</p>}
+            {a.reason && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">{a.reason}</p>}
             {a.procedures && a.procedures.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {a.procedures.map(p => (
-                  <span key={p.id} className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                  <span key={p.id} className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-full dark:bg-indigo-900/40 dark:text-indigo-300">
                     {p.procedure_name}{Number(p.quantity) > 1 ? ` ×${p.quantity}` : ''}
                   </span>
                 ))}
@@ -304,28 +304,28 @@ export default function Appointments() {
           <div className="flex gap-1 shrink-0">
             <button
               onClick={() => goInvoice(a)}
-              className={`p-2 rounded-lg ${a.invoice_id ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+              className={`p-2 rounded-lg ${a.invoice_id ? 'text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/40' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40'}`}
               title={a.invoice_id ? 'Ver factura de esta cita' : 'Crear factura para esta cita'}
             >
               <Receipt className="w-4 h-4" />
             </button>
-            <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title={t('common.download')}>
+            <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/40 rounded-lg" title={t('common.download')}>
               <Download className="w-4 h-4" />
             </button>
-            <button onClick={() => openEdit(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+            <button onClick={() => openEdit(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg">
               <Pencil className="w-4 h-4" />
             </button>
-            <button onClick={() => setDeleteId(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+            <button onClick={() => setDeleteId(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
         {a.status === 'scheduled' && (
-          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
-            <button onClick={() => openComplete(a)} className="flex-1 text-xs py-1.5 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100">
+          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
+            <button onClick={() => openComplete(a)} className="flex-1 text-xs py-1.5 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60">
               {t('appointments.markCompleted')}
             </button>
-            <button onClick={() => handleStatusChange(a.id, 'cancelled')} className="flex-1 text-xs py-1.5 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100">
+            <button onClick={() => handleStatusChange(a.id, 'cancelled')} className="flex-1 text-xs py-1.5 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60">
               {t('appointments.cancelAppointment')}
             </button>
           </div>
@@ -376,8 +376,8 @@ export default function Appointments() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('appointments.title')}</h1>
-          <p className="text-sm text-gray-500">{t('appointments.totalCount', { count: appointments.length })}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('appointments.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('appointments.totalCount', { count: appointments.length })}</p>
         </div>
         <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
           <Plus className="w-4 h-4" /> {t('common.newFem')}
@@ -385,13 +385,13 @@ export default function Appointments() {
       </div>
 
       {/* Selector de vista */}
-      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg p-1 w-fit">
         <button onClick={() => setView('list')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'list' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'list' ? 'bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
           <List className="w-4 h-4" /> {t('appointments.listView')}
         </button>
         <button onClick={() => setView('calendar')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'calendar' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'calendar' ? 'bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
           <CalendarDays className="w-4 h-4" /> {t('appointments.calendarView')}
         </button>
       </div>
@@ -401,7 +401,7 @@ export default function Appointments() {
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
               placeholder={t('appointments.searchPlaceholder')}
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -415,7 +415,7 @@ export default function Appointments() {
                 key={s}
                 onClick={() => setFilterStatus(s)}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
                 {s === 'all' ? t('appointments.filterAll') : statusLabel(s)}
@@ -425,7 +425,7 @@ export default function Appointments() {
 
           <div className="space-y-3">
             {filtered.length === 0 && (
-              <div className="text-center py-12 text-gray-400 text-sm">{t('appointments.noneFound')}</div>
+              <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">{t('appointments.noneFound')}</div>
             )}
             {filtered.map(a => ApptCard(a))}
           </div>
@@ -436,25 +436,25 @@ export default function Appointments() {
         <div>
           {/* Cabecera del mes */}
           <div className="flex items-center justify-between mb-3">
-            <button onClick={() => changeMonth(-1)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
-            <span className="font-semibold text-gray-900">{monthLabel}</span>
-            <button onClick={() => changeMonth(1)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
+            <button onClick={() => changeMonth(-1)} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{monthLabel}</span>
+            <button onClick={() => changeMonth(1)} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
           </div>
 
           {/* Filtro de estado también en calendario */}
           <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
             {(['all', 'scheduled', 'completed', 'cancelled'] as const).map(s => (
               <button key={s} onClick={() => setFilterStatus(s)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterStatus === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>
                 {s === 'all' ? t('appointments.filterAll') : statusLabel(s)}
               </button>
             ))}
           </div>
 
           {/* Cuadrícula */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-2">
             <div className="grid grid-cols-7 mb-1">
-              {WEEKDAYS.map(d => <div key={d} className="text-center text-[11px] font-medium text-gray-400 py-1">{d}</div>)}
+              {WEEKDAYS.map(d => <div key={d} className="text-center text-[11px] font-medium text-gray-400 dark:text-gray-500 py-1">{d}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-1">
               {buildCalendarCells().map((cell, i) => {
@@ -464,16 +464,16 @@ export default function Appointments() {
                 const isToday = cell === todayStr;
                 const isSelected = cell === selectedDate;
                 const chipCls: Record<Status, string> = {
-                  scheduled: 'bg-blue-50 border-blue-500 text-blue-900',
-                  completed: 'bg-green-50 border-green-500 text-green-900',
-                  cancelled: 'bg-red-50 border-red-400 text-red-700',
+                  scheduled: 'bg-blue-50 border-blue-500 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200',
+                  completed: 'bg-green-50 border-green-500 text-green-900 dark:bg-green-900/30 dark:text-green-200',
+                  cancelled: 'bg-red-50 border-red-400 text-red-700 dark:bg-red-900/30 dark:text-red-300',
                 };
                 return (
                   <button key={cell} onClick={() => setSelectedDate(isSelected ? null : cell)}
                     className={`min-h-[96px] rounded-lg border flex flex-col items-stretch p-1 text-left transition-colors overflow-hidden ${
-                      isSelected ? 'border-blue-500 bg-blue-50' : isToday ? 'border-blue-200 bg-blue-50/40' : 'border-gray-100 hover:bg-gray-50'
+                      isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : isToday ? 'border-blue-200 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-900/20' : 'border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/60'
                     }`}>
-                    <span className={`text-xs mb-0.5 ${isToday ? 'font-bold text-blue-600' : 'text-gray-500'}`}>{day}</span>
+                    <span className={`text-xs mb-0.5 ${isToday ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{day}</span>
                     <div className="flex flex-col gap-0.5">
                       {dayAppts.slice(0, 3).map(a => (
                         <div key={a.id} className={`rounded border-l-2 px-1 py-0.5 leading-tight ${chipCls[a.status]}`}
@@ -484,7 +484,7 @@ export default function Appointments() {
                           <p className="text-[8px] opacity-70 truncate">Dr. {a.doctor_name}</p>
                         </div>
                       ))}
-                      {dayAppts.length > 3 && <span className="text-[9px] text-gray-400 px-1">{t('appointments.plusMore', { count: dayAppts.length - 3 })}</span>}
+                      {dayAppts.length > 3 && <span className="text-[9px] text-gray-400 dark:text-gray-500 px-1">{t('appointments.plusMore', { count: dayAppts.length - 3 })}</span>}
                     </div>
                   </button>
                 );
@@ -493,7 +493,7 @@ export default function Appointments() {
           </div>
 
           {/* Leyenda */}
-          <div className="flex gap-3 mt-2 mb-4 text-[11px] text-gray-500">
+          <div className="flex gap-3 mt-2 mb-4 text-[11px] text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />{t('appointments.legendScheduled')}</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />{t('appointments.legendCompleted')}</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />{t('appointments.legendCancelled')}</span>
@@ -502,12 +502,12 @@ export default function Appointments() {
           {/* Citas del día seleccionado */}
           {selectedDate && (
             <div>
-              <p className="text-sm font-semibold text-gray-700 mb-2">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 {capFirst(new Date(selectedDate + 'T00:00:00').toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }))}
               </p>
               <div className="space-y-3">
                 {(byDate[selectedDate] || []).length === 0
-                  ? <div className="text-center py-8 text-gray-400 text-sm">{t('appointments.noneThisDay')}</div>
+                  ? <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">{t('appointments.noneThisDay')}</div>
                   : [...(byDate[selectedDate] || [])].sort((a, b) => a.time.localeCompare(b.time)).map(a => ApptCard(a))
                 }
               </div>
@@ -519,10 +519,10 @@ export default function Appointments() {
       {modal && (
         <Modal title={modal.type === 'create' ? t('appointments.createTitle') : t('appointments.editTitle')} onClose={() => setModal(null)}>
           <form onSubmit={handleSubmit} className="space-y-3">
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 dark:bg-red-900/30 dark:text-red-400">{error}</p>}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-gray-700">{t('appointments.patient')} *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('appointments.patient')} *</label>
                 <button type="button" onClick={openQuickPatient} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                   <UserPlus className="w-3 h-3" /> {t('appointments.newPatientQuick')}
                 </button>
@@ -533,7 +533,7 @@ export default function Appointments() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.doctor')} *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.doctor')} *</label>
               <select required className="input" value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })}>
                 <option value="">{t('appointments.selectDoctor')}</option>
                 {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name} — {d.specialty}</option>)}
@@ -541,11 +541,11 @@ export default function Appointments() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.date')} *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.date')} *</label>
                 <input required type="date" min={modal?.type === 'create' ? todayStr : undefined} className="input" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.time')} *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.time')} *</label>
                 <select required className="input" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}>
                   <option value="">{t('appointments.timeShort')}</option>
                   {TIMES.map(time => <option key={time} value={time}>{time}</option>)}
@@ -554,7 +554,7 @@ export default function Appointments() {
             </div>
             {modal.type === 'edit' && (
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.statusLabel')}</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.statusLabel')}</label>
                 <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value as Status })}>
                   <option value="scheduled">{t('status.scheduled')}</option>
                   <option value="completed">{t('status.completed')}</option>
@@ -564,7 +564,7 @@ export default function Appointments() {
             )}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-gray-700">Procedimientos planeados</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Procedimientos planeados</label>
                 <button type="button" onClick={addProcRow} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                   <Plus className="w-3 h-3" /> Agregar
                 </button>
@@ -600,7 +600,7 @@ export default function Appointments() {
                     <button
                       type="button"
                       onClick={() => removeProcRow(idx)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0"
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg shrink-0"
                       title="Quitar"
                     >
                       <X className="w-4 h-4" />
@@ -608,20 +608,20 @@ export default function Appointments() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-gray-400 mt-1">
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                 Al cerrar la cita se generará una factura preliminar con estos procedimientos.
               </p>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.reason')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.reason')}</label>
               <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder={t('appointments.reasonPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.notes')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.notes')}</label>
               <textarea className="input resize-none" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder={t('appointments.notesPlaceholder')} />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600">
                 {t('common.cancel')}
               </button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
@@ -635,43 +635,43 @@ export default function Appointments() {
       {completeAppt && (
         <Modal title={t('appointments.completeTitle')} onClose={() => setCompleteAppt(null)}>
           <form onSubmit={handleComplete} className="space-y-3">
-            {completeError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{completeError}</p>}
+            {completeError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 dark:bg-red-900/30 dark:text-red-400">{completeError}</p>}
 
-            <div className="bg-gray-50 rounded-lg px-3 py-2 text-sm">
-              <p className="font-semibold text-gray-900">{completeAppt.user_name}</p>
-              <p className="text-xs text-gray-500">Dr. {completeAppt.doctor_name} · {completeAppt.doctor_specialty}</p>
+            <div className="bg-gray-50 dark:bg-gray-700/60 rounded-lg px-3 py-2 text-sm">
+              <p className="font-semibold text-gray-900 dark:text-gray-100">{completeAppt.user_name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Dr. {completeAppt.doctor_name} · {completeAppt.doctor_specialty}</p>
             </div>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {t('appointments.completeIntro')}
             </p>
 
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.diagnosis')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.diagnosis')}</label>
               <input className="input" value={completeForm.diagnosis} onChange={e => setCompleteForm({ ...completeForm, diagnosis: e.target.value })} placeholder={t('appointments.diagnosisPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.treatment')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.treatment')}</label>
               <input className="input" value={completeForm.treatment} onChange={e => setCompleteForm({ ...completeForm, treatment: e.target.value })} placeholder={t('appointments.treatmentPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.observations')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('appointments.observations')}</label>
               <textarea className="input resize-none" rows={2} value={completeForm.observations} onChange={e => setCompleteForm({ ...completeForm, observations: e.target.value })} placeholder={t('appointments.observationsPlaceholder')} />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-2 block">{t('records.tabOdontogram')}</label>
-              <p className="text-[11px] text-gray-400 mb-2">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 block">{t('records.tabOdontogram')}</label>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-2">
                 {t('appointments.odontogramHint')}
               </p>
               {loadingChart
-                ? <p className="text-sm text-gray-400 text-center py-4">{t('appointments.loadingChart')}</p>
+                ? <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">{t('appointments.loadingChart')}</p>
                 : <Odontogram value={completeForm.tooth_chart} onChange={tc => setCompleteForm({ ...completeForm, tooth_chart: tc })} />
               }
             </div>
 
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setCompleteAppt(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              <button type="button" onClick={() => setCompleteAppt(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600">
                 {t('common.cancel')}
               </button>
               <button type="submit" disabled={completing || loadingChart} className="flex-1 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-60">
@@ -685,30 +685,30 @@ export default function Appointments() {
       {quickPatient && (
         <Modal title={t('appointments.quickPatientTitle')} onClose={() => setQuickPatient(false)}>
           <form onSubmit={handleQuickPatient} className="space-y-3">
-            {quickPatientError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{quickPatientError}</p>}
-            <p className="text-xs text-gray-500">{t('appointments.quickPatientHint')}</p>
+            {quickPatientError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 dark:bg-red-900/30 dark:text-red-400">{quickPatientError}</p>}
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('appointments.quickPatientHint')}</p>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.fullName')} *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.fullName')} *</label>
               <input required autoFocus className="input" value={quickPatientForm.name}
                 onChange={e => setQuickPatientForm({ ...quickPatientForm, name: e.target.value })}
                 placeholder={t('patients.fullNamePlaceholder')} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.phone')}</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.phone')}</label>
                 <input className="input" value={quickPatientForm.phone}
                   onChange={e => setQuickPatientForm({ ...quickPatientForm, phone: e.target.value })}
                   placeholder="+504 9999 9999" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.email')}</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('patients.email')}</label>
                 <input type="email" className="input" value={quickPatientForm.email}
                   onChange={e => setQuickPatientForm({ ...quickPatientForm, email: e.target.value })}
                   placeholder={t('patients.emailPlaceholder')} />
               </div>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setQuickPatient(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              <button type="button" onClick={() => setQuickPatient(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600">
                 {t('common.cancel')}
               </button>
               <button type="submit" disabled={quickPatientSaving} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">

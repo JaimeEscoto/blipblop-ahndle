@@ -75,7 +75,7 @@ export default function SignaturePad({ onChange, height = 180 }: Props) {
 
   return (
     <div>
-      <div className="relative border-2 border-dashed border-gray-300 rounded-lg bg-white" style={{ height }}>
+      <div className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white" style={{ height }}>
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full touch-none cursor-crosshair rounded-lg"
@@ -91,7 +91,7 @@ export default function SignaturePad({ onChange, height = 180 }: Props) {
         )}
       </div>
       <button type="button" onClick={clear}
-        className="mt-2 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800">
+        className="mt-2 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
         <Eraser className="w-3.5 h-3.5" /> Borrar y volver a firmar
       </button>
     </div>
