@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { api, User, PatientBalance } from '../api/client';
-import { Plus, Pencil, Trash2, Search, Phone, Mail, CreditCard, MapPin, Cake, Upload, Download, CheckCircle, AlertCircle, Wallet } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Phone, Mail, CreditCard, MapPin, Cake, Upload, Download, CheckCircle, AlertCircle, Wallet, FileText } from 'lucide-react';
 import { formatMoney } from '../utils/money';
 import { COUNTRIES, findCountry } from '../data/countries';
+import { withSlug } from '../tenant';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -75,6 +77,7 @@ const EMPTY = {
 
 export default function Patients() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<{ type: 'create' | 'edit'; user?: User } | null>(null);
@@ -142,6 +145,21 @@ export default function Patients() {
       }));
     } catch { /* noop */ }
   };
+
+  // ?user=ID → abre directamente la edición de ese paciente (ej. desde Expedientes)
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (deepLinkHandled.current || users.length === 0) return;
+    deepLinkHandled.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const userParam = params.get('user');
+    if (!userParam) return;
+    const u = users.find(x => x.id === Number(userParam));
+    if (u) openEdit(u);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('user');
+    window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+  }, [users]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,6 +355,9 @@ export default function Patients() {
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
+                  <button onClick={() => navigate(withSlug(`/expedientes?user=${u.id}`))} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Ver expediente clínico">
+                    <FileText className="w-4 h-4" />
+                  </button>
                   <button onClick={() => openEdit(u)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
                     <Pencil className="w-4 h-4" />
                   </button>
