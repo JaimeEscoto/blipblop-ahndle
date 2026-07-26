@@ -89,6 +89,7 @@ export interface Appointment {
   user_name: string; user_email: string; user_phone: string | null;
   doctor_name: string; doctor_specialty: string;
   procedures?: AppointmentProcedure[];
+  invoice_id: number | null;
 }
 export interface AppointmentStatusResponse extends Appointment {
   draft_invoice_id: number | null;
@@ -470,7 +471,7 @@ export const api = {
       request<{ id: number; status: TreatmentPlanStatus }>(`/treatments/${id}/status`, { method:'PATCH', body:JSON.stringify({ status }) }),
   },
   invoices: {
-    list: (params?: { user_id?: number; status?: InvoiceStatus; type?: InvoiceType; from?: string; to?: string; limit?: number }) => {
+    list: (params?: { user_id?: number; status?: InvoiceStatus; type?: InvoiceType; from?: string; to?: string; limit?: number; appointment_id?: number }) => {
       const q = new URLSearchParams();
       if (params?.user_id) q.set('user_id', String(params.user_id));
       if (params?.status) q.set('status', params.status);
@@ -478,6 +479,7 @@ export const api = {
       if (params?.from) q.set('from', params.from);
       if (params?.to) q.set('to', params.to);
       if (params?.limit) q.set('limit', String(params.limit));
+      if (params?.appointment_id) q.set('appointment_id', String(params.appointment_id));
       const qs = q.toString();
       return request<Invoice[]>(`/invoices${qs ? `?${qs}` : ''}`);
     },

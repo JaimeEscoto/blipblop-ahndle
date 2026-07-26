@@ -33,7 +33,11 @@ const EMPTY_FORM = { user_id: '', doctor_id: '', date: '', time: '', reason: '',
 export default function Appointments() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const goInvoice = (apptId: number) => navigate(`${withSlug('/finanzas')}?new_invoice_appointment=${apptId}`);
+  // Si la cita ya tiene factura, la abre; si no, arranca la creación de una nueva.
+  const goInvoice = (a: Appointment) => {
+    if (a.invoice_id) navigate(`${withSlug('/finanzas')}?invoice=${a.invoice_id}`);
+    else navigate(`${withSlug('/finanzas')}?new_invoice_appointment=${a.id}`);
+  };
   const statusLabel = (s: Status) => t(`status.${s}`);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -288,7 +292,11 @@ export default function Appointments() {
             )}
           </div>
           <div className="flex gap-1 shrink-0">
-            <button onClick={() => goInvoice(a.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Crear factura para esta cita">
+            <button
+              onClick={() => goInvoice(a)}
+              className={`p-2 rounded-lg ${a.invoice_id ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+              title={a.invoice_id ? 'Ver factura de esta cita' : 'Crear factura para esta cita'}
+            >
               <Receipt className="w-4 h-4" />
             </button>
             <button onClick={() => generateAppointmentPDF(a)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title={t('common.download')}>

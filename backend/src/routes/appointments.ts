@@ -123,7 +123,16 @@ router.get('/', async (req: Request, res: Response) => {
     arr.push(p);
     byAppt.set(p.appointment_id, arr);
   }
-  res.json(rows.map(r => ({ ...r, procedures: byAppt.get(r.id) || [] })));
+  // Marca qué citas ya tienen una factura, para no ofrecer "crear factura" como si no existiera.
+  const { rows: invs } = await pool.query(
+    `SELECT DISTINCT ON (appointment_id) appointment_id, id AS invoice_id
+     FROM invoices
+     WHERE appointment_id = ANY($1::int[]) AND clinic_id = $2
+     ORDER BY appointment_id, id DESC`,
+    [ids, req.clinic!.id]
+  );
+  const invoiceByAppt = new Map<number, number>(invs.map((r: any) => [r.appointment_id, r.invoice_id]));
+  res.json(rows.map(r => ({ ...r, procedures: byAppt.get(r.id) || [], invoice_id: invoiceByAppt.get(r.id) ?? null })));
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
