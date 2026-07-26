@@ -43,7 +43,8 @@ export default function Appointments() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
-  const [search, setSearch] = useState('');
+  // ?q=texto → prellena el buscador local (ej. viniendo de la búsqueda global)
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [filterStatus, setFilterStatus] = useState<Status | 'all'>('all');
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
@@ -82,6 +83,15 @@ export default function Appointments() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Limpia el ?q= de la URL tras consumirlo para que un refresh no lo vuelva a aplicar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('q')) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('q');
+    window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+  }, []);
 
   // Auto-cierre del toast después de 8s.
   useEffect(() => {

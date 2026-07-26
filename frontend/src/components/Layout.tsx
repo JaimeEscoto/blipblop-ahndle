@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, Package, Bell, LogOut, Shield, Settings, Wallet, FlaskConical, RotateCcw } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, Package, Bell, LogOut, Shield, Settings, Wallet, FlaskConical, RotateCcw, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { withSlug, currentSlug } from '../tenant';
 import TermsGate from './TermsGate';
 import WhatsNewModal from './WhatsNewModal';
+import GlobalSearch from './GlobalSearch';
 
 // Banner persistente que avisa al visitante que está en modo demo.
 // Incluye un botón para resetear el sandbox compartido.
@@ -50,27 +51,40 @@ function DemoBanner({ visitorName }: { visitorName: string }) {
   );
 }
 
-const baseNavItems = [
-  { to: 'inicio',       label: 'menu.home',        icon: Home },
-  { to: 'citas',        label: 'menu.appointments', icon: Calendar },
-  { to: 'pacientes',    label: 'menu.patients',    icon: Users },
-  { to: 'finanzas',     label: 'menu.finance',     icon: Wallet },
-  { to: 'medicos',      label: 'menu.doctors',     icon: Stethoscope },
-  { to: 'inventario',   label: 'menu.inventory',   icon: Package },
-  { to: 'recordatorios',label: 'menu.reminders',   icon: Bell },
-];
+// Agrupado por qué tan seguido se usa: operación diaria arriba, negocio en medio,
+// configuración/uso ocasional al final. El sidebar (desktop) muestra los grupos con
+// encabezado; el menú móvil usa la misma lista aplanada, sin encabezados de grupo.
+function buildNavGroups(isAdmin: boolean) {
+  return [
+    { label: 'Operación', items: [
+      { to: 'inicio',    label: 'menu.home',         icon: Home },
+      { to: 'citas',     label: 'menu.appointments', icon: Calendar },
+      { to: 'pacientes', label: 'menu.patients',     icon: Users },
+    ]},
+    { label: 'Negocio', items: [
+      { to: 'finanzas',   label: 'menu.finance',   icon: Wallet },
+      { to: 'inventario', label: 'menu.inventory', icon: Package },
+    ]},
+    { label: 'Configuración', items: [
+      { to: 'medicos',       label: 'menu.doctors',    icon: Stethoscope },
+      { to: 'recordatorios', label: 'menu.reminders',  icon: Bell },
+      ...(isAdmin ? [{ to: 'superadmin', label: 'menu.superadmin', icon: Shield }] : []),
+      { to: 'ajustes', label: 'menu.settings', icon: Settings },
+    ]},
+  ];
+}
 
 export default function Layout() {
   const { account, logout } = useAuth();
   const { t } = useTranslation();
-  const navItems = [
-    ...baseNavItems,
-    ...(account?.role === 'superuser' || account?.role === 'clinic_admin'
-      ? [{ to: 'superadmin', label: 'menu.superadmin', icon: Shield }]
-      : []),
-    { to: 'ajustes', label: 'menu.settings', icon: Settings },
-  ].map(it => ({ ...it, to: withSlug(it.to) }));
+  const isAdmin = account?.role === 'superuser' || account?.role === 'clinic_admin';
+  const navGroups = buildNavGroups(isAdmin).map(g => ({
+    ...g,
+    items: g.items.map(it => ({ ...it, to: withSlug(it.to) })),
+  }));
+  const navItems = navGroups.flatMap(g => g.items);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [pendingReminders, setPendingReminders] = useState(0);
 
@@ -102,40 +116,24 @@ export default function Layout() {
       </div>
       {/* Banner persistente para visitantes del modo demostración */}
       {account?.is_demo_visitor && <DemoBanner visitorName={account.name || ''} />}
-      {/* Header */}
+      {/* Header: logo + búsqueda global + salir. La navegación vive en el sidebar (desktop) / menú (móvil). */}
       <header className="bg-blue-900 text-white shadow-md sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center">
-            <span className="bg-white rounded-xl p-1.5 shadow-sm flex items-center justify-center">
-              <img src="/icono.png" alt="odontiacloud" className="h-9 w-9 object-contain block" />
-            </span>
+        <div className="px-4 py-3 flex items-center gap-3">
+          <span className="shrink-0 bg-white rounded-xl p-1.5 shadow-sm flex items-center justify-center">
+            <img src="/icono.png" alt="odontiacloud" className="h-9 w-9 object-contain block" />
+          </span>
+          <div className="hidden md:block flex-1 max-w-sm">
+            <GlobalSearch />
           </div>
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map(({ to, label, icon: Icon }) => {
-              const badge = getBadge(to);
-              return (
-                <NavLink key={to} to={to}
-                  className={({ isActive }) =>
-                    `relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-700'
-                    }`}>
-                  <Icon className="w-4 h-4" />
-                  {t(label)}
-                  {badge > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-amber-400 text-gray-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                      {badge > 9 ? '9+' : badge}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
-            <button onClick={logout} title={t('menu.logout')} className="ml-1 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </nav>
-          {/* Mobile menu button */}
-          <button className="md:hidden p-2 rounded-lg hover:bg-blue-700" onClick={() => setMenuOpen(!menuOpen)}>
+          <div className="flex-1 md:hidden" />
+          <button onClick={logout} title={t('menu.logout')} className="hidden md:flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-100 hover:bg-blue-700">
+            <LogOut className="w-4 h-4" />
+          </button>
+          {/* Mobile: ícono de búsqueda + menú */}
+          <button className="md:hidden shrink-0 p-2 rounded-lg hover:bg-blue-700" onClick={() => setMobileSearchOpen(true)}>
+            <Search className="w-5 h-5" />
+          </button>
+          <button className="md:hidden shrink-0 p-2 rounded-lg hover:bg-blue-700" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
@@ -170,10 +168,45 @@ export default function Layout() {
         )}
       </header>
 
-      {/* Main */}
-      <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full px-4 py-6">
-        <Outlet />
-      </main>
+      {/* Sidebar (desktop) + contenido */}
+      <div className="flex-1 flex w-full min-h-0">
+        <aside className="hidden md:block w-56 shrink-0 border-r border-gray-100 bg-white relative z-10 py-4 px-3 overflow-y-auto">
+          {navGroups.map(group => (
+            <div key={group.label} className="mb-4">
+              <p className="px-3 mb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wide">{group.label}</p>
+              <div className="space-y-0.5">
+                {group.items.map(({ to, label, icon: Icon }) => {
+                  const badge = getBadge(to);
+                  return (
+                    <NavLink key={to} to={to}
+                      className={({ isActive }) =>
+                        `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                        }`}>
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{t(label)}</span>
+                      {badge > 0 && (
+                        <span className="ml-auto shrink-0 bg-amber-400 text-gray-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                          {badge > 9 ? '9+' : badge}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </aside>
+
+        <main className="relative z-10 flex-1 min-w-0 overflow-x-hidden">
+          <div className="max-w-5xl mx-auto w-full px-4 py-6">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+
+      {/* Buscador global en pantalla completa (móvil) */}
+      {mobileSearchOpen && <GlobalSearch fullScreen onClose={() => setMobileSearchOpen(false)} />}
 
       {/* Modal bloqueante de Términos de Servicio si la versión vigente no ha sido aceptada */}
       <TermsGate />
