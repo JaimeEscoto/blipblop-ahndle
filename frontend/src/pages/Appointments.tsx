@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, Appointment, Doctor, User, Procedure } from '../api/client';
 import { dateLocale } from '../i18n/format';
-import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight, Receipt, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight, Receipt, X, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { withSlug } from '../tenant';
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
@@ -54,6 +54,12 @@ export default function Appointments() {
   // Aviso flotante con link a la factura preliminar generada al cerrar la cita.
   const [draftInvoiceToast, setDraftInvoiceToast] = useState<number | null>(null);
 
+  // Alta rápida de paciente desde el propio modal de cita (evita salir a Pacientes)
+  const [quickPatient, setQuickPatient] = useState(false);
+  const [quickPatientForm, setQuickPatientForm] = useState({ name: '', phone: '', email: '' });
+  const [quickPatientError, setQuickPatientError] = useState('');
+  const [quickPatientSaving, setQuickPatientSaving] = useState(false);
+
   // Modal de completar cita → entrada clínica con odontograma
   const [completeAppt, setCompleteAppt] = useState<Appointment | null>(null);
   const [completeForm, setCompleteForm] = useState({ diagnosis: '', treatment: '', observations: '', tooth_chart: {} as Record<string, string> });
@@ -97,6 +103,32 @@ export default function Appointments() {
     }));
     setFormProcedures(rows.length > 0 ? rows : [{ ...EMPTY_PROC_ROW }]);
     setError(''); setModal({ type: 'edit', appt: a });
+  };
+
+  const openQuickPatient = () => {
+    setQuickPatientForm({ name: '', phone: '', email: '' });
+    setQuickPatientError('');
+    setQuickPatient(true);
+  };
+
+  // Crea el paciente sin salir del modal de cita y lo deja seleccionado en el formulario.
+  const handleQuickPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuickPatientError(''); setQuickPatientSaving(true);
+    try {
+      const created = await api.users.create({
+        name: quickPatientForm.name, email: quickPatientForm.email || null, phone: quickPatientForm.phone || null,
+        document_id: null, document_type: null, birth_date: null, gender: null,
+        address: null, city: null, department: null, country: null, occupation: null,
+      } as any);
+      setUsers(list => [...list, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setForm(f => ({ ...f, user_id: String(created.id) }));
+      setQuickPatient(false);
+    } catch (err: any) {
+      setQuickPatientError(err.message);
+    } finally {
+      setQuickPatientSaving(false);
+    }
   };
 
   // Helpers para el editor de procedimientos
@@ -471,7 +503,12 @@ export default function Appointments() {
           <form onSubmit={handleSubmit} className="space-y-3">
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('appointments.patient')} *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-gray-700">{t('appointments.patient')} *</label>
+                <button type="button" onClick={openQuickPatient} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  <UserPlus className="w-3 h-3" /> {t('appointments.newPatientQuick')}
+                </button>
+              </div>
               <select required className="input" value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })}>
                 <option value="">{t('appointments.selectPatient')}</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -621,6 +658,43 @@ export default function Appointments() {
               </button>
               <button type="submit" disabled={completing || loadingChart} className="flex-1 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-60">
                 {completing ? t('common.saving') : t('appointments.saveAndComplete')}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {quickPatient && (
+        <Modal title={t('appointments.quickPatientTitle')} onClose={() => setQuickPatient(false)}>
+          <form onSubmit={handleQuickPatient} className="space-y-3">
+            {quickPatientError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{quickPatientError}</p>}
+            <p className="text-xs text-gray-500">{t('appointments.quickPatientHint')}</p>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.fullName')} *</label>
+              <input required autoFocus className="input" value={quickPatientForm.name}
+                onChange={e => setQuickPatientForm({ ...quickPatientForm, name: e.target.value })}
+                placeholder={t('patients.fullNamePlaceholder')} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.phone')}</label>
+                <input className="input" value={quickPatientForm.phone}
+                  onChange={e => setQuickPatientForm({ ...quickPatientForm, phone: e.target.value })}
+                  placeholder="+504 9999 9999" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('patients.email')}</label>
+                <input type="email" className="input" value={quickPatientForm.email}
+                  onChange={e => setQuickPatientForm({ ...quickPatientForm, email: e.target.value })}
+                  placeholder={t('patients.emailPlaceholder')} />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setQuickPatient(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                {t('common.cancel')}
+              </button>
+              <button type="submit" disabled={quickPatientSaving} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
+                {quickPatientSaving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </form>

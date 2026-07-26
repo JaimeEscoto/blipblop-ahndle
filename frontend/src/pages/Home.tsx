@@ -4,24 +4,44 @@ import { useTranslation } from 'react-i18next';
 import { api, Appointment, InventoryItem } from '../api/client';
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
 import { dateLocale } from '../i18n/format';
-import { Calendar, Clock, Download, MessageCircle, Package, AlertTriangle, ChevronRight, CalendarDays } from 'lucide-react';
+import { withSlug } from '../tenant';
+import { Calendar, Clock, Download, MessageCircle, Package, AlertTriangle, ChevronRight, CalendarDays, CheckCircle2, Circle } from 'lucide-react';
 
 export default function Home() {
   const { t } = useTranslation();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [lowStock, setLowStock] = useState<InventoryItem[]>([]);
+  const [doctorsCount, setDoctorsCount] = useState(0);
+  const [proceduresCount, setProceduresCount] = useState(0);
+  const [patientsCount, setPatientsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [appts, ls] = await Promise.all([api.appointments.list(), api.inventory.lowStock()]);
+      const [appts, ls, docs, procs, users] = await Promise.all([
+        api.appointments.list(), api.inventory.lowStock(), api.doctors.list(), api.procedures.list(), api.users.list(),
+      ]);
       setAppointments(appts);
       setLowStock(ls);
+      setDoctorsCount(docs.length);
+      setProceduresCount(procs.length);
+      setPatientsCount(users.length);
     } catch { /* noop */ }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Checklist de primeros pasos: guía a una clínica nueva por el orden real que necesita
+  // (médico → procedimiento → paciente → cita) antes de que Inicio tenga algo útil que mostrar.
+  const setupSteps = [
+    { key: 'doctor', done: doctorsCount > 0, to: withSlug('/medicos'), label: t('home.stepDoctor') },
+    { key: 'procedure', done: proceduresCount > 0, to: withSlug('/finanzas?tab=procedures'), label: t('home.stepProcedure') },
+    { key: 'patient', done: patientsCount > 0, to: withSlug('/pacientes'), label: t('home.stepPatient') },
+    { key: 'appointment', done: appointments.length > 0, to: withSlug('/citas'), label: t('home.stepAppointment') },
+  ];
+  const setupDoneCount = setupSteps.filter(s => s.done).length;
+  const showSetupChecklist = !loading && setupDoneCount < setupSteps.length;
 
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
 
@@ -69,6 +89,31 @@ export default function Home() {
         <p className="text-sm text-gray-500">{t('home.subtitle')}</p>
       </div>
 
+      {/* Checklist de primeros pasos para una clínica nueva */}
+      {showSetupChecklist && (
+        <div className="mb-6 bg-white rounded-xl border border-blue-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-800">{t('home.setupTitle')}</h2>
+            <span className="text-xs font-medium text-blue-600">{t('home.setupProgress', { done: setupDoneCount, total: setupSteps.length })}</span>
+          </div>
+          <div className="space-y-2">
+            {setupSteps.map(s => (
+              <Link
+                key={s.key}
+                to={s.to}
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors ${s.done ? 'bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'}`}
+              >
+                {s.done
+                  ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                  : <Circle className="w-4 h-4 text-blue-400 shrink-0" />}
+                <span className={`text-sm flex-1 ${s.done ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>{s.label}</span>
+                {!s.done && <ChevronRight className="w-4 h-4 text-blue-400 shrink-0" />}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Métricas rápidas */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
@@ -106,7 +151,7 @@ export default function Home() {
             ))}
           </div>
           {lowStock.length > 5 && (
-            <Link to="/inventario" className="flex items-center justify-end gap-1 mt-2 text-xs text-blue-600 font-medium hover:underline">
+            <Link to={withSlug('/inventario')} className="flex items-center justify-end gap-1 mt-2 text-xs text-blue-600 font-medium hover:underline">
               {t('home.seeProducts', { count: lowStock.length })} <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           )}
@@ -116,7 +161,7 @@ export default function Home() {
       {/* Próximas citas */}
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-sm font-semibold text-gray-800">{t('home.upcomingAppointments')}</h2>
-        <Link to="/citas" className="flex items-center gap-1 text-xs text-blue-600 font-medium hover:underline">
+        <Link to={withSlug('/citas')} className="flex items-center gap-1 text-xs text-blue-600 font-medium hover:underline">
           {t('home.seeAll')} <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>

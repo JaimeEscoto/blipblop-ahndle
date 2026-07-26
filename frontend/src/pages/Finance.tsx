@@ -35,11 +35,13 @@ const STATUS_LABEL: Record<InvoiceStatus, { label: string; cls: string }> = {
 };
 
 export default function Finance() {
-  const [tab, setTab] = useState<Tab>('invoices');
-  const [settings, setSettings] = useState<FinanceSettings | null>(null);
   // ?new_invoice_appointment=ID → abre el modal de crear factura precargado
   // ?invoice=ID → abre directamente el detalle de una factura existente
+  // ?tab=procedures|report → abre esa pestaña de entrada (ej. desde el checklist de inicio)
   const params = new URLSearchParams(window.location.search);
+  const initialTab = params.get('tab');
+  const [tab, setTab] = useState<Tab>(initialTab === 'procedures' || initialTab === 'report' ? initialTab : 'invoices');
+  const [settings, setSettings] = useState<FinanceSettings | null>(null);
   const prefilledAppt = params.get('new_invoice_appointment');
   const initialPrefilledId = prefilledAppt ? Number(prefilledAppt) : undefined;
   const openInvoiceParam = params.get('invoice');
