@@ -314,6 +314,14 @@ export interface ActivityAccount {
   account_email: string; account_name: string | null; events: number;
 }
 
+export interface ReleaseNote {
+  id: number;
+  icon: string | null;
+  title: string;
+  body: string;
+  published_at: string; // YYYY-MM-DD
+}
+
 export const api = {
   auth: {
     google: (credential: string, language?: 'es' | 'en') => publicRequest<{ token: string; account: Account }>('/auth/google', { credential, language }),
@@ -434,6 +442,10 @@ export const api = {
     create: (d: Partial<Procedure>) => request<Procedure>('/procedures', { method:'POST', body:JSON.stringify(d) }),
     update: (id: number, d: Partial<Procedure>) => request<Procedure>(`/procedures/${id}`, { method:'PUT', body:JSON.stringify(d) }),
     delete: (id: number) => request<Procedure>(`/procedures/${id}`, { method:'DELETE' }),
+  },
+  releaseNotes: {
+    pending: () => request<ReleaseNote[]>('/release-notes'),
+    ack: (id: number) => request<{ ok: true }>(`/release-notes/${id}/ack`, { method: 'POST' }),
   },
   treatments: {
     list: (params?: { user_id?: number; status?: TreatmentPlanStatus }) => {

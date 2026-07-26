@@ -532,6 +532,32 @@ export async function initDB() {
     END$$;
   `);
 
+  // --- Migración: novedades del sistema (release notes) ---
+  // Cada nota se publica con un timestamp `published_at`. Al abrir la app,
+  // un usuario ve las notas cuyo `published_at` es POSTERIOR a su fecha de
+  // alta (accounts.created_at) y que aún no ha acked (release_note_acks).
+  // Así los usuarios nuevos no ven notas viejas y los existentes se enteran
+  // de lo que se lanzó después de que entraron.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS release_notes (
+      id SERIAL PRIMARY KEY,
+      icon TEXT,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS release_notes_published_idx
+      ON release_notes(published_at DESC);
+
+    CREATE TABLE IF NOT EXISTS release_note_acks (
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      release_note_id INTEGER NOT NULL REFERENCES release_notes(id) ON DELETE CASCADE,
+      acked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (account_id, release_note_id)
+    );
+  `);
+
   // --- Migración: soporte multi-país en pacientes ---
   // Cada clínica define un país por defecto (ISO alpha-2). Cada paciente puede
   // pertenecer a un país distinto — útil para clínicas fronterizas. Backfill:

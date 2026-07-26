@@ -1,37 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
-import { RELEASE_NOTES, LATEST_RELEASE_NOTE_ID, ReleaseNote } from '../data/releaseNotes';
+import { api, ReleaseNote } from '../api/client';
 
-const STORAGE_KEY = 'oc_last_release_note_id';
-
-// Modal de "Novedades" que aparece una sola vez al usuario cuando hay
-// entradas nuevas en releaseNotes.ts que aún no ha visto (comparado contra
-// el id guardado en localStorage). Al cerrarlo, guarda el máximo id visto.
-// No aparece para visitantes demo (para que la primera experiencia sea limpia).
+// Modal de "Novedades": muestra las notas pendientes desde el servidor
+// (publicadas después de que la cuenta fue creada y aún no ack). Al cerrarlo
+// confirma acks al backend, para que en el próximo login no reaparezcan.
+// No se muestra a visitantes demo (el endpoint devuelve [] igual).
 export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boolean }) {
   const [pending, setPending] = useState<ReleaseNote[]>([]);
 
   useEffect(() => {
     if (isDemoVisitor) return;
-    let lastSeen = 0;
-    try {
-      const v = localStorage.getItem(STORAGE_KEY);
-      lastSeen = v ? Number(v) : 0;
-    } catch { /* privado o desactivado */ }
-    // Si no hay nada visto aún (usuario nuevo), no mostramos el histórico:
-    // marcamos todo como visto silenciosamente para que solo vea lo que
-    // venga a partir de ahora.
-    if (lastSeen === 0) {
-      try { localStorage.setItem(STORAGE_KEY, String(LATEST_RELEASE_NOTE_ID)); } catch {}
-      return;
-    }
-    const unseen = RELEASE_NOTES.filter(n => n.id > lastSeen).sort((a, b) => b.id - a.id);
-    if (unseen.length > 0) setPending(unseen);
+    api.releaseNotes.pending()
+      .then(setPending)
+      .catch(() => { /* si falla, silencio: no bloqueamos la app */ });
   }, [isDemoVisitor]);
 
-  const dismiss = () => {
-    try { localStorage.setItem(STORAGE_KEY, String(LATEST_RELEASE_NOTE_ID)); } catch {}
+  const dismiss = async () => {
+    const ids = pending.map(n => n.id);
+    // Optimista: cerramos la UI ya, y mandamos los acks en background.
     setPending([]);
+    ids.forEach(id => { api.releaseNotes.ack(id).catch(() => {}); });
   };
 
   if (pending.length === 0) return null;
@@ -50,7 +39,9 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-gray-900">Novedades</h2>
             <p className="text-xs text-gray-500">
-              {pending.length === 1 ? 'Una novedad nueva desde tu última visita' : `${pending.length} novedades nuevas desde tu última visita`}
+              {pending.length === 1
+                ? 'Una novedad nueva desde tu última visita'
+                : `${pending.length} novedades nuevas desde tu última visita`}
             </p>
           </div>
           <button
@@ -65,9 +56,11 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
           {pending.map(n => (
             <div key={n.id} className="flex gap-3">
-              <div className="text-2xl leading-none shrink-0" aria-hidden="true">{n.icon}</div>
+              <div className="text-2xl leading-none shrink-0" aria-hidden="true">
+                {n.icon || '✨'}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400 mb-0.5">{n.date}</p>
+                <p className="text-xs text-gray-400 mb-0.5">{n.published_at}</p>
                 <h3 className="text-sm font-semibold text-gray-900">{n.title}</h3>
                 <p
                   className="text-sm text-gray-600 mt-1 leading-relaxed"
