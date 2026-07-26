@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { randomBytes, createHash } from 'crypto';
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
-import { generateAppointmentCode } from './utils/code';
+import { generatePublicCode } from './utils/code';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -348,6 +348,25 @@ export async function initDB() {
     CREATE INDEX IF NOT EXISTS consents_user_idx ON consents(clinic_id, user_id, signed_at DESC);
   `);
 
+  // --- Migración: plantillas de consentimiento en PDF + firma remota por enlace ---
+  // Las plantillas dejan de ser texto libre y pasan a ser un PDF subido por la clínica.
+  // Un consentimiento puede quedar "pending" (asignado a una cita, con un enlace público
+  // reutilizable para que el paciente firme desde su celular) antes de tener firma.
+  await pool.query(`
+    ALTER TABLE consent_templates ADD COLUMN IF NOT EXISTS pdf_storage_key TEXT;
+    ALTER TABLE consent_templates ALTER COLUMN body DROP NOT NULL;
+
+    ALTER TABLE consents ADD COLUMN IF NOT EXISTS public_code TEXT;
+    ALTER TABLE consents ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'signed';
+    ALTER TABLE consents DROP CONSTRAINT IF EXISTS consents_status_chk;
+    ALTER TABLE consents ADD CONSTRAINT consents_status_chk CHECK (status IN ('pending','signed'));
+    ALTER TABLE consents ALTER COLUMN body DROP NOT NULL;
+    ALTER TABLE consents ALTER COLUMN signer_name DROP NOT NULL;
+    ALTER TABLE consents ALTER COLUMN signature_data_url DROP NOT NULL;
+    ALTER TABLE consents ALTER COLUMN signed_at DROP NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS consents_public_code_idx ON consents(public_code) WHERE public_code IS NOT NULL;
+  `);
+
   // 12) Adjuntos a expedientes (RX, fotos intraorales, PDFs).
   //    Pueden estar asociados a una visita clínica (record_id) o ser del
   //    paciente en general (record_id NULL). Los bytes viven en R2.
@@ -471,7 +490,7 @@ export async function initDB() {
     let ok = false;
     while (!ok) {
       try {
-        await pool.query(`UPDATE appointments SET public_code=$1 WHERE id=$2`, [generateAppointmentCode(), r.id]);
+        await pool.query(`UPDATE appointments SET public_code=$1 WHERE id=$2`, [generatePublicCode(), r.id]);
         ok = true;
       } catch {
         // colisión improbable de código: reintenta con otro

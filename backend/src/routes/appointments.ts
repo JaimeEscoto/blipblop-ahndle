@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import pool from '../database';
-import { generateAppointmentCode } from '../utils/code';
+import { generatePublicCode } from '../utils/code';
 import { requireAuth, requireClinicMember } from '../auth';
 import { requireClinic } from '../tenant';
 
@@ -161,7 +161,7 @@ router.post('/', async (req: Request, res: Response) => {
     await client.query('BEGIN');
     const { rows } = await client.query(
       'INSERT INTO appointments (user_id, doctor_id, date, time, reason, notes, public_code, clinic_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-      [user_id, doctor_id, date, time, reason || null, notes || null, generateAppointmentCode(), req.clinic!.id]
+      [user_id, doctor_id, date, time, reason || null, notes || null, generatePublicCode(), req.clinic!.id]
     );
     await replaceAppointmentProcedures(client, rows[0].id, req.clinic!.id, Array.isArray(procedures) ? procedures : []);
     await client.query('COMMIT');

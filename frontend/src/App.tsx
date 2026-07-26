@@ -8,6 +8,7 @@ import Inventory from './pages/Inventory';
 import Reminders from './pages/Reminders';
 import Finance from './pages/Finance';
 import PublicAppointment from './pages/PublicAppointment';
+import PublicConsent from './pages/PublicConsent';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import CreateAccount from './pages/CreateAccount';
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/crear-clinica" element={<CreateClinic />} />
         <Route path="/login" element={<GlobalLogin />} />
         <Route path="/cita/:code" element={<PublicAppointment />} />
+        <Route path="/consentimiento/:code" element={<PublicConsent />} />
 
         {/* Demo público: pide nombre y entra a la clínica de demostración */}
         <Route path="/demo/:slug" element={<Demo />} />
