@@ -63,25 +63,25 @@ export default function Doctors() {
   );
 
   const specialtyColors: Record<string, string> = {
-    'Odontología General': 'bg-green-100 text-green-700',
-    'Ortodoncia': 'bg-blue-100 text-blue-700',
-    'Endodoncia': 'bg-red-100 text-red-700',
-    'Periodoncia': 'bg-pink-100 text-pink-700',
-    'Cirugía Maxilofacial': 'bg-orange-100 text-orange-700',
-    'Odontopediatría': 'bg-yellow-100 text-yellow-700',
-    'Prostodoncia': 'bg-purple-100 text-purple-700',
-    'Implantología': 'bg-indigo-100 text-indigo-700',
-    'Estética Dental': 'bg-cyan-100 text-cyan-700',
-    'Patología Oral': 'bg-amber-100 text-amber-700',
-    'Radiología Oral': 'bg-slate-100 text-slate-700',
+    'Odontología General': 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+    'Ortodoncia': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+    'Endodoncia': 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+    'Periodoncia': 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
+    'Cirugía Maxilofacial': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+    'Odontopediatría': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+    'Prostodoncia': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+    'Implantología': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+    'Estética Dental': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+    'Patología Oral': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    'Radiología Oral': 'bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-300',
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('doctors.title')}</h1>
-          <p className="text-sm text-gray-500">{t('doctors.registeredCount', { count: doctors.length })}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('doctors.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('doctors.registeredCount', { count: doctors.length })}</p>
         </div>
         <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
           <Plus className="w-4 h-4" /> {t('common.new')}
@@ -91,7 +91,7 @@ export default function Doctors() {
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
           placeholder={t('doctors.searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -100,31 +100,31 @@ export default function Doctors() {
 
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm">{t('doctors.noneFound')}</div>
+          <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">{t('doctors.noneFound')}</div>
         )}
         {filtered.map(d => (
-          <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div key={d.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-gray-900">Dr. {d.name}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${specialtyColors[d.specialty] || 'bg-blue-100 text-blue-700'}`}>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">Dr. {d.name}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${specialtyColors[d.specialty] || 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'}`}>
                     {specialtyLabel(d.specialty)}
                   </span>
                 </div>
                 <div className="mt-1.5 space-y-0.5">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                     <Mail className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{d.email}</span>
                   </div>
                   {d.phone && (
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                       <Phone className="w-3.5 h-3.5 shrink-0" />
                       <span>{d.phone}</span>
                     </div>
                   )}
                   {d.license_number && (
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                       <Award className="w-3.5 h-3.5 shrink-0" />
                       <span>{t('doctors.license', { license: d.license_number })}</span>
                     </div>
@@ -132,10 +132,10 @@ export default function Doctors() {
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
-                <button onClick={() => openEdit(d)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                <button onClick={() => openEdit(d)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg">
                   <Pencil className="w-4 h-4" />
                 </button>
-                <button onClick={() => setDeleteId(d.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                <button onClick={() => setDeleteId(d.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -147,32 +147,32 @@ export default function Doctors() {
       {modal && (
         <Modal title={modal.type === 'create' ? t('doctors.createTitle') : t('doctors.editTitle')} onClose={() => setModal(null)}>
           <form onSubmit={handleSubmit} className="space-y-3">
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 dark:bg-red-900/30 dark:text-red-400">{error}</p>}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.fullName')} *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('doctors.fullName')} *</label>
               <input required className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('doctors.fullNamePlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.specialty')} *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('doctors.specialty')} *</label>
               <select required className="input" value={form.specialty} onChange={e => setForm({ ...form, specialty: e.target.value })}>
                 <option value="">{t('doctors.selectSpecialty')}</option>
                 {SPECIALTIES.map(s => <option key={s} value={s}>{specialtyLabel(s)}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.email')} *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('doctors.email')} *</label>
               <input required type="email" className="input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('doctors.emailPlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.phone')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('doctors.phone')}</label>
               <input className="input" value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+57 300 000 0000" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('doctors.licenseNumber')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('doctors.licenseNumber')}</label>
               <input className="input" value={form.license_number || ''} onChange={e => setForm({ ...form, license_number: e.target.value })} placeholder={t('doctors.licenseNumberPlaceholder')} />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600">
                 {t('common.cancel')}
               </button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">

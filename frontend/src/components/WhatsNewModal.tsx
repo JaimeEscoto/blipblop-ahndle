@@ -30,15 +30,15 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
          onClick={dismiss}>
       <div
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl max-h-[85vh] flex flex-col"
+        className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-h-[85vh] flex flex-col"
       >
-        <div className="p-5 border-b border-gray-100 flex items-start gap-3">
+        <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center shrink-0">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-900">Novedades</h2>
-            <p className="text-xs text-gray-500">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Novedades</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {pending.length === 1
                 ? 'Una novedad nueva desde tu última visita'
                 : `${pending.length} novedades nuevas desde tu última visita`}
@@ -47,7 +47,7 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
           <button
             onClick={dismiss}
             aria-label="Cerrar"
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0"
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700"
           >
             <X className="w-4 h-4" />
           </button>
@@ -60,10 +60,10 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
                 {n.icon || '✨'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400 mb-0.5">{n.published_at}</p>
-                <h3 className="text-sm font-semibold text-gray-900">{n.title}</h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{n.published_at}</p>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{n.title}</h3>
                 <p
-                  className="text-sm text-gray-600 mt-1 leading-relaxed"
+                  className="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: n.body }}
                 />
               </div>
@@ -71,7 +71,7 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
           ))}
         </div>
 
-        <div className="p-4 border-t border-gray-100 flex justify-end">
+        <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
           <button
             onClick={dismiss}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg"

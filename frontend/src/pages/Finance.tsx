@@ -28,11 +28,11 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; Icon: typeof Bankn
 ];
 
 const STATUS_LABEL: Record<InvoiceStatus, { label: string; cls: string }> = {
-  draft:     { label: 'Borrador',  cls: 'bg-gray-100 text-gray-700' },
-  issued:    { label: 'Emitida',   cls: 'bg-blue-100 text-blue-700' },
-  partial:   { label: 'Parcial',   cls: 'bg-amber-100 text-amber-700' },
-  paid:      { label: 'Pagada',    cls: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Anulada',   cls: 'bg-red-100 text-red-700' },
+  draft:     { label: 'Borrador',  cls: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' },
+  issued:    { label: 'Emitida',   cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  partial:   { label: 'Parcial',   cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  paid:      { label: 'Pagada',    cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+  cancelled: { label: 'Anulada',   cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
 };
 
 export default function Finance() {
@@ -57,21 +57,21 @@ export default function Finance() {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">Finanzas</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Finanzas</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Facturas, abonos y reportes · Moneda: <span className="font-medium">{currency}</span>
           {settings && Number(settings.tax_rate) > 0 && <> · IVA por defecto: {settings.tax_rate}%</>}
         </p>
       </div>
 
-      <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1">
+      <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
         {([
           { id: 'invoices',   label: 'Facturas',      Icon: Receipt },
           { id: 'procedures', label: 'Procedimientos', Icon: FileText },
           { id: 'report',     label: 'Reportes',      Icon: BarChart3 },
         ] as const).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === t.id ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === t.id ? 'bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
             <t.Icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
@@ -140,7 +140,7 @@ function ProceduresTab({ currency }: { currency: string }) {
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm"
+          <input className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 rounded-lg text-sm"
             placeholder="Buscar procedimiento..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <button onClick={() => open()} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
@@ -149,31 +149,31 @@ function ProceduresTab({ currency }: { currency: string }) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-10">Sin procedimientos. Crea el primero para usarlo en facturas.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-10">Sin procedimientos. Crea el primero para usarlo en facturas.</p>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm divide-y divide-gray-50 dark:divide-gray-700 overflow-hidden">
           {filtered.map(p => (
             <div key={p.id} className="flex items-center justify-between p-3.5 gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-gray-900 truncate">{p.name}</p>
-                  {p.code && <span className="text-xs text-gray-400">#{p.code}</span>}
+                  <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{p.name}</p>
+                  {p.code && <span className="text-xs text-gray-400 dark:text-gray-500">#{p.code}</span>}
                   {(p.default_sessions || 1) > 1 && (
-                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 dark:bg-indigo-900/40 dark:text-indigo-300 px-1.5 py-0.5 rounded">
                       {p.default_sessions} sesiones
                     </span>
                   )}
-                  {!p.active && <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">Inactivo</span>}
+                  {!p.active && <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Inactivo</span>}
                 </div>
-                {p.description && <p className="text-xs text-gray-500 truncate mt-0.5">{p.description}</p>}
+                {p.description && <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{p.description}</p>}
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm font-semibold text-gray-900">{formatMoney(p.default_price, currency)}</p>
-                {p.duration_minutes && <p className="text-[10px] text-gray-400">{p.duration_minutes} min</p>}
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatMoney(p.default_price, currency)}</p>
+                {p.duration_minutes && <p className="text-[10px] text-gray-400 dark:text-gray-500">{p.duration_minutes} min</p>}
               </div>
               <div className="flex gap-1 shrink-0">
-                <button onClick={() => open(p)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setDeleteId(p.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button onClick={() => open(p)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setDeleteId(p.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
           ))}
@@ -183,40 +183,40 @@ function ProceduresTab({ currency }: { currency: string }) {
       {modal && (
         <Modal title={modal.procedure ? 'Editar procedimiento' : 'Nuevo procedimiento'} onClose={() => setModal(null)}>
           <form onSubmit={submit} className="space-y-3">
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg px-3 py-2">{error}</p>}
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Nombre *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Nombre *</label>
                 <input required className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ej. Limpieza dental" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Código</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Código</label>
                 <input className="input" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="LIMP-01" />
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Descripción</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Descripción</label>
               <textarea className="input resize-none" rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Precio ({currencySymbol(currency)}) *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Precio ({currencySymbol(currency)}) *</label>
                 <input required type="number" min="0" step="0.01" className="input" value={form.default_price} onChange={e => setForm({ ...form, default_price: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Duración (min)</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Duración (min)</label>
                 <input type="number" min="0" className="input" value={form.duration_minutes} onChange={e => setForm({ ...form, duration_minutes: e.target.value })} placeholder="30" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block" title="Sesiones por defecto al crear un plan de tratamiento">Sesiones</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block" title="Sesiones por defecto al crear un plan de tratamiento">Sesiones</label>
                 <input type="number" min="1" step="1" className="input" value={form.default_sessions} onChange={e => setForm({ ...form, default_sessions: e.target.value })} />
               </div>
             </div>
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">
               Si el procedimiento requiere varias citas (ortodoncia, endodoncia, blanqueamiento), pon aquí las sesiones por defecto. En cada cotización podrás ajustarlas.
             </p>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+              <button type="button" onClick={() => setModal(null)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {loading ? 'Guardando…' : 'Guardar'}
               </button>
@@ -296,9 +296,9 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
   return (
     <div>
       {findApptError && (
-        <div className="flex items-center justify-between gap-2 mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <div className="flex items-center justify-between gap-2 mb-3 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
           <span>{findApptError}</span>
-          <button onClick={() => setFindApptError('')} className="text-amber-500 hover:text-amber-700 shrink-0">
+          <button onClick={() => setFindApptError('')} className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -307,11 +307,11 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm"
+            <input className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 rounded-lg text-sm"
               placeholder="Buscar # o paciente..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-2 bg-white shrink-0">
+            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 shrink-0">
             <option value="">Todos</option>
             <option value="issued">Emitidas</option>
             <option value="partial">Parciales</option>
@@ -330,33 +330,33 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-10">Sin facturas todavía.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-10">Sin facturas todavía.</p>
       ) : (
         <div className="space-y-2">
           {filtered.map(inv => (
             <button key={inv.id} onClick={() => refreshDetail(inv.id)}
-              className="w-full text-left bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
+              className="w-full text-left bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 hover:border-blue-300 dark:hover:border-blue-500 transition-colors">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-500">#{String(inv.number).padStart(4, '0')}</span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">#{String(inv.number).padStart(4, '0')}</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_LABEL[inv.status].cls}`}>
                       {STATUS_LABEL[inv.status].label}
                     </span>
                     {inv.type === 'supply' && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Insumos</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Insumos</span>
                     )}
                   </div>
-                  <p className="font-semibold text-gray-900 truncate mt-0.5">{inv.user_name}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 truncate mt-0.5">{inv.user_name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     <Calendar className="w-3 h-3 inline -mt-0.5" /> {inv.date}
                     {inv.doctor_name && <> · Dr. {inv.doctor_name}</>}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-gray-900">{formatMoney(inv.total, currency)}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatMoney(inv.total, currency)}</p>
                   {Number(inv.total_paid) > 0 && Number(inv.total_paid) < Number(inv.total) && (
-                    <p className="text-xs text-amber-600">Pagado {formatMoney(inv.total_paid, currency)}</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Pagado {formatMoney(inv.total_paid, currency)}</p>
                   )}
                 </div>
               </div>
@@ -486,12 +486,12 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
   return (
     <Modal title={isSupply ? 'Venta de insumos' : 'Nueva factura'} onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg px-3 py-2">{error}</p>}
 
         {isSupply ? (
           <>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Paciente *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Paciente *</label>
               <select required className="input" value={supplyUserId}
                 onChange={e => setSupplyUserId(e.target.value ? Number(e.target.value) : '')}>
                 <option value="">Selecciona un paciente</option>
@@ -500,12 +500,12 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Fecha *</label>
                 <input type="date" required className="input" value={supplyDate}
                   onChange={e => setSupplyDate(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Doctor (opcional)</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Doctor (opcional)</label>
                 <select className="input" value={supplyDoctorId}
                   onChange={e => setSupplyDoctorId(e.target.value ? Number(e.target.value) : '')}>
                   <option value="">—</option>
@@ -513,13 +513,13 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
                 </select>
               </div>
             </div>
-            <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+            <p className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 rounded-lg px-3 py-2">
               Esta factura no estará ligada a una cita. Úsala solo para vender insumos o productos.
             </p>
           </>
         ) : (
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Cita asociada *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Cita asociada *</label>
             <select required className="input" value={appointmentId}
               onChange={e => setAppointmentId(e.target.value ? Number(e.target.value) : '')}
               disabled={!!prefilledAppointmentId}>
@@ -531,7 +531,7 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
               ))}
             </select>
             {selectedAppt && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 <span className="font-medium">{selectedAppt.user_name}</span>
                 {' '}con Dr. {doctors.find(d => d.id === selectedAppt.doctor_id)?.name || selectedAppt.doctor_name}
                 {' '}el {selectedAppt.date} {selectedAppt.time}
@@ -542,7 +542,7 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
 
         {/* Items */}
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">{isSupply ? 'Insumos / productos *' : 'Procedimientos *'}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{isSupply ? 'Insumos / productos *' : 'Procedimientos *'}</label>
           <div className="space-y-2">
             {items.map((it, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-start">
@@ -564,11 +564,11 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
                   <input className="input text-xs text-right" type="number" min="0" step="0.01"
                     value={it.unit_price} onChange={e => setItem(i, { unit_price: e.target.value })} placeholder="Precio" />
                 </div>
-                <div className="col-span-1 text-right text-xs text-gray-600 pt-2">
+                <div className="col-span-1 text-right text-xs text-gray-600 dark:text-gray-300 pt-2">
                   {((Number(it.quantity) || 0) * (Number(it.unit_price) || 0)).toFixed(2)}
                 </div>
                 <button type="button" onClick={() => removeItem(i)} disabled={items.length === 1}
-                  className="col-span-1 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-30">
+                  className="col-span-1 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg disabled:opacity-30">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -580,33 +580,33 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
         </div>
 
         {/* Totales */}
-        <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-sm">
-          <div className="flex justify-between text-gray-600">
+        <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3 space-y-1.5 text-sm">
+          <div className="flex justify-between text-gray-600 dark:text-gray-300">
             <span>Subtotal</span><span>{formatMoney(subtotal, currency)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-600 flex-1">Descuento</label>
+            <label className="text-xs text-gray-600 dark:text-gray-300 flex-1">Descuento</label>
             <input type="number" min="0" step="0.01" className="input w-28 text-xs text-right"
               value={discount} onChange={e => setDiscount(e.target.value)} />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-600 flex-1">IVA (%)</label>
+            <label className="text-xs text-gray-600 dark:text-gray-300 flex-1">IVA (%)</label>
             <input type="number" min="0" max="100" step="0.01" className="input w-28 text-xs text-right"
               value={taxRate} onChange={e => setTaxRate(e.target.value)} />
-            <span className="text-xs text-gray-500 w-20 text-right">{formatMoney(tax, currency)}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 w-20 text-right">{formatMoney(tax, currency)}</span>
           </div>
-          <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
+          <div className="flex justify-between font-bold text-gray-900 dark:text-gray-100 pt-2 border-t border-gray-200 dark:border-gray-700">
             <span>Total</span><span>{formatMoney(total, currency)}</span>
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Notas</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Notas</label>
           <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
           <button type="submit" disabled={loading} className={`flex-1 py-2.5 text-sm font-medium text-white rounded-lg disabled:opacity-60 ${isSupply ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
             {loading ? 'Creando…' : (isSupply ? 'Crear venta' : 'Crear factura')}
           </button>
@@ -682,12 +682,12 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
           <div className="min-w-0">
             <button
               onClick={() => navigate(withSlug(`/pacientes?user=${invoice.user_id}`))}
-              className="font-semibold text-gray-900 hover:text-blue-600 hover:underline truncate text-left"
+              className="font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate text-left"
               title="Ver expediente del paciente"
             >
               {invoice.user_name}
             </button>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {invoice.date}{invoice.doctor_name && <> · Dr. {invoice.doctor_name}</>}
               {invoice.appointment_id && <> · Cita #{invoice.appointment_id}</>}
             </p>
@@ -703,9 +703,9 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
         </div>
 
         {/* Items */}
-        <div className="border border-gray-100 rounded-lg overflow-hidden">
+        <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-gray-50 text-gray-500">
+            <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-500 dark:text-gray-400">
               <tr>
                 <th className="text-left px-3 py-1.5">Descripción</th>
                 <th className="text-right px-3 py-1.5 w-12">Cant</th>
@@ -715,11 +715,11 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
             </thead>
             <tbody>
               {invoice.items.map(it => (
-                <tr key={it.id} className="border-t border-gray-100">
+                <tr key={it.id} className="border-t border-gray-100 dark:border-gray-700">
                   <td className="px-3 py-2">
                     {it.description}
                     {it.procedure_name && it.procedure_name !== it.description && (
-                      <span className="text-gray-400"> ({it.procedure_name})</span>
+                      <span className="text-gray-400 dark:text-gray-500"> ({it.procedure_name})</span>
                     )}
                   </td>
                   <td className="text-right px-3 py-2">{it.quantity}</td>
@@ -732,19 +732,19 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
         </div>
 
         {/* Totales */}
-        <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-          <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>{formatMoney(invoice.subtotal, currency)}</span></div>
-          {Number(invoice.discount) > 0 && <div className="flex justify-between text-gray-600"><span>Descuento</span><span>− {formatMoney(invoice.discount, currency)}</span></div>}
-          {Number(invoice.tax) > 0 && <div className="flex justify-between text-gray-600"><span>IVA ({invoice.tax_rate}%)</span><span>{formatMoney(invoice.tax, currency)}</span></div>}
-          <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200"><span>Total</span><span>{formatMoney(invoice.total, currency)}</span></div>
-          <div className="flex justify-between text-green-700"><span>Pagado</span><span>{formatMoney(invoice.total_paid, currency)}</span></div>
+        <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3 text-sm space-y-1">
+          <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Subtotal</span><span>{formatMoney(invoice.subtotal, currency)}</span></div>
+          {Number(invoice.discount) > 0 && <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Descuento</span><span>− {formatMoney(invoice.discount, currency)}</span></div>}
+          {Number(invoice.tax) > 0 && <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>IVA ({invoice.tax_rate}%)</span><span>{formatMoney(invoice.tax, currency)}</span></div>}
+          <div className="flex justify-between font-bold text-gray-900 dark:text-gray-100 pt-1 border-t border-gray-200 dark:border-gray-700"><span>Total</span><span>{formatMoney(invoice.total, currency)}</span></div>
+          <div className="flex justify-between text-green-700 dark:text-green-400"><span>Pagado</span><span>{formatMoney(invoice.total_paid, currency)}</span></div>
           {balance > 0 && invoice.status !== 'cancelled' && (
-            <div className="flex justify-between font-semibold text-amber-700"><span>Saldo</span><span>{formatMoney(balance, currency)}</span></div>
+            <div className="flex justify-between font-semibold text-amber-700 dark:text-amber-400"><span>Saldo</span><span>{formatMoney(balance, currency)}</span></div>
           )}
         </div>
 
         {isDraft && (
-          <p className="text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+          <p className="text-[11px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
             Esta factura está en borrador. Edita items, IVA, descuento o notas, y cuando esté lista, emítela para empezar a cobrar.
           </p>
         )}
@@ -752,7 +752,7 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
         {/* Abonos */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-700">Abonos</h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Abonos</h3>
             {!isDraft && invoice.status !== 'cancelled' && balance > 0 && (
               <button onClick={() => setShowPayment(true)} className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline">
                 <Plus className="w-3.5 h-3.5" /> Registrar abono
@@ -760,23 +760,23 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
             )}
           </div>
           {invoice.payments.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-2">Sin abonos.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Sin abonos.</p>
           ) : (
             <div className="space-y-1.5">
               {invoice.payments.map(p => {
                 const m = PAYMENT_METHODS.find(x => x.value === p.method)!;
                 return (
-                  <div key={p.id} className="flex items-center gap-2 border border-gray-100 rounded-lg p-2 text-sm">
+                  <div key={p.id} className="flex items-center gap-2 border border-gray-100 dark:border-gray-700 rounded-lg p-2 text-sm">
                     <m.Icon className="w-4 h-4 text-gray-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800">{formatMoney(p.amount, currency)} · {m.label}</p>
-                      <p className="text-[10px] text-gray-400">
+                      <p className="font-medium text-gray-800 dark:text-gray-100">{formatMoney(p.amount, currency)} · {m.label}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500">
                         {p.date}
                         {p.reference && ` · Ref ${p.reference}`}
                         {p.received_by_name && ` · ${p.received_by_name}`}
                       </p>
                     </div>
-                    <button onClick={() => setConfirmDeletePayment(p.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
+                    <button onClick={() => setConfirmDeletePayment(p.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -787,14 +787,14 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
         </div>
 
         {invoice.notes && (
-          <div className="text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-amber-800">{invoice.notes}</div>
+          <div className="text-xs bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-800 rounded-lg px-3 py-2 text-amber-800 dark:text-amber-300">{invoice.notes}</div>
         )}
 
         {/* Acciones */}
-        <div className="flex gap-2 pt-2 border-t border-gray-100">
+        <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
           {isDraft && (
             <>
-              <button onClick={() => setEditing(true)} className="flex-1 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100">
+              <button onClick={() => setEditing(true)} className="flex-1 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/60">
                 Editar
               </button>
               <button onClick={issue} disabled={issuing} className="flex-1 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-60">
@@ -803,11 +803,11 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
             </>
           )}
           {!isDraft && invoice.status !== 'cancelled' && (
-            <button onClick={() => setConfirmCancel(true)} className="flex-1 py-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100">
+            <button onClick={() => setConfirmCancel(true)} className="flex-1 py-2 text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/60">
               Anular factura
             </button>
           )}
-          <button onClick={() => setConfirmDelete(true)} className="flex-1 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100">
+          <button onClick={() => setConfirmDelete(true)} className="flex-1 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/40 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/60">
             Eliminar
           </button>
         </div>
@@ -899,16 +899,16 @@ function EditDraftInvoiceModal({ invoice, currency, onClose, onSaved }: {
   return (
     <Modal title={`Editar factura #${String(invoice.number).padStart(4, '0')}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg px-3 py-2">{error}</p>}
 
-        <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
-          <span className="font-semibold text-gray-800">{invoice.user_name}</span>
+        <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
+          <span className="font-semibold text-gray-800 dark:text-gray-100">{invoice.user_name}</span>
           {invoice.doctor_name && <> · Dr. {invoice.doctor_name}</>}
           {invoice.appointment_id && <> · Cita #{invoice.appointment_id}</>}
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Items</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Items</label>
           <div className="space-y-2">
             {items.map((it, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-start">
@@ -930,11 +930,11 @@ function EditDraftInvoiceModal({ invoice, currency, onClose, onSaved }: {
                   <input className="input text-xs text-right" type="number" min="0" step="0.01"
                     value={it.unit_price} onChange={e => setItem(i, { unit_price: e.target.value })} placeholder="Precio" />
                 </div>
-                <div className="col-span-1 text-right text-xs text-gray-600 pt-2">
+                <div className="col-span-1 text-right text-xs text-gray-600 dark:text-gray-300 pt-2">
                   {((Number(it.quantity) || 0) * (Number(it.unit_price) || 0)).toFixed(2)}
                 </div>
                 <button type="button" onClick={() => removeItem(i)} disabled={items.length === 1}
-                  className="col-span-1 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-30">
+                  className="col-span-1 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg disabled:opacity-30">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -945,31 +945,31 @@ function EditDraftInvoiceModal({ invoice, currency, onClose, onSaved }: {
           </button>
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-sm">
-          <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>{formatMoney(subtotal, currency)}</span></div>
+        <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3 space-y-1.5 text-sm">
+          <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Subtotal</span><span>{formatMoney(subtotal, currency)}</span></div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-600 flex-1">Descuento</label>
+            <label className="text-xs text-gray-600 dark:text-gray-300 flex-1">Descuento</label>
             <input type="number" min="0" step="0.01" className="input w-28 text-xs text-right"
               value={discount} onChange={e => setDiscount(e.target.value)} />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-600 flex-1">IVA (%)</label>
+            <label className="text-xs text-gray-600 dark:text-gray-300 flex-1">IVA (%)</label>
             <input type="number" min="0" max="100" step="0.01" className="input w-28 text-xs text-right"
               value={taxRate} onChange={e => setTaxRate(e.target.value)} />
-            <span className="text-xs text-gray-500 w-20 text-right">{formatMoney(tax, currency)}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 w-20 text-right">{formatMoney(tax, currency)}</span>
           </div>
-          <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
+          <div className="flex justify-between font-bold text-gray-900 dark:text-gray-100 pt-2 border-t border-gray-200 dark:border-gray-700">
             <span>Total</span><span>{formatMoney(total, currency)}</span>
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Notas</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Notas</label>
           <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
           <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
             {loading ? 'Guardando…' : 'Guardar cambios'}
           </button>
@@ -1007,25 +1007,25 @@ function AddPaymentModal({ invoiceId, balance, currency, onClose, onAdded }: {
   return (
     <Modal title="Registrar abono" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-        <p className="text-xs text-gray-500">Saldo pendiente: <span className="font-medium">{formatMoney(balance, currency)}</span></p>
+        {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg px-3 py-2">{error}</p>}
+        <p className="text-xs text-gray-500 dark:text-gray-400">Saldo pendiente: <span className="font-medium">{formatMoney(balance, currency)}</span></p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Monto ({currencySymbol(currency)}) *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Monto ({currencySymbol(currency)}) *</label>
             <input required type="number" min="0.01" step="0.01" className="input" value={amount} onChange={e => setAmount(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Fecha *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Fecha *</label>
             <input required type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Método *</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Método *</label>
           <div className="grid grid-cols-4 gap-1">
             {PAYMENT_METHODS.map(m => (
               <button key={m.value} type="button" onClick={() => setMethod(m.value)}
                 className={`flex flex-col items-center gap-1 py-2 text-xs font-medium rounded-lg border ${
-                  method === m.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  method === m.value ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}>
                 <m.Icon className="w-4 h-4" /> {m.label}
               </button>
@@ -1033,15 +1033,15 @@ function AddPaymentModal({ invoiceId, balance, currency, onClose, onAdded }: {
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Referencia (opcional)</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Referencia (opcional)</label>
           <input className="input" value={reference} onChange={e => setReference(e.target.value)} placeholder="# transacción, # cheque, etc." />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">Notas</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Notas</label>
           <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
           <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
             {loading ? 'Guardando…' : 'Registrar'}
           </button>
@@ -1065,7 +1065,7 @@ function ReportTab({ currency }: { currency: string }) {
   const load = useCallback(async () => setData(await api.finance.report(from, to)), [from, to]);
   useEffect(() => { load(); }, [load]);
 
-  if (!data) return <p className="text-sm text-gray-400 text-center py-10">Cargando…</p>;
+  if (!data) return <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-10">Cargando…</p>;
 
   const methodLabel = (m: PaymentMethod) => PAYMENT_METHODS.find(x => x.value === m)?.label || m;
   const maxDay = Math.max(1, ...data.by_day.map(d => Number(d.total)));
@@ -1073,9 +1073,9 @@ function ReportTab({ currency }: { currency: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500">Desde</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400">Desde</label>
         <input type="date" className="input text-xs w-auto" value={from} onChange={e => setFrom(e.target.value)} />
-        <label className="text-xs text-gray-500">Hasta</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400">Hasta</label>
         <input type="date" className="input text-xs w-auto" value={to} onChange={e => setTo(e.target.value)} />
       </div>
 
@@ -1089,19 +1089,19 @@ function ReportTab({ currency }: { currency: string }) {
       </div>
 
       {/* Ingresos por día */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Ingresos por día</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Ingresos por día</h3>
         {data.by_day.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-4">Sin abonos en este rango.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">Sin abonos en este rango.</p>
         ) : (
           <div className="space-y-1">
             {data.by_day.map(d => (
               <div key={d.day} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-20 shrink-0">{d.day}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-20 shrink-0">{d.day}</span>
+                <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                   <div className="bg-blue-500 h-full rounded-full" style={{ width: `${(Number(d.total) / maxDay) * 100}%` }} />
                 </div>
-                <span className="text-xs font-medium text-gray-700 w-24 text-right">{formatMoney(d.total, currency)}</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-24 text-right">{formatMoney(d.total, currency)}</span>
               </div>
             ))}
           </div>
@@ -1110,14 +1110,14 @@ function ReportTab({ currency }: { currency: string }) {
 
       <div className="grid sm:grid-cols-2 gap-3">
         {/* Por método */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Por método</h3>
-          {data.by_method.length === 0 ? <p className="text-xs text-gray-400">—</p> : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Por método</h3>
+          {data.by_method.length === 0 ? <p className="text-xs text-gray-400 dark:text-gray-500">—</p> : (
             <div className="space-y-2">
               {data.by_method.map(m => (
                 <div key={m.method} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">{methodLabel(m.method)} <span className="text-gray-400 text-xs">({m.count})</span></span>
-                  <span className="font-medium text-gray-900">{formatMoney(m.total, currency)}</span>
+                  <span className="text-gray-600 dark:text-gray-300">{methodLabel(m.method)} <span className="text-gray-400 dark:text-gray-500 text-xs">({m.count})</span></span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{formatMoney(m.total, currency)}</span>
                 </div>
               ))}
             </div>
@@ -1125,14 +1125,14 @@ function ReportTab({ currency }: { currency: string }) {
         </div>
 
         {/* Por médico */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Por médico</h3>
-          {data.by_doctor.length === 0 ? <p className="text-xs text-gray-400">—</p> : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Por médico</h3>
+          {data.by_doctor.length === 0 ? <p className="text-xs text-gray-400 dark:text-gray-500">—</p> : (
             <div className="space-y-2">
               {data.by_doctor.map((d, i) => (
                 <div key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 truncate">{d.name || 'Sin médico'}</span>
-                  <span className="font-medium text-gray-900">{formatMoney(d.total, currency)}</span>
+                  <span className="text-gray-600 dark:text-gray-300 truncate">{d.name || 'Sin médico'}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{formatMoney(d.total, currency)}</span>
                 </div>
               ))}
             </div>
@@ -1141,14 +1141,14 @@ function ReportTab({ currency }: { currency: string }) {
       </div>
 
       {/* Top procedimientos */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Top procedimientos</h3>
-        {data.by_procedure.length === 0 ? <p className="text-xs text-gray-400">—</p> : (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Top procedimientos</h3>
+        {data.by_procedure.length === 0 ? <p className="text-xs text-gray-400 dark:text-gray-500">—</p> : (
           <div className="space-y-2">
             {data.by_procedure.map((p, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 truncate">{p.name} <span className="text-gray-400 text-xs">({Number(p.quantity)})</span></span>
-                <span className="font-medium text-gray-900">{formatMoney(p.total, currency)}</span>
+                <span className="text-gray-600 dark:text-gray-300 truncate">{p.name} <span className="text-gray-400 dark:text-gray-500 text-xs">({Number(p.quantity)})</span></span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{formatMoney(p.total, currency)}</span>
               </div>
             ))}
           </div>
@@ -1163,16 +1163,16 @@ function Kpi({ label, value, Icon, color, sub }: {
   color: 'green' | 'blue' | 'amber';
 }) {
   const colors = {
-    green: 'text-green-600 bg-green-50',
-    blue:  'text-blue-600 bg-blue-50',
-    amber: 'text-amber-600 bg-amber-50',
+    green: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/40',
+    blue:  'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40',
+    amber: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/40',
   }[color];
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-3">
       <div className={`inline-flex p-1.5 rounded-lg ${colors}`}><Icon className="w-4 h-4" /></div>
-      <p className="text-xs text-gray-500 mt-1">{label}</p>
-      <p className="text-lg font-bold text-gray-900">{value}</p>
-      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{value}</p>
+      {sub && <p className="text-[10px] text-gray-400 dark:text-gray-500">{sub}</p>}
     </div>
   );
 }

@@ -31,7 +31,9 @@
     "activity": "Activity",
     "superadmin": "Super Admin",
     "settings": "Settings",
-    "logout": "Log out"
+    "logout": "Log out",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode"
   },
   "login": {
     "subtitle": "Sign in to manage the clinic",

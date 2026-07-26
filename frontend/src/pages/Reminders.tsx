@@ -73,45 +73,45 @@ export default function Reminders() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('reminders.title')}</h1>
-          <p className="text-sm text-gray-500">{t('reminders.pendingCount', { count: pendingCount })}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('reminders.title')}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('reminders.pendingCount', { count: pendingCount })}</p>
         </div>
         <button onClick={() => setModal(true)} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
           <Plus className="w-4 h-4" /> {t('common.new')}
         </button>
       </div>
 
-      <div className="flex gap-2 mb-4 bg-gray-100 rounded-lg p-1">
+      <div className="flex gap-2 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
         {(['pending','done'] as const).map(tb => (
           <button key={tb} onClick={() => setTab(tb)}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${tab === tb ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${tab === tb ? 'bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
             {tb === 'pending' ? `${t('reminders.tabPending')} ${pendingCount > 0 ? `(${pendingCount})` : ''}` : t('reminders.tabDone')}
           </button>
         ))}
       </div>
 
       <div className="space-y-3">
-        {filtered.length === 0 && <div className="text-center py-12 text-gray-400 text-sm">{tab === 'pending' ? t('reminders.nonePending') : t('reminders.noneDone')}</div>}
+        {filtered.length === 0 && <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">{tab === 'pending' ? t('reminders.nonePending') : t('reminders.noneDone')}</div>}
         {filtered.map(r => {
           const link = waLink(r);
           return (
-            <div key={r.id} className={`bg-white rounded-xl border shadow-sm p-4 ${r.status === 'done' ? 'opacity-60' : ''}`}>
+            <div key={r.id} className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 ${r.status === 'done' ? 'opacity-60' : ''}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className={`mt-0.5 shrink-0 p-1.5 rounded-lg ${r.type === 'patient' ? 'bg-green-100' : 'bg-blue-100'}`}>
-                    {r.type === 'patient' ? <UserIcon className="w-4 h-4 text-green-600" /> : <Bell className="w-4 h-4 text-blue-600" />}
+                  <div className={`mt-0.5 shrink-0 p-1.5 rounded-lg ${r.type === 'patient' ? 'bg-green-100 dark:bg-green-900/40' : 'bg-blue-100 dark:bg-blue-900/40'}`}>
+                    {r.type === 'patient' ? <UserIcon className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm">{r.title}</p>
-                    {r.user_name && <p className="text-xs text-gray-500">{t('reminders.patientLabel', { name: r.user_name })}</p>}
-                    {r.description && <p className="text-xs text-gray-400 mt-0.5">{r.description}</p>}
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{r.title}</p>
+                    {r.user_name && <p className="text-xs text-gray-500 dark:text-gray-400">{t('reminders.patientLabel', { name: r.user_name })}</p>}
+                    {r.description && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{r.description}</p>}
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs text-gray-400">{formatDate(r.date)}{r.time ? ` · ${r.time}` : ''}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(r.date)}{r.time ? ` · ${r.time}` : ''}</span>
                     </div>
                     {/* WhatsApp button */}
                     {link && r.status === 'pending' && (
                       <a href={link} target="_blank" rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2.5 py-1 rounded-lg hover:bg-green-100 font-medium">
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/40 px-2.5 py-1 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/60 font-medium">
                         <MessageCircle className="w-3.5 h-3.5" />
                         {t('reminders.sendWhatsapp')}
                       </a>
@@ -120,11 +120,11 @@ export default function Reminders() {
                 </div>
                 <div className="flex gap-1 shrink-0">
                   {r.status === 'pending' && (
-                    <button onClick={() => handleDone(r.id)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title={t('reminders.markDone')}>
+                    <button onClick={() => handleDone(r.id)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg" title={t('reminders.markDone')}>
                       <Check className="w-4 h-4" />
                     </button>
                   )}
-                  <button onClick={() => setDeleteId(r.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                  <button onClick={() => setDeleteId(r.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -137,13 +137,13 @@ export default function Reminders() {
       {modal && (
         <Modal title={t('reminders.createTitle')} onClose={() => setModal(false)}>
           <form onSubmit={handleSubmit} className="space-y-3">
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg px-3 py-2">{error}</p>}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.type')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('reminders.type')}</label>
               <div className="grid grid-cols-2 gap-2">
                 {[['task', t('reminders.typeTask')],['patient', t('reminders.typePatient')]].map(([val, label]) => (
                   <button key={val} type="button" onClick={() => setForm({...form, type: val, user_id: val === 'task' ? '' : form.user_id})}
-                    className={`p-3 rounded-lg border text-sm font-medium text-left transition-colors ${form.type === val ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                    className={`p-3 rounded-lg border text-sm font-medium text-left transition-colors ${form.type === val ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                     {label}
                   </button>
                 ))}
@@ -151,7 +151,7 @@ export default function Reminders() {
             </div>
             {form.type === 'patient' && (
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.patient')}</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('reminders.patient')}</label>
                 <select className="input" value={form.user_id} onChange={e => setForm({...form, user_id: e.target.value})}>
                   <option value="">{t('reminders.selectPatient')}</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -159,20 +159,20 @@ export default function Reminders() {
               </div>
             )}
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.titleField')} *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('reminders.titleField')} *</label>
               <input required className="input" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder={t('reminders.titlePlaceholder')} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.description')}</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('reminders.description')}</label>
               <textarea className="input resize-none" rows={2} value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder={t('reminders.descriptionPlaceholder')} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.date')} *</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('reminders.date')} *</label>
                 <input required type="date" className="input" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">{t('reminders.time')}</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">{t('reminders.time')}</label>
                 <select className="input" value={form.time} onChange={e => setForm({...form, time: e.target.value})}>
                   <option value="">{t('reminders.noTime')}</option>
                   {TIMES.map(time => <option key={time} value={time}>{time}</option>)}
@@ -180,7 +180,7 @@ export default function Reminders() {
               </div>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setModal(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">{t('common.cancel')}</button>
+              <button type="button" onClick={() => setModal(false)} className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">{t('common.cancel')}</button>
               <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                 {loading ? t('common.saving') : t('common.save')}
               </button>

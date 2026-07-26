@@ -85,28 +85,28 @@ export default function Home() {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">{t('home.title')}</h1>
-        <p className="text-sm text-gray-500">{t('home.subtitle')}</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('home.title')}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('home.subtitle')}</p>
       </div>
 
       {/* Checklist de primeros pasos para una clínica nueva */}
       {showSetupChecklist && (
-        <div className="mb-6 bg-white rounded-xl border border-blue-100 shadow-sm p-4">
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-blue-100 dark:border-blue-900/50 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-800">{t('home.setupTitle')}</h2>
-            <span className="text-xs font-medium text-blue-600">{t('home.setupProgress', { done: setupDoneCount, total: setupSteps.length })}</span>
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('home.setupTitle')}</h2>
+            <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{t('home.setupProgress', { done: setupDoneCount, total: setupSteps.length })}</span>
           </div>
           <div className="space-y-2">
             {setupSteps.map(s => (
               <Link
                 key={s.key}
                 to={s.to}
-                className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors ${s.done ? 'bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'}`}
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors ${s.done ? 'bg-gray-50 dark:bg-gray-700/60' : 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/40 dark:hover:bg-blue-900/60'}`}
               >
                 {s.done
                   ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                   : <Circle className="w-4 h-4 text-blue-400 shrink-0" />}
-                <span className={`text-sm flex-1 ${s.done ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>{s.label}</span>
+                <span className={`text-sm flex-1 ${s.done ? 'text-gray-400 line-through dark:text-gray-500' : 'text-gray-800 font-medium dark:text-gray-100'}`}>{s.label}</span>
                 {!s.done && <ChevronRight className="w-4 h-4 text-blue-400 shrink-0" />}
               </Link>
             ))}
@@ -116,19 +116,19 @@ export default function Home() {
 
       {/* Métricas rápidas */}
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
           <div className="flex items-center gap-2 text-blue-600 mb-1">
             <CalendarDays className="w-4 h-4" />
-            <span className="text-xs font-medium text-gray-500">{t('home.upcomingAppointments')}</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('home.upcomingAppointments')}</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{upcoming.length}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{upcoming.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
           <div className="flex items-center gap-2 text-amber-600 mb-1">
             <Package className="w-4 h-4" />
-            <span className="text-xs font-medium text-gray-500">{t('home.lowStock')}</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('home.lowStock')}</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{lowStock.length}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{lowStock.length}</p>
         </div>
       </div>
 
@@ -137,16 +137,16 @@ export default function Home() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-gray-800">{t('home.runningOut')}</h2>
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('home.runningOut')}</h2>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl divide-y divide-amber-100 overflow-hidden">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl divide-y divide-amber-100 overflow-hidden dark:bg-amber-900/20 dark:border-amber-800 dark:divide-amber-800/60">
             {lowStock.slice(0, 5).map(item => (
               <div key={item.id} className="flex items-center justify-between px-4 py-2.5">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
-                  <p className="text-xs text-amber-700">{t('home.remaining', { quantity: item.quantity, unit: item.unit, min: item.min_quantity })}</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{item.name}</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400">{t('home.remaining', { quantity: item.quantity, unit: item.unit, min: item.min_quantity })}</p>
                 </div>
-                <span className="shrink-0 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">{t('home.low')}</span>
+                <span className="shrink-0 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full dark:bg-amber-900/40 dark:text-amber-300">{t('home.low')}</span>
               </div>
             ))}
           </div>
@@ -160,48 +160,48 @@ export default function Home() {
 
       {/* Próximas citas */}
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-gray-800">{t('home.upcomingAppointments')}</h2>
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('home.upcomingAppointments')}</h2>
         <Link to={withSlug('/citas')} className="flex items-center gap-1 text-xs text-blue-600 font-medium hover:underline">
           {t('home.seeAll')} <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400 text-sm">{t('common.loading')}</div>
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">{t('common.loading')}</div>
       ) : upcoming.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border border-gray-100">{t('home.noUpcoming')}</div>
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">{t('home.noUpcoming')}</div>
       ) : (
         <div className="space-y-3">
           {upcoming.map(a => {
             const rel = relativeDay(a.date);
             const link = waLink(a);
             return (
-              <div key={a.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <div key={a.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{a.user_name}</p>
-                    <p className="text-sm text-gray-600 truncate">Dr. {a.doctor_name} · <span className="text-gray-400">{a.doctor_specialty}</span></p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{a.user_name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 truncate">Dr. {a.doctor_name} · <span className="text-gray-400 dark:text-gray-500">{a.doctor_specialty}</span></p>
                   </div>
                   {rel && (
-                    <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded-full ${isToday(a.date) ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{rel}</span>
+                    <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded-full ${isToday(a.date) ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>{rel}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="flex items-center gap-1 text-xs text-gray-500"><Calendar className="w-3.5 h-3.5" />{fmtDate(a.date)}</span>
-                  <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3.5 h-3.5" />{a.time}</span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><Calendar className="w-3.5 h-3.5" />{fmtDate(a.date)}</span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"><Clock className="w-3.5 h-3.5" />{a.time}</span>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => generateAppointmentPDF(a)}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100">
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60">
                     <Download className="w-3.5 h-3.5" /> {t('home.downloadInvite')}
                   </button>
                   {link ? (
                     <a href={link} target="_blank" rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100">
+                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60">
                       <MessageCircle className="w-3.5 h-3.5" /> {t('common.whatsapp')}
                     </a>
                   ) : (
-                    <span className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 bg-gray-50 text-gray-400 rounded-lg cursor-not-allowed" title={t('home.noPhoneTitle')}>
+                    <span className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 bg-gray-50 text-gray-400 rounded-lg cursor-not-allowed dark:bg-gray-700/60 dark:text-gray-500" title={t('home.noPhoneTitle')}>
                       <MessageCircle className="w-3.5 h-3.5" /> {t('common.noPhone')}
                     </span>
                   )}

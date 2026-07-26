@@ -69,7 +69,7 @@ export default function Odontogram({ value, onChange, readOnly = false }: Odonto
         className={`flex flex-col items-center gap-0.5 ${readOnly ? '' : 'cursor-pointer'}`}
         title={`${tooth} — ${stateLabel(state)}`}
       >
-        <span className="text-[9px] text-gray-400">{tooth}</span>
+        <span className="text-[9px] text-gray-400 dark:text-gray-500">{tooth}</span>
         <svg
           viewBox="0 0 40 52"
           className="w-7 h-9 transition-transform hover:scale-110"
@@ -101,10 +101,10 @@ export default function Odontogram({ value, onChange, readOnly = false }: Odonto
               type="button"
               onClick={() => setActiveState(k)}
               className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs border transition-all ${
-                activeState === k ? 'border-blue-500 bg-blue-50 font-semibold' : 'border-gray-200'
-              }`}
+                activeState === k ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 font-semibold' : 'border-gray-200 dark:border-gray-600'
+              } text-gray-700 dark:text-gray-200`}
             >
-              <span className="w-3 h-3 rounded border border-gray-300 inline-block" style={{ backgroundColor: v.color }} />
+              <span className="w-3 h-3 rounded border border-gray-300 dark:border-gray-500 inline-block" style={{ backgroundColor: v.color }} />
               {stateLabel(k)}
             </button>
           ))}
@@ -112,14 +112,14 @@ export default function Odontogram({ value, onChange, readOnly = false }: Odonto
       )}
       {/* Upper teeth */}
       <div>
-        <p className="text-[10px] text-gray-400 mb-1">{t('odontogram.upper')}</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-1">{t('odontogram.upper')}</p>
         <div className="flex gap-1 flex-wrap">
           {UPPER.map(tooth => <ToothBox key={tooth} tooth={tooth} />)}
         </div>
       </div>
       {/* Lower teeth */}
       <div>
-        <p className="text-[10px] text-gray-400 mb-1">{t('odontogram.lower')}</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-1">{t('odontogram.lower')}</p>
         <div className="flex gap-1 flex-wrap">
           {LOWER.map(tooth => <ToothBox key={tooth} tooth={tooth} />)}
         </div>
@@ -127,8 +127,8 @@ export default function Odontogram({ value, onChange, readOnly = false }: Odonto
       {/* Legend readonly */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(TOOTH_STATES).map(([k, v]) => (
-          <span key={k} className="flex items-center gap-1 text-[10px] text-gray-500">
-            <span className="w-2.5 h-2.5 rounded border border-gray-300 inline-block" style={{ backgroundColor: v.color }} />
+          <span key={k} className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+            <span className="w-2.5 h-2.5 rounded border border-gray-300 dark:border-gray-500 inline-block" style={{ backgroundColor: v.color }} />
             {stateLabel(k)}
           </span>
         ))}
