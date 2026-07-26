@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,7 +10,9 @@ interface ConfirmDialogProps {
 
 export default function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmDialogProps) {
   const { t } = useTranslation();
-  return (
+  // Portal directo a <body>: ver el comentario en Modal.tsx — evita quedar atrapado
+  // en el contexto de apilamiento de <main> y perder contra la barra inferior móvil.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
@@ -28,6 +31,7 @@ export default function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmD
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api, Attachment, StorageUsage } from '../api/client';
 import { Paperclip, Upload, FileText, Image as ImageIcon, Trash2, Download, AlertCircle, Pencil, X, Check, Loader2, HardDrive } from 'lucide-react';
 
@@ -263,7 +264,10 @@ function PreviewModal({ attachment, onClose }: { attachment: Attachment; onClose
   const isPdf = attachment.mime_type === 'application/pdf';
   const fmtSize = (b: number) => b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
 
-  return (
+  // Portal directo a <body>: este visor vive dentro de una pestaña anidada en <main>,
+  // que tiene su propio z-index — sin portal, quedaría atrapado en ese contexto de
+  // apilamiento y no ganaría contra elementos fixed fuera de <main> (ver Modal.tsx).
+  return createPortal(
     <div
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
       onClick={onClose}
@@ -327,6 +331,7 @@ function PreviewModal({ attachment, onClose }: { attachment: Attachment; onClose
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
