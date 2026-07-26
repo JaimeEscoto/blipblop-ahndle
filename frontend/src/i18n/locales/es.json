@@ -98,7 +98,13 @@
     "downloadInvite": "Descargar invitación",
     "noPhoneTitle": "Paciente sin teléfono registrado",
     "waMessage": "Hola {{name}}, le recordamos su cita odontológica el {{date}} a las {{time}} con el Dr. {{doctor}}.{{url}} ¡Le esperamos!",
-    "waMessageUrl": " Puede ver los detalles aquí: {{url}}."
+    "waMessageUrl": " Puede ver los detalles aquí: {{url}}.",
+    "setupTitle": "Primeros pasos",
+    "setupProgress": "{{done}}/{{total}} completados",
+    "stepDoctor": "Agrega tu primer médico",
+    "stepProcedure": "Agrega un procedimiento a tu catálogo",
+    "stepPatient": "Registra tu primer paciente",
+    "stepAppointment": "Agenda tu primera cita"
   },
   "appointments": {
     "title": "Citas",
@@ -141,7 +147,10 @@
     "odontogramHint": "Cargado como estaba en el último registro. Ajusta lo que cambió en esta cita; se guardará como un nuevo registro del historial.",
     "loadingChart": "Cargando odontograma...",
     "saveAndComplete": "Guardar y completar",
-    "deleteConfirm": "¿Eliminar esta cita? Esta acción no se puede deshacer."
+    "deleteConfirm": "¿Eliminar esta cita? Esta acción no se puede deshacer.",
+    "newPatientQuick": "+ Nuevo paciente",
+    "quickPatientTitle": "Nuevo paciente rápido",
+    "quickPatientHint": "Puedes completar el resto de sus datos después, desde Pacientes."
   },
   "patients": {
     "title": "Pacientes",

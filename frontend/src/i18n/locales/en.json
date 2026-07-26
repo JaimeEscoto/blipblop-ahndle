@@ -98,7 +98,13 @@
     "downloadInvite": "Download invitation",
     "noPhoneTitle": "Patient has no phone on file",
     "waMessage": "Hi {{name}}, this is a reminder of your dental appointment on {{date}} at {{time}} with Dr. {{doctor}}.{{url}} We look forward to seeing you!",
-    "waMessageUrl": " You can see the details here: {{url}}."
+    "waMessageUrl": " You can see the details here: {{url}}.",
+    "setupTitle": "Getting started",
+    "setupProgress": "{{done}}/{{total}} done",
+    "stepDoctor": "Add your first doctor",
+    "stepProcedure": "Add a procedure to your catalog",
+    "stepPatient": "Register your first patient",
+    "stepAppointment": "Book your first appointment"
   },
   "appointments": {
     "title": "Appointments",
@@ -141,7 +147,10 @@
     "odontogramHint": "Loaded as it was in the last record. Adjust what changed in this appointment; it will be saved as a new record entry.",
     "loadingChart": "Loading odontogram...",
     "saveAndComplete": "Save and complete",
-    "deleteConfirm": "Delete this appointment? This action cannot be undone."
+    "deleteConfirm": "Delete this appointment? This action cannot be undone.",
+    "newPatientQuick": "+ New patient",
+    "quickPatientTitle": "Quick new patient",
+    "quickPatientHint": "You can fill in the rest of their details later, from Patients."
   },
   "patients": {
     "title": "Patients",
