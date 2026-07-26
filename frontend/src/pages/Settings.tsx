@@ -88,24 +88,24 @@ export default function Settings() {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">{t('settings.title')}</h1>
-        <p className="text-sm text-gray-500">{t('settings.subtitle')}</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('settings.title')}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.subtitle')}</p>
       </div>
 
       <div className="space-y-4 max-w-lg">
         {/* Idioma */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-1">
-            <Languages className="w-4 h-4 text-blue-600" />
-            <h2 className="text-sm font-semibold text-gray-800">{t('settings.languageTitle')}</h2>
+            <Languages className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('settings.languageTitle')}</h2>
           </div>
-          <p className="text-xs text-gray-500 mb-4">{t('settings.languageDescription')}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{t('settings.languageDescription')}</p>
 
           <div className="flex items-center gap-3">
             <LanguageToggle value={account?.language} onChange={changeLanguage} />
-            {saving && <span className="text-xs text-gray-400">{t('common.saving')}</span>}
+            {saving && <span className="text-xs text-gray-400 dark:text-gray-500">{t('common.saving')}</span>}
             {saved && !saving && (
-              <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+              <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
                 <Check className="w-3.5 h-3.5" /> {t('settings.saved')}
               </span>
             )}
@@ -121,58 +121,58 @@ export default function Settings() {
           const barColor = (pct: number, full: boolean) =>
             full ? 'bg-red-500' : pct > 80 ? 'bg-amber-500' : 'bg-blue-500';
           const textColor = (full: boolean, pct: number) =>
-            full ? 'text-red-700' : pct > 80 ? 'text-amber-700' : 'text-gray-700';
+            full ? 'text-red-700 dark:text-red-400' : pct > 80 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300';
 
           return (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
               <div className="flex items-center gap-2 mb-1">
-                <HardDrive className="w-4 h-4 text-blue-600" />
-                <h2 className="text-sm font-semibold text-gray-800">Almacenamiento</h2>
+                <HardDrive className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Almacenamiento</h2>
               </div>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                 Espacio utilizado por los archivos adjuntos en los expedientes.
               </p>
 
               {/* Uso de esta clínica */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-gray-600">Tu clínica</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Tu clínica</span>
                   <span className={`text-sm font-semibold ${textColor(clinicFull, clinicPct)}`}>
-                    {fmtBytes(usage.clinic_used)} <span className="text-gray-400 font-normal">/ {fmtBytes(usage.clinic_limit)}</span>
-                    <span className="text-xs text-gray-400 ml-1">({clinicPct.toFixed(1)}%)</span>
+                    {fmtBytes(usage.clinic_used)} <span className="text-gray-400 dark:text-gray-500 font-normal">/ {fmtBytes(usage.clinic_limit)}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">({clinicPct.toFixed(1)}%)</span>
                   </span>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full ${barColor(clinicPct, clinicFull)}`}
                     style={{ width: `${Math.min(100, clinicPct)}%` }} />
                 </div>
                 {clinicFull && (
-                  <p className="mt-2 text-xs text-red-700 flex items-start gap-1">
+                  <p className="mt-2 text-xs text-red-700 dark:text-red-400 flex items-start gap-1">
                     <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                     Tu clínica alcanzó el límite. Elimina archivos antiguos para liberar espacio o solicita una ampliación al administrador.
                   </p>
                 )}
                 {!clinicFull && clinicPct > 80 && (
-                  <p className="mt-2 text-xs text-amber-700">
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
                     Ya usaste más del 80% del espacio de tu clínica.
                   </p>
                 )}
               </div>
 
               {/* Uso del sistema (informativo, para que el admin sepa que hay un cap compartido) */}
-              <div className="pt-3 border-t border-gray-100">
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-gray-500">Sistema (todas las clínicas)</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Sistema (todas las clínicas)</span>
                   <span className={`text-xs font-medium ${textColor(globalFull, globalPct)}`}>
-                    {fmtBytes(usage.global_used)} <span className="text-gray-400 font-normal">/ {fmtBytes(usage.global_limit)}</span>
+                    {fmtBytes(usage.global_used)} <span className="text-gray-400 dark:text-gray-500 font-normal">/ {fmtBytes(usage.global_limit)}</span>
                   </span>
                 </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full ${barColor(globalPct, globalFull)}`}
                     style={{ width: `${Math.min(100, globalPct)}%` }} />
                 </div>
                 {globalFull && (
-                  <p className="mt-2 text-xs text-red-700 flex items-start gap-1">
+                  <p className="mt-2 text-xs text-red-700 dark:text-red-400 flex items-start gap-1">
                     <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                     El sistema alcanzó el límite global. Nadie puede subir archivos hasta que se libere espacio.
                   </p>
@@ -184,38 +184,38 @@ export default function Settings() {
 
         {/* Finanzas */}
         {isAdmin && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-1">
-              <Wallet className="w-4 h-4 text-blue-600" />
-              <h2 className="text-sm font-semibold text-gray-800">Finanzas</h2>
+              <Wallet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Finanzas</h2>
             </div>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
               Moneda e IVA por defecto para facturas. {finance && <>Próxima factura: <span className="font-medium">#{String(finance.next_invoice_number).padStart(4, '0')}</span></>}
             </p>
 
             <form onSubmit={saveFinance} className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Moneda</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Moneda</label>
                   <select className="input" value={financeForm.currency}
                     onChange={e => setFinanceForm({ ...financeForm, currency: e.target.value })}>
                     {CURRENCY_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">IVA por defecto (%)</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">IVA por defecto (%)</label>
                   <input type="number" min="0" max="100" step="0.01" className="input"
                     value={financeForm.tax_rate}
                     onChange={e => setFinanceForm({ ...financeForm, tax_rate: e.target.value })} />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">País por defecto</label>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">País por defecto</label>
                 <select className="input" value={financeForm.default_country}
                   onChange={e => setFinanceForm({ ...financeForm, default_country: e.target.value })}>
                   {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                 </select>
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                   Nuevos pacientes se crearán con este país pre-seleccionado. Se puede cambiar por paciente.
                 </p>
               </div>
@@ -226,7 +226,7 @@ export default function Settings() {
                   {financeSaving ? t('common.saving') : t('common.save')}
                 </button>
                 {financeSaved && (
-                  <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
                     <Check className="w-3.5 h-3.5" /> {t('settings.saved')}
                   </span>
                 )}
@@ -238,7 +238,7 @@ export default function Settings() {
         {/* Plantillas de consentimientos */}
         {isAdmin && <ConsentTemplatesCard />}
 
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 rounded-lg px-3 py-2">{error}</p>}
       </div>
     </div>
   );
