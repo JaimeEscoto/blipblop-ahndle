@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Calendar, Users, Stethoscope, Menu, X, FileText, Package, Bell, LogOut, Shield, Settings, Wallet, FlaskConical, RotateCcw } from 'lucide-react';
+import { Home, Calendar, Users, Stethoscope, Menu, X, Package, Bell, LogOut, Shield, Settings, Wallet, FlaskConical, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
@@ -53,12 +53,11 @@ function DemoBanner({ visitorName }: { visitorName: string }) {
 const baseNavItems = [
   { to: 'inicio',       label: 'menu.home',        icon: Home },
   { to: 'citas',        label: 'menu.appointments', icon: Calendar },
-  { to: 'expedientes',  label: 'menu.records',     icon: FileText },
-  { to: 'medicos',      label: 'menu.doctors',     icon: Stethoscope },
   { to: 'pacientes',    label: 'menu.patients',    icon: Users },
+  { to: 'finanzas',     label: 'menu.finance',     icon: Wallet },
+  { to: 'medicos',      label: 'menu.doctors',     icon: Stethoscope },
   { to: 'inventario',   label: 'menu.inventory',   icon: Package },
   { to: 'recordatorios',label: 'menu.reminders',   icon: Bell },
-  { to: 'finanzas',     label: 'menu.finance',     icon: Wallet },
 ];
 
 export default function Layout() {
