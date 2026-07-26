@@ -52,6 +52,21 @@ export default function Records() {
     await loadUserData(userId);
   };
 
+  // ?user=ID → abre directamente el expediente de ese paciente (ej. desde una factura en Finanzas)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const userParam = params.get('user');
+    const userId = Number(userParam);
+    if (userParam && userId) {
+      setExpandedUser(userId);
+      loadUserData(userId);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('user');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openRecord = (userId: number, record?: ClinicalRecord) => {
     setForm(record ? {
       doctor_id: String(record.doctor_id), date: record.date,

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api, Procedure, Invoice, InvoiceDetail, FinanceSettings, FinanceReport, Doctor, Appointment, User, PaymentMethod, InvoiceStatus, InvoiceType } from '../api/client';
 import { formatMoney, currencySymbol } from '../utils/money';
 import { generateInvoicePDF } from '../utils/generateInvoicePDF';
-import { currentSlug } from '../tenant';
+import { currentSlug, withSlug } from '../tenant';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { Plus, Trash2, Pencil, FileText, Calendar, X, Receipt, Wallet, BarChart3, Search, CreditCard, Banknote, Smartphone, MoreHorizontal, Printer, Package } from 'lucide-react';
@@ -37,6 +38,7 @@ const STATUS_LABEL: Record<InvoiceStatus, { label: string; cls: string }> = {
 export default function Finance() {
   // ?new_invoice_appointment=ID → abre el modal de crear factura precargado
   // ?invoice=ID → abre directamente el detalle de una factura existente
+  // ?appt=ID → busca la factura ya asociada a esa cita/sesión y la abre (ej. desde un plan de tratamiento)
   // ?tab=procedures|report → abre esa pestaña de entrada (ej. desde el checklist de inicio)
   const params = new URLSearchParams(window.location.search);
   const initialTab = params.get('tab');
@@ -46,6 +48,8 @@ export default function Finance() {
   const initialPrefilledId = prefilledAppt ? Number(prefilledAppt) : undefined;
   const openInvoiceParam = params.get('invoice');
   const initialOpenInvoiceId = openInvoiceParam ? Number(openInvoiceParam) : undefined;
+  const findInvoiceApptParam = params.get('appt');
+  const initialFindInvoiceApptId = findInvoiceApptParam ? Number(findInvoiceApptParam) : undefined;
 
   useEffect(() => { api.finance.settings().then(setSettings).catch(() => {}); }, []);
   const currency = settings?.currency || 'HNL';
@@ -73,7 +77,7 @@ export default function Finance() {
         ))}
       </div>
 
-      {tab === 'invoices'   && <InvoicesTab currency={currency} settings={settings} prefilledAppointmentId={initialPrefilledId} openInvoiceId={initialOpenInvoiceId} />}
+      {tab === 'invoices'   && <InvoicesTab currency={currency} settings={settings} prefilledAppointmentId={initialPrefilledId} openInvoiceId={initialOpenInvoiceId} findInvoiceApptId={initialFindInvoiceApptId} />}
       {tab === 'procedures' && <ProceduresTab currency={currency} />}
       {tab === 'report'     && <ReportTab currency={currency} />}
     </div>
@@ -232,14 +236,15 @@ function ProceduresTab({ currency }: { currency: string }) {
 
 interface InvoiceItemDraft { procedure_id: number | null; description: string; quantity: string; unit_price: string; }
 
-function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId }: {
+function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId, findInvoiceApptId }: {
   currency: string; settings: FinanceSettings | null;
-  prefilledAppointmentId?: number; openInvoiceId?: number;
+  prefilledAppointmentId?: number; openInvoiceId?: number; findInvoiceApptId?: number;
 }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | InvoiceStatus>('');
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
+  const [findApptError, setFindApptError] = useState('');
   // Modo del modal: 'appointment' factura ligada a cita; 'supply' venta de insumos.
   const [createMode, setCreateMode] = useState<InvoiceType | null>(
     prefilledAppointmentId ? 'appointment' : null
@@ -264,6 +269,18 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
     window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
   }, [openInvoiceId]);
 
+  // ?appt=ID → buscar la factura asociada a esa cita/sesión y abrirla (ej. desde un plan de tratamiento)
+  useEffect(() => {
+    if (!findInvoiceApptId) return;
+    api.invoices.list({ appointment_id: findInvoiceApptId }).then(found => {
+      if (found[0]) api.invoices.get(found[0].id).then(setDetail).catch(() => {});
+      else setFindApptError('Esta sesión todavía no tiene una factura generada.');
+    }).catch(() => setFindApptError('No se pudo buscar la factura de esta sesión.'));
+    const url = new URL(window.location.href);
+    url.searchParams.delete('appt');
+    window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+  }, [findInvoiceApptId]);
+
   const load = useCallback(async () => {
     setInvoices(await api.invoices.list({ status: (statusFilter || undefined) as any, limit: 200 }));
   }, [statusFilter]);
@@ -278,6 +295,14 @@ function InvoicesTab({ currency, settings, prefilledAppointmentId, openInvoiceId
 
   return (
     <div>
+      {findApptError && (
+        <div className="flex items-center justify-between gap-2 mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <span>{findApptError}</span>
+          <button onClick={() => setFindApptError('')} className="text-amber-500 hover:text-amber-700 shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="relative flex-1 min-w-0">
@@ -596,6 +621,7 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
 function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
   invoice: InvoiceDetail; currency: string; onClose: () => void; onChange: () => Promise<void>;
 }) {
+  const navigate = useNavigate();
   const [showPayment, setShowPayment] = useState(false);
   const [editing, setEditing] = useState(false);
   const [issuing, setIssuing] = useState(false);
@@ -654,7 +680,13 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{invoice.user_name}</p>
+            <button
+              onClick={() => navigate(withSlug(`/expedientes?user=${invoice.user_id}`))}
+              className="font-semibold text-gray-900 hover:text-blue-600 hover:underline truncate text-left"
+              title="Ver expediente del paciente"
+            >
+              {invoice.user_name}
+            </button>
             <p className="text-xs text-gray-500">
               {invoice.date}{invoice.doctor_name && <> · Dr. {invoice.doctor_name}</>}
               {invoice.appointment_id && <> · Cita #{invoice.appointment_id}</>}

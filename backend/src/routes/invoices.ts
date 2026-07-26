@@ -81,16 +81,17 @@ async function loadPayments(invoiceId: number) {
   return rows;
 }
 
-// Lista de facturas, con filtros opcionales: user_id, status, from, to
+// Lista de facturas, con filtros opcionales: user_id, status, type, from, to, appointment_id
 router.get('/', async (req: Request, res: Response) => {
   const conditions = ['i.clinic_id = $1'];
   const params: any[] = [req.clinic!.id];
 
-  if (req.query.user_id) { params.push(req.query.user_id); conditions.push(`i.user_id = $${params.length}`); }
-  if (req.query.status)  { params.push(req.query.status);  conditions.push(`i.status = $${params.length}`); }
-  if (req.query.type)    { params.push(req.query.type);    conditions.push(`i.type = $${params.length}`); }
-  if (req.query.from)    { params.push(req.query.from);    conditions.push(`i.date >= $${params.length}`); }
-  if (req.query.to)      { params.push(req.query.to);      conditions.push(`i.date <= $${params.length}`); }
+  if (req.query.user_id)        { params.push(req.query.user_id);        conditions.push(`i.user_id = $${params.length}`); }
+  if (req.query.status)         { params.push(req.query.status);         conditions.push(`i.status = $${params.length}`); }
+  if (req.query.type)           { params.push(req.query.type);           conditions.push(`i.type = $${params.length}`); }
+  if (req.query.from)           { params.push(req.query.from);           conditions.push(`i.date >= $${params.length}`); }
+  if (req.query.to)             { params.push(req.query.to);             conditions.push(`i.date <= $${params.length}`); }
+  if (req.query.appointment_id) { params.push(req.query.appointment_id); conditions.push(`i.appointment_id = $${params.length}`); }
 
   const limit = Math.min(Number(req.query.limit) || 100, 500);
   params.push(limit);

@@ -215,7 +215,7 @@ function PlanDetailBody({
               )}
               {a.status === 'completed' && (
                 <button
-                  onClick={() => navigate(`${withSlug('/finanzas')}?invoice=auto&appt=${a.id}`)}
+                  onClick={() => navigate(`${withSlug('/finanzas')}?appt=${a.id}`)}
                   className="text-gray-400 hover:text-blue-600"
                   title="Ver factura de esta sesión"
                 >
