@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import pool from '../database';
 import { requireAuth, requireClinicMember } from '../auth';
 import { requireClinic } from '../tenant';
+import { clampTaxRate, computeBalance } from '../lib/finance';
 
 const router = Router();
 router.use(requireClinic, requireAuth, requireClinicMember);
@@ -21,7 +22,7 @@ router.put('/settings', async (req: Request, res: Response) => {
     return res.status(403).json({ error: 'Solo el administrador puede cambiar la configuración' });
   }
   const currency = (req.body.currency || 'HNL').toString().toUpperCase().slice(0, 6);
-  const taxRate = Math.max(0, Math.min(100, Number(req.body.tax_rate) || 0));
+  const taxRate = clampTaxRate(req.body.tax_rate);
   const defaultCountry = (req.body.default_country || 'HN').toString().toUpperCase().slice(0, 2);
   const { rows } = await pool.query(
     `UPDATE clinics SET currency = $1, tax_rate = $2, default_country = $3 WHERE id = $4
@@ -50,7 +51,7 @@ router.get('/balances', async (req: Request, res: Response) => {
     user_id: Number(r.user_id),
     total_invoiced: Number(r.total_invoiced),
     total_paid: Number(r.total_paid),
-    balance: Math.round((Number(r.total_invoiced) - Number(r.total_paid)) * 100) / 100,
+    balance: computeBalance(r.total_invoiced, r.total_paid),
     pending_count: r.pending_count,
   }));
   res.json(out);
@@ -75,11 +76,10 @@ router.get('/balance/:userId', async (req: Request, res: Response) => {
     [req.clinic!.id, req.params.userId]
   );
   const r = rows[0];
-  const balance = Number(r.total_invoiced) - Number(r.total_paid);
   res.json({
     total_invoiced: Number(r.total_invoiced),
     total_paid: Number(r.total_paid),
-    balance: Math.round(balance * 100) / 100,
+    balance: computeBalance(r.total_invoiced, r.total_paid),
     invoices_count: r.invoices_count,
     pending_count: r.pending_count,
   });
