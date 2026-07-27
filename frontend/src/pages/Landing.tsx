@@ -4,6 +4,7 @@ import {
   Calendar, Users, Stethoscope, FileText, Package, Bell, Wallet,
   Smartphone, ShieldCheck, QrCode, MessageCircle, Image as ImageIcon,
   Activity, ArrowRight, CheckCircle2, Sparkles, Cloud,
+  FileSignature, ClipboardList, Tag, HeartPulse, BarChart3, Search, Moon, WifiOff,
 } from 'lucide-react';
 import { trackVisit } from '../utils/track';
 
@@ -50,8 +51,9 @@ export default function Landing() {
             La nube de tu <span className="text-blue-600">clínica dental</span>
           </h1>
           <p className="mt-4 text-lg text-gray-600 max-w-lg">
-            Pacientes, citas, odontograma, recordatorios por WhatsApp y facturación, todo en
-            un solo lugar. Tu propio espacio en <span className="font-medium text-gray-800">odontiacloud.com/tu-clinica</span>.
+            Pacientes, citas, odontograma, planes de tratamiento, consentimientos con firma
+            digital, recordatorios por WhatsApp y facturación, todo en un solo lugar. Tu propio
+            espacio en <span className="font-medium text-gray-800">odontiacloud.com/tu-clinica</span>.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link to="/crear-clinica"
@@ -66,7 +68,7 @@ export default function Landing() {
           <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-600">
             <li className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-600" /> Sin tarjeta de crédito</li>
             <li className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-600" /> En menos de 1 minuto</li>
-            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-600" /> Web y Android</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-600" /> Web, instalable y Android</li>
           </ul>
         </div>
 
@@ -94,16 +96,30 @@ export default function Landing() {
             text="Ficha completa: contacto, documento, dirección, ocupación y más." />
           <FeatureCard icon={FileText} title="Expedientes con odontograma"
             text="Historia clínica detallada y odontograma interactivo por pieza dental." />
+          <FeatureCard icon={HeartPulse} title="Historia clínica e info médica"
+            text="Alergias, antecedentes y registros clínicos fechados de cada paciente." />
+          <FeatureCard icon={ClipboardList} title="Planes de tratamiento"
+            text="Divide un tratamiento en sesiones, agéndalas automáticamente y sigue el avance." />
+          <FeatureCard icon={FileSignature} title="Consentimientos con firma"
+            text="Firma presencial o remota por enlace; el paciente firma desde su celular." />
           <FeatureCard icon={Stethoscope} title="Médicos y especialidades"
             text="Asigna doctores a cada cita y gestiona sus horarios y datos." />
+          <FeatureCard icon={Tag} title="Procedimientos y precios"
+            text="Catálogo con código y precio que alimenta facturas y planes de tratamiento." />
           <FeatureCard icon={Package} title="Inventario"
             text="Stock de materiales, alertas de bajo nivel y reabastecimiento." />
           <FeatureCard icon={Bell} title="Recordatorios"
             text="Avisos automáticos a pacientes vía WhatsApp para reducir ausencias." />
           <FeatureCard icon={Wallet} title="Finanzas y facturación"
-            text="Cobros, pagos, facturas y reportes con tu moneda e impuesto local." />
+            text="Cobros, pagos parciales, facturas en PDF con tu moneda e impuesto local." />
+          <FeatureCard icon={BarChart3} title="Reportes de ingresos"
+            text="Ingresos por día, método de pago, médico, top procedimientos y cuentas por cobrar." />
           <FeatureCard icon={ImageIcon} title="Adjuntos clínicos"
             text="Radiografías, fotos y documentos guardados de forma segura." />
+          <FeatureCard icon={Search} title="Buscador global"
+            text="Encuentra pacientes, citas y facturas desde cualquier pantalla al instante." />
+          <FeatureCard icon={ShieldCheck} title="Roles y permisos"
+            text="Administradores y asistentes: cada quien accede solo a lo que le corresponde." />
           <FeatureCard icon={Activity} title="Bitácora de actividad"
             text="Sabes quién hizo qué y cuándo — auditoría completa por usuario." />
         </div>
@@ -138,8 +154,20 @@ export default function Landing() {
         <Showcase reverse={false}
           eyebrow="Finanzas" title="Cobros y reportes en tu moneda"
           text="Genera facturas con tu numeración, registra pagos parciales, controla saldos y ve cómo va tu clínica con reportes claros. Configurable en Lempiras, USD o tu moneda local."
-          bullets={['Facturación con numeración propia', 'Pagos parciales', 'Impuesto configurable', 'Reportes mensuales']}
+          bullets={['Facturación con numeración propia', 'Pagos parciales', 'Impuesto configurable', 'Reportes de ingresos por día, método y médico']}
           visual={<MockFinance />}
+        />
+        <Showcase reverse={true}
+          eyebrow="Consentimientos" title="Firma digital, presencial o remota"
+          text="Crea plantillas de consentimiento y hazlas firmar en el momento sobre el dispositivo, o envía un enlace con QR para que el paciente firme desde su celular. Todo queda guardado y descargable en PDF."
+          bullets={['Plantillas de consentimiento reutilizables', 'Firma presencial en pantalla', 'Enlace público con QR para firma remota', 'Consentimiento firmado en PDF']}
+          visual={<MockConsent />}
+        />
+        <Showcase reverse={false}
+          eyebrow="Planes de tratamiento" title="Trata en varias sesiones, sin perder el hilo"
+          text="Define un tratamiento de varias sesiones y odontiacloud reparte el monto por sesión y agenda las citas espaciadas por semanas. Reprograma en cascada y sigue el avance sesión por sesión."
+          bullets={['Monto total repartido por sesión', 'Citas generadas automáticamente', 'Reprogramación en cascada', 'Progreso X de N por plan']}
+          visual={<MockTreatment />}
         />
       </section>
 
@@ -148,23 +176,28 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
           <div>
             <div className="inline-flex items-center gap-1.5 bg-white/15 text-white text-xs font-medium px-3 py-1 rounded-full">
-              <Smartphone className="w-3.5 h-3.5" /> Web + Android
+              <Smartphone className="w-3.5 h-3.5" /> Web · Instalable · Android
             </div>
             <h3 className="mt-4 text-3xl font-bold leading-tight">
               Tu clínica también en el bolsillo
             </h3>
             <p className="mt-3 text-white/90 max-w-md">
-              Usa odontiacloud desde cualquier navegador o instala la app Android.
-              Tus datos viajan contigo a la consulta, a casa o a una conferencia.
+              Úsala desde cualquier navegador, instálala como app en el celular o la
+              computadora (PWA) o descarga la app Android. Funciona incluso con conexión
+              intermitente y se adapta con modo claro y oscuro.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4 text-sm">
             <Highlight icon={ShieldCheck} title="Datos aislados"
               text="Cada clínica vive en su propio espacio. Otra clínica nunca ve tus pacientes." />
+            <Highlight icon={WifiOff} title="Instalable y offline"
+              text="Instálala como app (PWA); sigue respondiendo con conexión intermitente." />
             <Highlight icon={QrCode} title="QR público de citas"
               text="Comparte una cita por WhatsApp con un enlace que el paciente abre al instante." />
             <Highlight icon={MessageCircle} title="WhatsApp integrado"
               text="Confirma citas y envía recordatorios sin salir de la plataforma." />
+            <Highlight icon={Moon} title="Modo claro y oscuro"
+              text="La interfaz se adapta a tu preferencia para trabajar cómodo a cualquier hora." />
             <Highlight icon={Cloud} title="Tu propio subdominio"
               text="odontiacloud.com/tu-clinica — fácil de recordar y compartir." />
           </div>
@@ -178,7 +211,11 @@ export default function Landing() {
           <Faq q="¿Cuánto cuesta?" a="Puedes empezar gratis. Los planes de pago aparecen cuando necesitas más capacidad o funciones avanzadas." />
           <Faq q="¿Mis datos son privados?" a="Sí. Cada clínica vive en su propio espacio aislado. Ningún otro usuario o clínica puede ver tu información." />
           <Faq q="¿Cómo invito a mi equipo?" a="Desde la sección de invitaciones envías un correo. Cada miembro entra con su cuenta de Google o con contraseña propia." />
-          <Faq q="¿Funciona en celular?" a="Sí. La web funciona perfectamente en cualquier navegador móvil, y además tenemos app Android nativa." />
+          <Faq q="¿Funciona en celular?" a="Sí. La web funciona perfectamente en cualquier navegador móvil, puedes instalarla como app (PWA) desde el navegador y además tenemos app Android nativa." />
+          <Faq q="¿Funciona sin internet?" a="Se instala como app y sigue respondiendo con conexión intermitente; al recuperar la señal se sincroniza. Para cargar y guardar cambios necesitas conexión." />
+          <Faq q="¿Puedo probar antes de registrarme?" a="Sí. Tenemos un modo demostración con datos de ejemplo donde puedes explorar la plataforma sin crear una cuenta; puedes resetear los datos cuando quieras." />
+          <Faq q="¿Una sola cuenta para varias clínicas?" a="Sí. Con el mismo correo puedes pertenecer a varias clínicas y cambiar entre ellas desde el inicio de sesión, cada una con sus datos aislados." />
+          <Faq q="¿Puedo firmar consentimientos digitalmente?" a="Sí. Creas plantillas de consentimiento y el paciente firma en pantalla o desde su celular con un enlace/QR. El documento firmado queda guardado y se descarga en PDF." />
           <Faq q="¿Puedo exportar mis datos?" a="Sí. Tus datos son tuyos. Mientras tu cuenta esté activa puedes solicitar una exportación cuando quieras." />
         </div>
       </section>
@@ -517,6 +554,86 @@ function MockFinance() {
             </div>
           );
         })}
+      </div>
+    </BrowserChrome>
+  );
+}
+
+/* Pantalla pública de firma del consentimiento (PublicConsent.tsx) */
+function MockConsent() {
+  return (
+    <BrowserChrome url="odontiacloud.com/consentimiento/k7p2x">
+      <div className="rounded-xl overflow-hidden border border-gray-100 bg-white">
+        <div className="bg-gradient-to-r from-[#0f2f4f] via-[#1e6f9f] to-[#36c1d6] text-white px-4 py-4">
+          <p className="text-blue-100 text-[9px] uppercase tracking-wide">Consentimiento informado</p>
+          <h4 className="text-base font-bold mt-0.5">Tratamiento de ortodoncia</h4>
+          <span className="inline-flex items-center gap-1 mt-2 text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+            Pendiente de firma
+          </span>
+        </div>
+        <div className="px-4 py-3 space-y-2">
+          <div className="space-y-1">
+            <div className="h-1.5 rounded bg-gray-100 w-full" />
+            <div className="h-1.5 rounded bg-gray-100 w-11/12" />
+            <div className="h-1.5 rounded bg-gray-100 w-4/5" />
+          </div>
+          <div>
+            <p className="text-[9px] text-gray-400 uppercase tracking-wide mb-1">Tu firma</p>
+            <div className="relative h-16 rounded-lg border border-dashed border-gray-300 bg-gray-50 overflow-hidden">
+              <svg viewBox="0 0 200 60" className="absolute inset-0 w-full h-full">
+                <path d="M10 42 C 30 12, 42 12, 52 36 S 78 54, 92 30 C 104 12, 120 20, 132 38 S 168 44, 190 22"
+                  fill="none" stroke="#1e6f9f" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <QrCode className="w-8 h-8 text-gray-400 shrink-0" />
+            <span className="text-[9px] text-gray-400 flex-1 leading-tight">Escanea el QR para firmar desde tu celular</span>
+            <span className="text-[10px] px-3 py-1.5 bg-blue-600 text-white rounded-lg font-medium">Firmar</span>
+          </div>
+        </div>
+      </div>
+    </BrowserChrome>
+  );
+}
+
+/* Detalle de un plan de tratamiento con progreso por sesión (TreatmentsTab.tsx) */
+const PLAN_SESSIONS = [
+  { n: 1, date: '05 may', s: 'completed', label: 'Completada' },
+  { n: 2, date: '19 may', s: 'completed', label: 'Completada' },
+  { n: 3, date: '02 jun', s: 'scheduled', label: 'Programada' },
+  { n: 4, date: '16 jun', s: 'scheduled', label: 'Programada' },
+] as const;
+
+function MockTreatment() {
+  const done = PLAN_SESSIONS.filter(s => s.s === 'completed').length;
+  return (
+    <BrowserChrome url="odontiacloud.com/dental-sur/pacientes">
+      <div className="text-[10px] uppercase tracking-wider text-blue-600 font-semibold">Plan de tratamiento</div>
+      <div className="text-base font-bold text-gray-900 mt-0.5">Ortodoncia · Ana Castro</div>
+      <div className="flex items-center gap-3 mt-2 mb-3">
+        <span className="text-[10px] text-gray-500">Total <span className="font-semibold text-gray-800">L 12,000.00</span></span>
+        <span className="text-[10px] text-gray-500">Por sesión <span className="font-semibold text-gray-800">L 3,000.00</span></span>
+      </div>
+      <div className="mb-3">
+        <div className="flex items-center justify-between text-[9px] text-gray-400 mb-1">
+          <span>Avance</span><span>{done} de {PLAN_SESSIONS.length} sesiones</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+          <div className="h-full bg-blue-600 rounded-full" style={{ width: `${(done / PLAN_SESSIONS.length) * 100}%` }} />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        {PLAN_SESSIONS.map(s => (
+          <div key={s.n} className="flex items-center gap-3 p-2 rounded-lg bg-white border border-gray-100">
+            <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold flex items-center justify-center shrink-0">{s.n}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium text-gray-900">Sesión {s.n}</div>
+              <div className="text-[10px] text-gray-400">{s.date}</div>
+            </div>
+            <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_PILL[s.s]}`}>{s.label}</div>
+          </div>
+        ))}
       </div>
     </BrowserChrome>
   );
