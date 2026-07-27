@@ -75,7 +75,7 @@ router.post('/', async (req: Request, res: Response) => {
     const acc = await client.query(
       `INSERT INTO accounts (email, name, role, google_sub, language, last_login, clinic_id)
        VALUES ($1, $2, 'clinic_admin', $3, 'es', NOW(), $4)
-       RETURNING id, email, name, role, language`,
+       RETURNING id, email, name, role, language, token_version`,
       [email, ownerName, sub, clinic.id]
     );
 
@@ -93,6 +93,7 @@ router.post('/', async (req: Request, res: Response) => {
     const session: SessionAccount = {
       id: acc.rows[0].id, email: acc.rows[0].email, name: acc.rows[0].name,
       role: acc.rows[0].role, clinic_id: clinic.id,
+      token_version: acc.rows[0].token_version,
     };
     const token = signSession(session);
 

@@ -1,10 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
+import pool from './database';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const JWT_SECRET = process.env.JWT_SECRET || 'cambia-esta-clave-en-produccion';
-const SESSION_TTL = '30d';
+
+// El secreto de firma NUNCA debe tener un valor por defecto en producción:
+// si se filtrara (o quedara el placeholder del repo), cualquiera podría forjar
+// tokens de superusuario. En producción abortamos el arranque si falta.
+const JWT_SECRET = (() => {
+  const s = process.env.JWT_SECRET;
+  if (s && s.length >= 16) return s;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET no está definida (o es demasiado corta). Configúrala antes de arrancar en producción.');
+  }
+  console.warn('⚠️  JWT_SECRET no definida: usando una clave de desarrollo insegura. NO usar en producción.');
+  return 'dev-only-insecure-secret';
+})();
+
+// TTL corto: reduce la ventana de un token robado. La revocación server-side
+// (token_version) permite invalidar sesiones antes de que expiren.
+const SESSION_TTL = '7d';
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -22,6 +38,10 @@ export interface SessionAccount {
   // No tiene fila propia en accounts; las acciones se auditan con su
   // nombre pero accountId=NULL. Sandbox compartido y reseteable.
   is_demo_visitor?: boolean;
+  // Versión de sesión de la cuenta al momento de firmar el token. Si la fila
+  // en accounts tiene un token_version mayor, el token quedó revocado (p.ej.
+  // "cerrar sesión en todos los dispositivos" o al desactivar la cuenta).
+  token_version?: number;
 }
 
 export const SUPERUSER_EMAIL = (process.env.SUPERUSER_EMAIL || 'jaimeted@gmail.com').toLowerCase();
@@ -60,16 +80,36 @@ declare global {
   }
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   if (!token) return res.status(401).json({ error: 'No autenticado' });
+
+  let account: SessionAccount;
   try {
-    req.account = jwt.verify(token, JWT_SECRET) as SessionAccount;
-    next();
+    account = jwt.verify(token, JWT_SECRET) as SessionAccount;
   } catch {
     return res.status(401).json({ error: 'Sesión inválida o expirada' });
   }
+
+  // Revocación server-side: los visitantes demo no tienen fila en accounts, así
+  // que se omiten. Para el resto, el token es válido solo si su token_version
+  // coincide con el de la cuenta (y la cuenta sigue existiendo).
+  if (!account.is_demo_visitor) {
+    try {
+      const r = await pool.query('SELECT token_version FROM accounts WHERE id = $1', [account.id]);
+      if (!r.rows[0]) return res.status(401).json({ error: 'Sesión inválida o expirada' });
+      const current = Number(r.rows[0].token_version) || 0;
+      if (current !== (Number(account.token_version) || 0)) {
+        return res.status(401).json({ error: 'Sesión revocada. Inicia sesión de nuevo.' });
+      }
+    } catch {
+      return res.status(503).json({ error: 'No se pudo validar la sesión' });
+    }
+  }
+
+  req.account = account;
+  next();
 }
 
 export function requireSuperuser(req: Request, res: Response, next: NextFunction) {

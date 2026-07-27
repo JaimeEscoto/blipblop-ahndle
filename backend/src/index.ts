@@ -2,6 +2,7 @@ import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { initDB } from './database';
 import { auditLog } from './audit';
 import authRouter from './routes/auth';
@@ -43,6 +44,11 @@ function corsOrigin(origin: string | undefined, cb: (err: Error | null, allow?: 
   if (/^https?:\/\/(?:[a-z0-9-]+\.)?odontiacloud\.com$/i.test(origin)) return cb(null, true);
   return cb(null, false);
 }
+
+// Cabeceras de seguridad. Es una API JSON (no sirve HTML), así que desactivamos
+// la CSP (no aplica) y dejamos que CORS gobierne el acceso cross-origin; el resto
+// de defaults de helmet (HSTS, noSniff, frameguard, etc.) sí aplican.
+app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
