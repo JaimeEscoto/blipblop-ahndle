@@ -9,9 +9,9 @@ const router = Router();
 
 // ── Auxiliares ──────────────────────────────────────────────────────────────
 
-async function getSuperuserAccount(): Promise<{ id: number; email: string; name: string | null } | null> {
+async function getSuperuserAccount(): Promise<{ id: number; email: string; name: string | null; token_version: number } | null> {
   const r = await pool.query(
-    `SELECT id, email, name FROM accounts WHERE email = $1 AND clinic_id IS NULL`,
+    `SELECT id, email, name, token_version FROM accounts WHERE email = $1 AND clinic_id IS NULL`,
     [SUPERUSER_EMAIL]
   );
   return r.rows[0] || null;
@@ -30,6 +30,7 @@ async function buildShadowSession(clinicId: number): Promise<SessionAccount | nu
     role: 'clinic_admin',
     clinic_id: clinicId,
     is_shadow: true,
+    token_version: sup.token_version,
   };
 }
 
@@ -77,10 +78,10 @@ router.post('/google', requireClinic, async (req: Request, res: Response) => {
 
   // Caso normal: busca cuenta DENTRO de la clínica
   const existing = await pool.query(
-    'SELECT id, email, name, role, language FROM accounts WHERE email = $1 AND clinic_id = $2',
+    'SELECT id, email, name, role, language, token_version FROM accounts WHERE email = $1 AND clinic_id = $2',
     [email, clinic.id]
   );
-  let account: { id: number; email: string; name: string | null; role: 'superuser' | 'clinic_admin' | 'staff'; language: string };
+  let account: { id: number; email: string; name: string | null; role: 'superuser' | 'clinic_admin' | 'staff'; language: string; token_version: number };
 
   if (existing.rows[0]) {
     account = existing.rows[0];
@@ -99,7 +100,7 @@ router.post('/google', requireClinic, async (req: Request, res: Response) => {
     }
     const created = await pool.query(
       `INSERT INTO accounts (email, name, role, google_sub, language, last_login, clinic_id)
-       VALUES ($1, $2, 'staff', $3, $4, NOW(), $5) RETURNING id, email, name, role, language`,
+       VALUES ($1, $2, 'staff', $3, $4, NOW(), $5) RETURNING id, email, name, role, language, token_version`,
       [email, name, sub, preferredLang, clinic.id]
     );
     account = created.rows[0];
@@ -108,6 +109,7 @@ router.post('/google', requireClinic, async (req: Request, res: Response) => {
 
   const session: SessionAccount = {
     id: account.id, email: account.email, name: account.name, role: account.role, clinic_id: clinic.id,
+    token_version: account.token_version,
   };
   const token = signSession(session);
 
@@ -164,7 +166,7 @@ router.post('/register', requireClinic, async (req: Request, res: Response) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const created = await pool.query(
     `INSERT INTO accounts (email, name, role, password_hash, language, last_login, clinic_id)
-     VALUES ($1, $2, 'staff', $3, $4, NOW(), $5) RETURNING id, email, name, role, language`,
+     VALUES ($1, $2, 'staff', $3, $4, NOW(), $5) RETURNING id, email, name, role, language, token_version`,
     [email, name, passwordHash, preferredLang, clinic.id]
   );
   const account = created.rows[0];
@@ -172,6 +174,7 @@ router.post('/register', requireClinic, async (req: Request, res: Response) => {
 
   const session: SessionAccount = {
     id: account.id, email: account.email, name: account.name, role: account.role, clinic_id: clinic.id,
+    token_version: account.token_version,
   };
   const sessionToken = signSession(session);
 
@@ -204,7 +207,7 @@ router.post('/login', requireClinic, async (req: Request, res: Response) => {
   }
 
   const r = await pool.query(
-    'SELECT id, email, name, role, language, password_hash FROM accounts WHERE email = $1 AND clinic_id = $2',
+    'SELECT id, email, name, role, language, password_hash, token_version FROM accounts WHERE email = $1 AND clinic_id = $2',
     [email, clinic.id]
   );
   const row = r.rows[0];
@@ -216,6 +219,7 @@ router.post('/login', requireClinic, async (req: Request, res: Response) => {
 
   const session: SessionAccount = {
     id: row.id, email: row.email, name: row.name, role: row.role, clinic_id: clinic.id,
+    token_version: row.token_version,
   };
   const token = signSession(session);
 
@@ -256,6 +260,7 @@ router.post('/discover', async (req: Request, res: Response) => {
     if (!sup) return res.status(500).json({ error: 'Configuración inválida del super admin' });
     const session: SessionAccount = {
       id: sup.id, email: sup.email, name: sup.name, role: 'superuser', clinic_id: null,
+      token_version: sup.token_version,
     };
     return res.json({
       super: { token: signSession(session), account: { ...session, language: 'es' } },
@@ -264,7 +269,7 @@ router.post('/discover', async (req: Request, res: Response) => {
 
   // Busca todas las cuentas de este correo (una por clínica)
   const { rows } = await pool.query(
-    `SELECT a.id, a.email, a.name, a.role, a.language, a.clinic_id,
+    `SELECT a.id, a.email, a.name, a.role, a.language, a.clinic_id, a.token_version,
             c.slug AS clinic_slug, c.name AS clinic_name
      FROM accounts a
      JOIN clinics c ON c.id = a.clinic_id
@@ -281,6 +286,7 @@ router.post('/discover', async (req: Request, res: Response) => {
   const clinics = rows.map(r => {
     const session: SessionAccount = {
       id: r.id, email: r.email, name: r.name, role: r.role, clinic_id: r.clinic_id,
+      token_version: r.token_version,
     };
     return {
       clinic_id: r.clinic_id,
@@ -322,6 +328,7 @@ router.post('/super/google', async (req: Request, res: Response) => {
 
   const session: SessionAccount = {
     id: sup.id, email: sup.email, name: sup.name, role: 'superuser', clinic_id: null,
+    token_version: sup.token_version,
   };
   const token = signSession(session);
 

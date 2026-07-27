@@ -149,6 +149,12 @@ export async function initDB() {
   // --- Migración: contraseña para cuentas que no usan Google ---
   await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT`);
 
+  // --- Migración: versión de sesión para revocación server-side ---
+  // Incrementar token_version invalida TODOS los JWT emitidos previamente para
+  // esa cuenta (p.ej. "cerrar sesión en todos los dispositivos" o al desactivar
+  // la cuenta). requireAuth compara el valor del token contra este.
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0`);
+
   // --- Migración: token único de invitación (enlace para crear cuenta) ---
   await pool.query(`ALTER TABLE invitations ADD COLUMN IF NOT EXISTS token TEXT`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS invitations_token_idx ON invitations(token)`);

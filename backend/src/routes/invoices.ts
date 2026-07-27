@@ -133,6 +133,24 @@ router.post('/', async (req: Request, res: Response) => {
   const u = await pool.query('SELECT 1 FROM users WHERE id = $1 AND clinic_id = $2', [user_id, req.clinic!.id]);
   if (!u.rows[0]) return res.status(404).json({ error: 'Paciente no encontrado' });
 
+  // El médico (opcional) debe ser de la clínica; el SELECT hace LEFT JOIN global
+  // por id, así que sin esto se filtraría el nombre/especialidad de otra clínica.
+  if (doctor_id) {
+    const d = await pool.query('SELECT 1 FROM doctors WHERE id = $1 AND clinic_id = $2', [doctor_id, req.clinic!.id]);
+    if (!d.rows[0]) return res.status(404).json({ error: 'Médico no encontrado' });
+  }
+
+  // Cada procedimiento referenciado en los ítems debe pertenecer a la clínica.
+  const procIds = Array.from(new Set(
+    items.map((it: any) => it.procedure_id).filter((id: any) => id !== undefined && id !== null).map(Number)
+  ));
+  if (procIds.length > 0) {
+    const p = await pool.query('SELECT id FROM procedures WHERE id = ANY($1::int[]) AND clinic_id = $2', [procIds, req.clinic!.id]);
+    if (p.rows.length !== procIds.length) {
+      return res.status(404).json({ error: 'Algún procedimiento no pertenece a esta clínica' });
+    }
+  }
+
   // Para facturas de cita: verifica que pertenezca a la clínica y al paciente.
   // Para venta de insumos: no se vincula a una cita (constraint del DB lo exige).
   let appointmentRef: number | null = null;
@@ -220,6 +238,17 @@ router.put('/:id', async (req: Request, res: Response) => {
   if (!current.rows[0]) return res.status(404).json({ error: 'Factura no encontrada' });
   if (current.rows[0].status !== 'draft') {
     return res.status(409).json({ error: 'Solo se puede editar una factura en borrador' });
+  }
+
+  // Los procedimientos de los ítems deben ser de la clínica (mismo motivo que en POST).
+  const procIds = Array.from(new Set(
+    items.map((it: any) => it.procedure_id).filter((id: any) => id !== undefined && id !== null).map(Number)
+  ));
+  if (procIds.length > 0) {
+    const p = await pool.query('SELECT id FROM procedures WHERE id = ANY($1::int[]) AND clinic_id = $2', [procIds, req.clinic!.id]);
+    if (p.rows.length !== procIds.length) {
+      return res.status(404).json({ error: 'Algún procedimiento no pertenece a esta clínica' });
+    }
   }
 
   const useTaxRate = tax_rate !== undefined && tax_rate !== null ? Number(tax_rate) : 0;
