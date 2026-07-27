@@ -3,11 +3,10 @@ import pool from '../database';
 import { requireAuth, requireClinicMember } from '../auth';
 import { requireClinic } from '../tenant';
 import { generatePublicCode } from '../utils/code';
+import { clampSessions, clampTotalAmount, clampIntervalWeeks, perSessionAmount } from '../lib/finance';
 
 const router = Router();
 router.use(requireClinic, requireAuth, requireClinicMember);
-
-const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 // SELECT base con datos relacionados + progreso (X de N).
 const SELECT_PLAN = `
@@ -78,9 +77,9 @@ router.post('/', async (req: Request, res: Response) => {
   if (!user_id || !doctor_id || !procedure_id) {
     return res.status(400).json({ error: 'Paciente, doctor y procedimiento son requeridos' });
   }
-  const sessions = Math.max(1, Number(sessions_planned) || 1);
-  const total = Math.max(0, Number(total_amount) || 0);
-  const interval = Math.max(0, Number(interval_weeks) || 0);
+  const sessions = clampSessions(sessions_planned);
+  const total = clampTotalAmount(total_amount);
+  const interval = clampIntervalWeeks(interval_weeks);
   if (!start_date || !time) {
     return res.status(400).json({ error: 'Fecha y hora inicial son requeridas' });
   }
@@ -94,7 +93,7 @@ router.post('/', async (req: Request, res: Response) => {
   const dRes = await pool.query('SELECT 1 FROM doctors WHERE id = $1 AND clinic_id = $2', [doctor_id, req.clinic!.id]);
   if (!dRes.rows[0]) return res.status(404).json({ error: 'Doctor no encontrado' });
 
-  const perSession = round2(sessions > 0 ? total / sessions : 0);
+  const perSession = perSessionAmount(total, sessions);
 
   const client = await pool.connect();
   try {
@@ -141,8 +140,8 @@ router.post('/', async (req: Request, res: Response) => {
 // Si disminuye, se eliminan citas FUTURAS sobrantes (las pasadas no se tocan).
 router.put('/:id', async (req: Request, res: Response) => {
   const { total_amount, sessions_planned, notes } = req.body;
-  const total = Math.max(0, Number(total_amount) || 0);
-  const sessions = Math.max(1, Number(sessions_planned) || 1);
+  const total = clampTotalAmount(total_amount);
+  const sessions = clampSessions(sessions_planned);
 
   const current = await pool.query(
     `${SELECT_PLAN} WHERE tp.id = $1 AND tp.clinic_id = $2`,
@@ -160,7 +159,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     return res.status(400).json({ error: `Ya hay ${completedN} sesiones completadas; no puedes bajar a menos.` });
   }
 
-  const perSession = round2(sessions > 0 ? total / sessions : 0);
+  const perSession = perSessionAmount(total, sessions);
 
   const client = await pool.connect();
   try {

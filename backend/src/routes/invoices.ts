@@ -4,6 +4,7 @@ import pool from '../database';
 import { requireAuth, requireClinicMember } from '../auth';
 import { requireClinic } from '../tenant';
 import { hasStorage, putObject, getSignedDownloadUrl, deleteObject, buildStorageKey } from '../storage';
+import { round2, computeTotals, statusFor } from '../lib/finance';
 
 const router = Router();
 router.use(requireClinic, requireAuth, requireClinicMember);
@@ -18,32 +19,7 @@ const pdfUpload = multer({
   },
 });
 
-const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
-
-// Calcula los totales de los items y devuelve {subtotal, total} aplicando IVA y descuento.
-function computeTotals(items: any[], taxRate: number, discount: number) {
-  let subtotal = 0;
-  for (const it of items) {
-    const qty = Number(it.quantity) || 0;
-    const price = Number(it.unit_price) || 0;
-    subtotal += qty * price;
-  }
-  subtotal = round2(subtotal);
-  const dsc = round2(Number(discount) || 0);
-  const base = Math.max(0, subtotal - dsc);
-  const tax = round2(base * ((Number(taxRate) || 0) / 100));
-  const total = round2(base + tax);
-  return { subtotal, tax, discount: dsc, total };
-}
-
-// Decide el estado según el total pagado.
-function statusFor(total: number, paid: number, currentStatus: string): string {
-  if (currentStatus === 'cancelled') return 'cancelled';
-  const p = round2(paid);
-  if (p >= round2(total) && total > 0) return 'paid';
-  if (p > 0) return 'partial';
-  return 'issued';
-}
+// round2, computeTotals y statusFor viven en ../lib/finance (probados de forma aislada).
 
 // SELECT de factura con datos relacionados.
 const SELECT_INVOICE = `
