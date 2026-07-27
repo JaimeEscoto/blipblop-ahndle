@@ -409,6 +409,7 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
   const [items, setItems] = useState<InvoiceItemDraft[]>([
     { procedure_id: null, description: '', quantity: '1', unit_price: '0' }
   ]);
+  const [prefilledFromApptId, setPrefilledFromApptId] = useState<number | null>(null);
   const [taxRate, setTaxRate] = useState<string>(settings ? String(settings.tax_rate) : '0');
   const [discount, setDiscount] = useState('0');
   const [notes, setNotes] = useState('');
@@ -428,6 +429,25 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
   const date = isSupply ? supplyDate : (selectedAppt?.date || today);
   const userId = isSupply ? (supplyUserId || null) : (selectedAppt?.user_id || null);
   const doctorId = isSupply ? (supplyDoctorId || null) : (selectedAppt?.doctor_id || null);
+
+  // Precarga los ítems con los procedimientos ya planeados en la cita (mismos
+  // precios/cantidades acordados ahí), igual que hace el borrador automático
+  // al completar una cita — evita tener que volver a elegirlos a mano. Se
+  // aplica una sola vez por cita: si el usuario edita los ítems a mano no se
+  // le pisan en re-renders posteriores, pero cambiar de cita en el selector
+  // sí refresca los ítems para que coincidan con la cita recién elegida.
+  useEffect(() => {
+    if (isSupply || !selectedAppt || prefilledFromApptId === selectedAppt.id) return;
+    setPrefilledFromApptId(selectedAppt.id);
+    setItems(selectedAppt.procedures && selectedAppt.procedures.length > 0
+      ? selectedAppt.procedures.map(p => ({
+          procedure_id: p.procedure_id,
+          description: p.procedure_name,
+          quantity: String(p.quantity),
+          unit_price: String(p.unit_price),
+        }))
+      : [{ procedure_id: null, description: '', quantity: '1', unit_price: '0' }]);
+  }, [isSupply, selectedAppt, prefilledFromApptId]);
 
   const setItem = (i: number, patch: Partial<InvoiceItemDraft>) =>
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it));
