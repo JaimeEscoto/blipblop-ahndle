@@ -415,6 +415,18 @@
   "odontogram": {
     "upper": "Superior",
     "lower": "Inferior",
+    "byToothHint": "Elige una condición y toca la cara del diente. Extraído, corona e implante aplican a todo el diente.",
+    "surfaces": {
+      "vestibular": "Vestibular",
+      "lingual": "Lingual/Palatino",
+      "mesial": "Mesial",
+      "distal": "Distal",
+      "occlusal": "Oclusal/Incisal"
+    },
+    "scope": {
+      "surface": "por cara",
+      "whole": "todo el diente"
+    },
     "states": {
       "healthy": "Sano",
       "cavity": "Caries",

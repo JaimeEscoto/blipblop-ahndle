@@ -67,7 +67,7 @@ export default function Appointments() {
 
   // Modal de completar cita → entrada clínica con odontograma
   const [completeAppt, setCompleteAppt] = useState<Appointment | null>(null);
-  const [completeForm, setCompleteForm] = useState({ diagnosis: '', treatment: '', observations: '', tooth_chart: {} as Record<string, string> });
+  const [completeForm, setCompleteForm] = useState({ diagnosis: '', treatment: '', observations: '', tooth_chart: {} as Record<string, any> });
   const [loadingChart, setLoadingChart] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState('');

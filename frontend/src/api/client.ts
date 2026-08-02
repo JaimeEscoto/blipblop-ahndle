@@ -110,7 +110,7 @@ export interface ClinicalRecord {
   id: number; user_id: number; doctor_id: number;
   appointment_id: number | null; date: string; diagnosis: string | null;
   treatment: string | null; observations: string | null;
-  tooth_chart: Record<string, string>; created_at: string;
+  tooth_chart: Record<string, any>; created_at: string;
   doctor_name: string;
   invoice_id: number | null;
   invoice_number: number | null;

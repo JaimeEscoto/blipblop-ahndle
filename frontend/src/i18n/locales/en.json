@@ -415,6 +415,18 @@
   "odontogram": {
     "upper": "Upper",
     "lower": "Lower",
+    "byToothHint": "Pick a condition and tap the tooth surface. Extracted, crown and implant apply to the whole tooth.",
+    "surfaces": {
+      "vestibular": "Buccal/Facial",
+      "lingual": "Lingual/Palatal",
+      "mesial": "Mesial",
+      "distal": "Distal",
+      "occlusal": "Occlusal/Incisal"
+    },
+    "scope": {
+      "surface": "per surface",
+      "whole": "whole tooth"
+    },
     "states": {
       "healthy": "Healthy",
       "cavity": "Cavity",
