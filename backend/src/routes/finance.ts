@@ -11,10 +11,10 @@ router.use(requireClinic, requireAuth, requireClinicMember);
 
 router.get('/settings', async (req: Request, res: Response) => {
   const { rows } = await pool.query(
-    'SELECT currency, tax_rate, next_invoice_number, default_country FROM clinics WHERE id = $1',
+    'SELECT currency, tax_rate, next_invoice_number, default_country, address, tax_id, phone, logo_url FROM clinics WHERE id = $1',
     [req.clinic!.id]
   );
-  res.json(rows[0] || { currency: 'HNL', tax_rate: 0, next_invoice_number: 1, default_country: 'HN' });
+  res.json(rows[0] || { currency: 'HNL', tax_rate: 0, next_invoice_number: 1, default_country: 'HN', address: null, tax_id: null, phone: null, logo_url: null });
 });
 
 router.put('/settings', async (req: Request, res: Response) => {
@@ -24,10 +24,17 @@ router.put('/settings', async (req: Request, res: Response) => {
   const currency = (req.body.currency || 'HNL').toString().toUpperCase().slice(0, 6);
   const taxRate = clampTaxRate(req.body.tax_rate);
   const defaultCountry = (req.body.default_country || 'HN').toString().toUpperCase().slice(0, 2);
+  const address = req.body.address ? String(req.body.address).trim().slice(0, 300) : null;
+  const taxId = req.body.tax_id ? String(req.body.tax_id).trim().slice(0, 50) : null;
+  const phone = req.body.phone ? String(req.body.phone).trim().slice(0, 40) : null;
+  const logoUrl = req.body.logo_url ? String(req.body.logo_url).trim() : null;
+
   const { rows } = await pool.query(
-    `UPDATE clinics SET currency = $1, tax_rate = $2, default_country = $3 WHERE id = $4
-     RETURNING currency, tax_rate, next_invoice_number, default_country`,
-    [currency, taxRate, defaultCountry, req.clinic!.id]
+    `UPDATE clinics
+     SET currency = $1, tax_rate = $2, default_country = $3, address = $4, tax_id = $5, phone = $6, logo_url = $7
+     WHERE id = $8
+     RETURNING currency, tax_rate, next_invoice_number, default_country, address, tax_id, phone, logo_url`,
+    [currency, taxRate, defaultCountry, address, taxId, phone, logoUrl, req.clinic!.id]
   );
   res.json(rows[0]);
 });

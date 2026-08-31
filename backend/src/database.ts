@@ -243,6 +243,10 @@ export async function initDB() {
     ALTER TABLE clinics ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'HNL';
     ALTER TABLE clinics ADD COLUMN IF NOT EXISTS tax_rate NUMERIC NOT NULL DEFAULT 0;
     ALTER TABLE clinics ADD COLUMN IF NOT EXISTS next_invoice_number INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS address TEXT;
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS tax_id TEXT;
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS phone TEXT;
+    ALTER TABLE clinics ADD COLUMN IF NOT EXISTS logo_url TEXT;
   `);
 
   // 10) Finanzas: catálogo de procedimientos
@@ -582,6 +586,21 @@ export async function initDB() {
       PRIMARY KEY (account_id, release_note_id)
     );
   `);
+
+  // --- Novedad: Perfil y membrete oficial de la clínica ---
+  try {
+    const releaseTitle = '🏢 ¡Nuevo Membrete y Perfil Oficial de la Clínica!';
+    const releaseBody = 'Ahora puedes configurar el logotipo, dirección física, teléfono de contacto y Registro Fiscal (RTN) de tu clínica desde la sección de **Ajustes**. Estos datos se incluirán automáticamente en el membrete de tus facturas y documentos PDF.';
+    const existing = await pool.query(`SELECT id FROM release_notes WHERE title = $1`, [releaseTitle]);
+    if (!existing.rows[0]) {
+      await pool.query(
+        `INSERT INTO release_notes (icon, title, body, published_at) VALUES ('🏢', $1, $2, NOW())`,
+        [releaseTitle, releaseBody]
+      );
+    }
+  } catch (e) {
+    console.warn('No se pudo insertar la novedad de perfil de clínica:', e);
+  }
 
   // --- Migración: soporte multi-país en pacientes ---
   // Cada clínica define un país por defecto (ISO alpha-2). Cada paciente puede

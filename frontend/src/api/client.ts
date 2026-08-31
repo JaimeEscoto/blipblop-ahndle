@@ -231,6 +231,10 @@ export interface PatientBalance {
 export interface FinanceSettings {
   currency: string; tax_rate: number; next_invoice_number: number;
   default_country: string;
+  address?: string | null;
+  tax_id?: string | null;
+  phone?: string | null;
+  logo_url?: string | null;
 }
 export interface FinanceReport {
   from: string; to: string;
@@ -527,7 +531,7 @@ export const api = {
   },
   finance: {
     settings: () => request<FinanceSettings>('/finance/settings'),
-    updateSettings: (d: { currency: string; tax_rate: number; default_country?: string }) => request<FinanceSettings>('/finance/settings', { method:'PUT', body:JSON.stringify(d) }),
+    updateSettings: (d: Partial<FinanceSettings>) => request<FinanceSettings>('/finance/settings', { method:'PUT', body:JSON.stringify(d) }),
     balance: (userId: number) => request<PatientBalance>(`/finance/balance/${userId}`),
     balances: () => request<(PatientBalance & { user_id: number })[]>(`/finance/balances`),
     report: (from?: string, to?: string) => {

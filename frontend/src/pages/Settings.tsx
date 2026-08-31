@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Languages, Check, Wallet, HardDrive, AlertCircle, FileSignature, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Languages, Check, Wallet, HardDrive, AlertCircle, FileSignature, Plus, Pencil, Trash2, Building2, Upload } from 'lucide-react';
 import { api, FinanceSettings, StorageUsage, ConsentTemplate } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import LanguageToggle from '../components/LanguageToggle';
@@ -33,9 +33,17 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
-  // Finanzas
+  // Finanzas y Membrete
   const [finance, setFinance] = useState<FinanceSettings | null>(null);
-  const [financeForm, setFinanceForm] = useState({ currency: 'HNL', tax_rate: '0', default_country: 'HN' });
+  const [financeForm, setFinanceForm] = useState({
+    currency: 'HNL',
+    tax_rate: '0',
+    default_country: 'HN',
+    address: '',
+    tax_id: '',
+    phone: '',
+    logo_url: '',
+  });
   const [financeSaving, setFinanceSaving] = useState(false);
   const [financeSaved, setFinanceSaved] = useState(false);
   const isAdmin = account?.role === 'clinic_admin' || account?.role === 'superuser';
@@ -46,7 +54,15 @@ export default function Settings() {
   useEffect(() => {
     api.finance.settings().then(s => {
       setFinance(s);
-      setFinanceForm({ currency: s.currency, tax_rate: String(s.tax_rate), default_country: s.default_country || 'HN' });
+      setFinanceForm({
+        currency: s.currency,
+        tax_rate: String(s.tax_rate),
+        default_country: s.default_country || 'HN',
+        address: s.address || '',
+        tax_id: s.tax_id || '',
+        phone: s.phone || '',
+        logo_url: s.logo_url || '',
+      });
     }).catch(() => {});
     api.attachments.usage().then(setUsage).catch(() => {});
   }, []);
@@ -66,6 +82,20 @@ export default function Settings() {
     }
   };
 
+  const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError('El logotipo debe pesar menos de 2 MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setFinanceForm(prev => ({ ...prev, logo_url: evt.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const saveFinance = async (e: React.FormEvent) => {
     e.preventDefault();
     setFinanceSaving(true); setError(''); setFinanceSaved(false);
@@ -74,6 +104,10 @@ export default function Settings() {
         currency: financeForm.currency,
         tax_rate: Number(financeForm.tax_rate) || 0,
         default_country: financeForm.default_country,
+        address: financeForm.address,
+        tax_id: financeForm.tax_id,
+        phone: financeForm.phone,
+        logo_url: financeForm.logo_url,
       });
       setFinance(updated);
       setFinanceSaved(true);
@@ -182,45 +216,117 @@ export default function Settings() {
           );
         })()}
 
-        {/* Finanzas */}
+        {/* Perfil y Membrete de la Clínica */}
         {isAdmin && (
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-1">
-              <Wallet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Finanzas</h2>
+              <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Perfil y Membrete de la Clínica</h2>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              Moneda e IVA por defecto para facturas. {finance && <>Próxima factura: <span className="font-medium">#{String(finance.next_invoice_number).padStart(4, '0')}</span></>}
+              Configura el logotipo, dirección física y Registro Fiscal (RTN) para que aparezcan en el encabezado oficial de tus documentos y facturas.
             </p>
 
-            <form onSubmit={saveFinance} className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Moneda</label>
-                  <select className="input" value={financeForm.currency}
-                    onChange={e => setFinanceForm({ ...financeForm, currency: e.target.value })}>
-                    {CURRENCY_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">IVA por defecto (%)</label>
-                  <input type="number" min="0" max="100" step="0.01" className="input"
-                    value={financeForm.tax_rate}
-                    onChange={e => setFinanceForm({ ...financeForm, tax_rate: e.target.value })} />
-                </div>
-              </div>
+            <form onSubmit={saveFinance} className="space-y-4">
+              {/* Logotipo */}
               <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">País por defecto</label>
-                <select className="input" value={financeForm.default_country}
-                  onChange={e => setFinanceForm({ ...financeForm, default_country: e.target.value })}>
-                  {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-                </select>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-                  Nuevos pacientes se crearán con este país pre-seleccionado. Se puede cambiar por paciente.
-                </p>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Logotipo de la Clínica</label>
+                <div className="flex items-center gap-4">
+                  {financeForm.logo_url ? (
+                    <div className="relative group w-16 h-16 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
+                      <img src={financeForm.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+                      <button
+                        type="button"
+                        onClick={() => setFinanceForm(prev => ({ ...prev, logo_url: '' }))}
+                        className="absolute inset-0 bg-black/60 text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0 text-gray-400">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                  )}
+
+                  <div className="flex-1">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                      <Upload className="w-3.5 h-3.5" />
+                      Sugerir / Cargar archivo
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+                    </label>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">PNG, JPG o SVG (máx 2 MB)</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              {/* Dirección Física */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Dirección Física</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Ej: Col. Palmira, Ave. República de Chile #102, Tegucigalpa"
+                  value={financeForm.address}
+                  onChange={e => setFinanceForm({ ...financeForm, address: e.target.value })}
+                />
+              </div>
+
+              {/* Registro Fiscal / RTN & Teléfono */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Registro Fiscal (RTN / NIF)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ej: 0801-1990-123456"
+                    value={financeForm.tax_id}
+                    onChange={e => setFinanceForm({ ...financeForm, tax_id: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Teléfono de Contacto</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ej: +504 2233-4455"
+                    value={financeForm.phone}
+                    onChange={e => setFinanceForm({ ...financeForm, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-xs font-semibold text-gray-800 dark:text-gray-200">Ajustes Financieros</h3>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">Moneda</label>
+                    <select className="input" value={financeForm.currency}
+                      onChange={e => setFinanceForm({ ...financeForm, currency: e.target.value })}>
+                      {CURRENCY_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">IVA (%)</label>
+                    <input type="number" min="0" max="100" step="0.01" className="input"
+                      value={financeForm.tax_rate}
+                      onChange={e => setFinanceForm({ ...financeForm, tax_rate: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">País por defecto</label>
+                  <select className="input" value={financeForm.default_country}
+                    onChange={e => setFinanceForm({ ...financeForm, default_country: e.target.value })}>
+                    {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
                 <button type="submit" disabled={financeSaving}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60">
                   {financeSaving ? t('common.saving') : t('common.save')}
