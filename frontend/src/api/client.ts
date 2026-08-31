@@ -88,6 +88,9 @@ export interface Appointment {
   notes: string | null; created_at: string; public_code: string | null;
   user_name: string; user_email: string; user_phone: string | null;
   doctor_name: string; doctor_specialty: string;
+  blood_type?: string | null;
+  allergies?: string | null;
+  medical_conditions?: string | null;
   procedures?: AppointmentProcedure[];
   invoice_id: number | null;
 }

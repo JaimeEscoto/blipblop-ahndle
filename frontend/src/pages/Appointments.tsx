@@ -291,6 +291,15 @@ export default function Appointments() {
               </span>
             </div>
             {a.reason && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">{a.reason}</p>}
+            {(a.allergies || a.medical_conditions) && (
+              <div className="mt-2 p-2 bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-800 rounded-lg flex items-start gap-1.5 text-xs text-red-700 dark:text-red-300">
+                <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  {a.allergies && <p className="truncate"><span className="font-semibold text-red-800 dark:text-red-200">Alergia:</span> {a.allergies}</p>}
+                  {a.medical_conditions && <p className="truncate"><span className="font-semibold text-red-800 dark:text-red-200">Condiciones:</span> {a.medical_conditions}</p>}
+                </div>
+              </div>
+            )}
             {a.procedures && a.procedures.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {a.procedures.map(p => (

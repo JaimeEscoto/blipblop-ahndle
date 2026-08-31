@@ -42,10 +42,12 @@ const SELECT_WITH_RELATIONS = `
     TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
     TO_CHAR(a.time, 'HH24:MI') AS time,
     u.name AS user_name, u.email AS user_email, u.phone AS user_phone,
-    d.name AS doctor_name, d.specialty AS doctor_specialty
+    d.name AS doctor_name, d.specialty AS doctor_specialty,
+    m.blood_type, m.allergies, m.medical_conditions
   FROM appointments a
   JOIN users u ON a.user_id = u.id
   JOIN doctors d ON a.doctor_id = d.id
+  LEFT JOIN medical_info m ON m.user_id = u.id
 `;
 
 // Procedimientos planificados de una cita, con nombre y precio del catálogo.

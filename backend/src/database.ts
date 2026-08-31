@@ -602,6 +602,21 @@ export async function initDB() {
     console.warn('No se pudo insertar la novedad de perfil de clínica:', e);
   }
 
+  // --- Novedad: Alertas médicas y alergias visibles en citas ---
+  try {
+    const releaseTitle = '⚠️ ¡Alertas Médicas y Alergias Visibles en la Agenda!';
+    const releaseBody = 'Ahora cuando abras una cita o veas la agenda, la plataforma te mostrará una **insignia destacada en rojo de Alerta Médica** si el paciente padece alergias a medicamentos (penicilina, látex, etc.) o condiciones clínicas preexistentes (diabetes, hipertensión), para garantizar su seguridad antes de atenderlo.';
+    const existing = await pool.query(`SELECT id FROM release_notes WHERE title = $1`, [releaseTitle]);
+    if (!existing.rows[0]) {
+      await pool.query(
+        `INSERT INTO release_notes (icon, title, body, published_at) VALUES ('⚠️', $1, $2, NOW())`,
+        [releaseTitle, releaseBody]
+      );
+    }
+  } catch (e) {
+    console.warn('No se pudo insertar la novedad de alertas médicas:', e);
+  }
+
   // --- Migración: soporte multi-país en pacientes ---
   // Cada clínica define un país por defecto (ISO alpha-2). Cada paciente puede
   // pertenecer a un país distinto — útil para clínicas fronterizas. Backfill:

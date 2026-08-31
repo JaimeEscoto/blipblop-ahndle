@@ -37,11 +37,18 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Novedades</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Novedades del Sistema</h2>
+              {pending.length > 1 && (
+                <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 rounded-full">
+                  {pending.length} nuevas
+                </span>
+              )}
+            </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {pending.length === 1
-                ? 'Una novedad nueva desde tu última visita'
-                : `${pending.length} novedades nuevas desde tu última visita`}
+                ? 'Tienes 1 novedad no vista desde tu última visita'
+                : `Tienes ${pending.length} novedades acumuladas que no has visto`}
             </p>
           </div>
           <button
@@ -53,17 +60,22 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
           </button>
         </div>
 
-        <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {pending.map(n => (
-            <div key={n.id} className="flex gap-3">
-              <div className="text-2xl leading-none shrink-0" aria-hidden="true">
+        <div className="p-5 overflow-y-auto space-y-3.5 flex-1">
+          {pending.map((n, idx) => (
+            <div key={n.id} className="flex gap-3.5 p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-700/40">
+              <div className="text-2xl leading-none shrink-0 p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm h-fit" aria-hidden="true">
                 {n.icon || '✨'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{n.published_at}</p>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{n.title}</h3>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded-md">
+                    Novedad #{pending.length - idx}
+                  </span>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{n.published_at}</p>
+                </div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{n.title}</h3>
                 <p
-                  className="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed"
+                  className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: n.body }}
                 />
               </div>
@@ -71,12 +83,15 @@ export default function WhatsNewModal({ isDemoVisitor }: { isDemoVisitor?: boole
           ))}
         </div>
 
-        <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+        <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {pending.length === 1 ? '1 aviso pendiente' : `${pending.length} avisos pendientes`}
+          </span>
           <button
             onClick={dismiss}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+            className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
           >
-            Entendido
+            Entendido ({pending.length})
           </button>
         </div>
       </div>
