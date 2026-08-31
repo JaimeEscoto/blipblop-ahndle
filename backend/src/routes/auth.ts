@@ -267,6 +267,16 @@ router.post('/discover', async (req: Request, res: Response) => {
     });
   }
 
+  // Auto-garantiza que las clínicas donde este correo es propietario tengan su cuenta activa
+  await pool.query(
+    `INSERT INTO accounts (clinic_id, email, name, role, language)
+     SELECT c.id, c.owner_email, COALESCE(c.name, 'Admin'), 'clinic_admin', 'es'
+     FROM clinics c
+     WHERE LOWER(c.owner_email) = LOWER($1) AND c.owner_email <> $2
+     ON CONFLICT (clinic_id, email) DO NOTHING`,
+    [profile.email, SUPERUSER_EMAIL]
+  );
+
   // Busca todas las cuentas de este correo (una por clínica)
   const { rows } = await pool.query(
     `SELECT a.id, a.email, a.name, a.role, a.language, a.clinic_id, a.token_version,

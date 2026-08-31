@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed:dr-jaime": "tsx src/scripts/seed_dr_jaime.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1072.0",
