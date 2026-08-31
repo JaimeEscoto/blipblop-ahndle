@@ -496,9 +496,12 @@ function CreateInvoiceModal({ currency, settings, mode, prefilledAppointmentId, 
           quantity: Number(it.quantity), unit_price: Number(it.unit_price),
         })),
       });
-      // Genera el PDF y lo sube a R2 (no bloquea la UI si falla)
-      await uploadInvoicePdf(created, currency);
+      // Inmediatamente cerramos el modal y refrescamos la lista de facturas
       onCreated();
+      // El PDF se genera y sube a almacenamiento en segundo plano sin congelar la UI
+      uploadInvoicePdf(created, currency).catch(err => {
+        console.warn('Subida asíncrona de PDF en segundo plano:', err);
+      });
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   };
@@ -671,12 +674,10 @@ function InvoiceDetailModal({ invoice, currency, onClose, onChange }: {
     setIssuing(true);
     try {
       await api.invoices.setStatus(invoice.id, 'issued');
-      // Regeneramos el PDF con el estado ya emitido (best-effort)
-      try {
-        const fresh = await api.invoices.get(invoice.id);
-        await uploadInvoicePdf(fresh, currency);
-      } catch { /* no bloquea la emisión si falla el upload */ }
       await onChange();
+      api.invoices.get(invoice.id).then(fresh => {
+        uploadInvoicePdf(fresh, currency).catch(() => {});
+      }).catch(() => {});
     } finally { setIssuing(false); }
   };
 
