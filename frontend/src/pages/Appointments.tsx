@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, Appointment, Doctor, User, Procedure } from '../api/client';
 import { dateLocale } from '../i18n/format';
-import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight, Receipt, X, UserPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Download, List, CalendarDays, ChevronLeft, ChevronRight, Receipt, X, UserPlus, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { withSlug } from '../tenant';
 import { generateAppointmentPDF } from '../utils/generateAppointmentPDF';
@@ -117,6 +117,22 @@ export default function Appointments() {
     }));
     setFormProcedures(rows.length > 0 ? rows : [{ ...EMPTY_PROC_ROW }]);
     setError(''); setModal({ type: 'edit', appt: a });
+  };
+
+  // Nueva cita con el mismo paciente/médico/procedimientos que otra ya existente —
+  // para pacientes recurrentes (limpiezas periódicas, ortodoncia). Solo pide
+  // fecha/hora nuevas: es una cita nueva (type 'create'), no edita la original.
+  const openDuplicate = (a: Appointment) => {
+    const d = new Date();
+    const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setForm({ user_id: String(a.user_id), doctor_id: String(a.doctor_id), date: local, time: '', reason: a.reason || '', notes: a.notes || '', status: 'scheduled' });
+    const rows: ProcRow[] = (a.procedures || []).map(p => ({
+      procedure_id: String(p.procedure_id),
+      quantity: String(p.quantity),
+      unit_price: String(p.unit_price),
+    }));
+    setFormProcedures(rows.length > 0 ? rows : [{ ...EMPTY_PROC_ROW }]);
+    setError(''); setModal({ type: 'create' });
   };
 
   const openQuickPatient = () => {
@@ -323,6 +339,9 @@ export default function Appointments() {
             </button>
             <button onClick={() => openEdit(a)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg">
               <Pencil className="w-4 h-4" />
+            </button>
+            <button onClick={() => openDuplicate(a)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded-lg" title="Duplicar cita">
+              <Copy className="w-4 h-4" />
             </button>
             <button onClick={() => setDeleteId(a.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg">
               <Trash2 className="w-4 h-4" />
